@@ -33,3 +33,16 @@ npx cabinet \
   --users /path/to/folder/containing/users
   --port PORT_TO_LISTEN_ON
 ```
+
+## Options
+
+|Name|Default|Description|
+|---|---|---|
+|`--library`|Required|Absolute path to the folder containing photos and videos (including in subdirectories).|
+|`--users`|Required|Absolute path to the folder containing user profiles.|
+|`--port`|Random port between 1024 and 9999 (inclusive).|Port to listen on.|
+|`--video`|`mp4`|Comma-separated file extensions to consider as video files.|
+|`--photo`|`png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp`|Comma-separated file extensions to consider as photo files.|
+|`--key`||Absolute path to HTTPS private key file in PEM format. Required for HTTPS.|
+|`--cert`||Absolute path to HTTPS certificate file in PEM format. Required for HTTPS.|
+|`--dh`||Absolute path to HTTPS Diffie-Hellman parameters file. Not required for HTTPS.|
