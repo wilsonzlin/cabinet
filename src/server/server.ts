@@ -38,9 +38,9 @@ export const startServer = (
     };
 
     SSL?: {
-      key: string;
-      certificate: string;
-      DHParameters?: string;
+      key: Buffer;
+      certificate: Buffer;
+      DHParameters?: Buffer;
     };
     port: number;
 

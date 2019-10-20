@@ -63,7 +63,7 @@ const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo | 
   try {
     dimensions = await getImageSize(fullPath);
   } catch (err) {
-    console.error(err);
+    console.error(`Failed to get dimensions of ${fullPath}: ${err.message}`);
     return;
   }
 

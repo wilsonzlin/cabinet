@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import {promises as fs} from "fs";
 import minimist from "minimist";
 import {join} from "path";
 import {listPhotos, listVideos} from "./server/library";
@@ -26,9 +27,9 @@ const SSL_DHPARAM: string | undefined = args.dh;
 
   await startServer({
     SSL: !SSL_KEY || !SSL_CERT ? undefined : {
-      certificate: SSL_CERT,
-      key: SSL_KEY,
-      DHParameters: SSL_DHPARAM,
+      certificate: await fs.readFile(SSL_CERT),
+      key: await fs.readFile(SSL_KEY),
+      DHParameters: SSL_DHPARAM ? await fs.readFile(SSL_DHPARAM) : undefined,
     },
     clientPath: join(__dirname, "client"),
     photosRoot,
