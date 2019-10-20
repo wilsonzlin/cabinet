@@ -28,7 +28,7 @@ EOD
 **2\. Run the server.**
 
 ```bash
-npx cabinet \
+npx @wzlin/cabinet \
   --library /path/to/library/folder
   --users /path/to/folder/containing/users
   --port PORT_TO_LISTEN_ON
