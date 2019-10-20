@@ -16,7 +16,7 @@ with a single command and zero configuration.
 
 **1\. Create a folder for storing user profiles and a new user in that profile.**
 
-Passwords are hashed using `bcrypt`; one way to generate the hash for a password is using `npx bcrypt-cli "PLAINTEXT_PASSWORD" 10`.
+Passwords are hashed using `bcrypt`; one way to generate the hash for a password is to use `npx bcrypt-cli "PLAINTEXT_PASSWORD" 10`.
 
 ```bash
 mkdir /path/to/profiles
