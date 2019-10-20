@@ -7,9 +7,9 @@ with a single command and zero configuration.
 - Browse, manage, and view photos.
 - Stream and favourite videos privately.
 
-## Quick run
+## Quick start
 
-1\. Create a folder for storing user profiles and a new user in that profile.
+**1\. Create a folder for storing user profiles and a new user in that profile.**
 
 Passwords are hashed using `bcrypt`; one way to generate the hash for a password is using `npx bcrypt-cli "PLAINTEXT_PASSWORD" 10`.
 
@@ -25,7 +25,7 @@ cat << 'EOD' > USERNAME.json
 EOD
 ``` 
 
-2\. Run the server.
+**2\. Run the server.**
 
 ```bash
 npx cabinet \
@@ -38,8 +38,8 @@ npx cabinet \
 
 |Name|Default|Description|
 |---|---|---|
-|`--library`|Required|Absolute path to the folder containing photos and videos (including in subdirectories).|
-|`--users`|Required|Absolute path to the folder containing user profiles.|
+|`--library`|**Required**|Absolute path to the folder containing photos and videos (including in subdirectories).|
+|`--users`|**Required**|Absolute path to the folder containing user profiles.|
 |`--port`|Random port between 1024 and 9999 (inclusive).|Port to listen on.|
 |`--video`|`mp4`|Comma-separated file extensions to consider as video files.|
 |`--photo`|`png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp`|Comma-separated file extensions to consider as photo files.|
