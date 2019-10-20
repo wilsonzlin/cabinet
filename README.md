@@ -7,6 +7,11 @@ with a single command and zero configuration.
 - Browse, manage, and view photos.
 - Stream and favourite videos privately.
 
+## Requirements
+
+- [Node.js >= 7 and npm >= 5.2.](https://nodejs.org)
+- Modern browser or IE 11.
+
 ## Quick start
 
 **1\. Create a folder for storing user profiles and a new user in that profile.**

@@ -1,8 +1,8 @@
 import minimist from "minimist";
 import {join} from "path";
-import {listPhotos, listVideos} from "server/library";
-import {startServer} from "server/server";
-import {getUsers, writeUser} from "server/user";
+import {listPhotos, listVideos} from "./server/library";
+import {startServer} from "./server/server";
+import {getUsers, writeUser} from "./server/user";
 
 const args = minimist(process.argv.slice(2));
 

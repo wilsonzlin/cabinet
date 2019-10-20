@@ -7,8 +7,8 @@ import {createReadStream} from "fs";
 import https from "https";
 import {join} from "path";
 import pug, {compileTemplate, LocalsObject} from "pug";
-import {Photo, PhotoDirectory, Video} from "server/library";
-import {User} from "server/user";
+import {Photo, PhotoDirectory, Video} from "./library";
+import {User} from "./user";
 
 declare global {
   namespace Express {

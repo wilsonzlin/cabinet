@@ -1,5 +1,5 @@
 mixin Page(title, component)
-doctype html
+  doctype html
   html
     head
       meta(charset="utf8")
@@ -10,6 +10,7 @@ doctype html
       link(rel="stylesheet" href="/static/common/common.css")
       link(rel="stylesheet" href=`/static/${component}/index.css`)
 
+      script(defer src="/static/common/core-js.min.js")
       script(defer src="/static/common/common.js")
       script(defer src=`/static/${component}/index.js`)
   body

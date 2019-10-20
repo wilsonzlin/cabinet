@@ -7,9 +7,11 @@
     "build/**"
   ],
   "scripts": {
-    "build": "npm run clean && tsc && cp -r src/client build/client",
+    "build": "npm run clean && tsc && npm run buildClient",
+    "buildClient": "node compile/client.js",
     "clean": "rm -rf build",
     "prepublishOnly": "npm run build",
+    "run": "npm run build && node build/main.js",
     "start": "ts-node -r tsconfig-paths/register src/main.ts"
   },
   "repository": {
@@ -25,6 +27,10 @@
   "bugs": {
     "url": "https://github.com/wilsonzlin/cabinet/issues"
   },
+  "engines": {
+    "node": ">=7",
+    "npm": ">=5.2"
+  },
   "homepage": "https://github.com/wilsonzlin/cabinet#readme",
   "dependencies": {
     "bcrypt": "^3.0.6",
@@ -38,6 +44,8 @@
     "readdirp": "^3.2.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.6.4",
+    "@babel/preset-env": "^7.6.3",
     "@types/bcrypt": "^3.0.0",
     "@types/body-parser": "^1.17.1",
     "@types/cookie-parser": "^1.4.2",
@@ -46,6 +54,10 @@
     "@types/minimist": "^1.2.0",
     "@types/node": "^12.11.1",
     "@types/pug": "^2.0.4",
+    "clean-css": "^4.2.1",
+    "core-js-bundle": "^3.3.2",
+    "mkdirp": "^0.5.1",
+    "terser": "^4.3.9",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.6.4"
   }
