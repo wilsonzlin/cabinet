@@ -1,0 +1,46 @@
+<template ooml-class="Thumbnail">
+  <ooml-attribute name="hidden" type="boolean">false</ooml-attribute>
+  <ooml-attribute name="usingVideo" type="boolean">false</ooml-attribute>
+
+  <ooml-property name="path" type="string" set="
+                let src = '/photo' + newValue;
+                if (/\.(gifv|webm)$/i.test(newValue)) {
+                    this.attributes.usingVideo = true;
+                    this.$image.src = '';
+                    this.$video.src = src;
+                } else {
+                    this.attributes.usingVideo = false;
+                    this.$image.src = src;
+                    this.$video.src = '';
+                }
+            ">""
+  </ooml-property>
+
+  <div class="thumbnail" ooml-expose="thumbnail">
+    <a class="thumbnail-link" href="#{{ this.path }}">
+      <img ooml-expose="image" class="thumbnail-image" domoncontextmenu="event.preventDefault();">
+      <video ooml-expose="video" class="thumbnail-video" autoplay loop
+             domoncontextmenu="event.preventDefault();"></video>
+    </a>
+    <div class="thumbnail-name">{{ this.name }}</div>
+  </div>
+</template>
+
+<template ooml-class="App">
+  <ooml-attribute name="previewing" type="boolean">false</ooml-attribute>
+  <ooml-attribute name="previewNavigateLeftCallback">null</ooml-attribute>
+  <ooml-attribute name="previewNavigateRightCallback">null</ooml-attribute>
+
+  <div id="app">
+    <div id="preview">
+      <div id="preview-image-container">
+        <img id="preview-image" ooml-expose="previewImage">
+        <video id="preview-video" ooml-expose="previewVideo" autoplay loop></video>
+        <div id="preview-image-click-left" domonclick="this.attributes.previewNavigateLeftCallback();"></div>
+        <div id="preview-image-click-right" domonclick="this.attributes.previewNavigateRightCallback();"></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<div ooml-instantiate="App app"></div>

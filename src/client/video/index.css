@@ -1,0 +1,243 @@
+body {
+  display: flex;
+}
+
+body > * {
+  height: 100vh;
+}
+
+#cover {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: black;
+  z-index: 99999;
+}
+
+#button-cover-close {
+  color: gray;
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+}
+
+body.s-engaged * {
+  cursor: none !important;
+}
+
+#pane {
+  flex: 0 0 auto;
+  width: 18rem;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  border-left: 1px solid #444;
+}
+
+#pane-toolbar {
+  flex: 0 0 auto;
+  margin: 1rem;
+
+  display: flex;
+  align-items: center;
+}
+
+#search {
+  flex-grow: 1;
+
+  border: 2px solid #333;
+  background: transparent;
+
+  color: #aaa;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+}
+
+#search:focus {
+  background: rgba(90, 90, 90, 0.1);
+  border-color: #444;
+}
+
+#button-settings {
+  flex: 0 0 auto;
+
+  color: #444;
+  font-size: 1.5rem;
+  padding-left: 1rem;
+}
+
+#list {
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex-grow: 1;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+}
+
+.entry[data-current] {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.entry-fav {
+  color: yellow;
+  font-size: 1.25rem;
+
+  opacity: 0;
+
+  padding: 0 0.5rem;
+
+  flex: 0 0 auto;
+}
+
+.entry[data-favourite] .entry-fav {
+  opacity: 1;
+}
+
+.entry-link {
+  color: #ddd;
+  text-decoration: none;
+  font-size: 0.75rem;
+  outline: 0;
+  padding: 0.5rem 0.5rem 0.5rem 0;
+
+  flex-grow: 1;
+  word-wrap: break-word;
+}
+
+#pane-controls {
+  flex: 0 0 auto;
+  height: 2rem;
+
+  border-top: 1px solid #444;
+
+  display: flex;
+}
+
+#pane-controls > button {
+  flex: 1 0 0;
+  background: black;
+}
+
+#pane-controls > button:not(:last-child) {
+  border-right: 1px solid #444;
+}
+
+#player {
+  flex-grow: 1;
+  position: relative; /* For #overlay */
+}
+
+#player:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+}
+
+#video {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  background: black;
+  object-fit: contain;
+}
+
+#overlay {
+  text-shadow: 0 0 0.5rem black;
+
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 0;
+
+  /* Hide #title and #player-controls when engaged. */
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+#title, #player-controls {
+  flex: 0 0 auto;
+  padding: 0 1rem;
+  transition: 0.3s linear;
+}
+
+#targets {
+  flex-grow: 1;
+}
+
+#title {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
+  height: 3rem;
+  line-height: 3rem;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s-engaged #title {
+  transform: translateY(-3rem);
+}
+
+#player-controls {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.75) 100%);
+  height: 2rem;
+
+  display: flex;
+  align-items: center;
+}
+
+.s-engaged #player-controls {
+  transform: translateY(2rem);
+}
+
+#player-controls > button {
+  flex: 0 0 auto;
+  padding: 0 0.5rem;
+
+  font-size: 1.25rem;
+}
+
+.s-playing #button-playback::before {
+  content: "⏸";
+}
+
+body:not(.s-playing) #button-playback::before {
+  content: "▶";
+}
+
+.s-fullscreen #button-fullscreen::before {
+  content: "⇲";
+}
+
+body:not(.s-fullscreen) #button-fullscreen::before {
+  content: "⇱";
+}
+
+/*
+#p-progress-container {
+  background: rgba(180, 180, 180, 0.3);
+  border-radius: 0.25rem;
+  overflow: hidden; /* To hide border-radius overflow /
+  height: 100%;
+}
+*/
+
+#progress {
+  cursor: pointer;
+  flex-grow: 1;
+  /*background: white;*/
+  /*box-shadow: 0 0 0.25rem white;*/
+}

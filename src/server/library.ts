@@ -1,0 +1,108 @@
+import {Dirent, promises as fs} from "fs";
+import {imageSize} from "image-size";
+import mime from "mime";
+import {basename, join, relative} from "path";
+import readdirp from "readdirp";
+import {promisify} from "util";
+
+const getImageSize = promisify(imageSize);
+const hasExtension = (file: string, extensions: string[]) => extensions.some(
+  ext => file.toLowerCase().endsWith(`.${ext}`));
+
+export interface Video {
+  title: string;
+  relativePath: string;
+  absolutePath: string;
+  size: number;
+  type: string | null,
+}
+
+export const listVideos = async (dir: string, videoExtensions: string[]): Promise<Video[]> => {
+  const entries = await readdirp.promise(dir, {
+    depth: Infinity,
+    fileFilter: e => hasExtension(e.basename, videoExtensions),
+    type: "files",
+    alwaysStat: true,
+  });
+
+  return entries.map(e => ({
+    title: e.basename.slice(0, e.basename.lastIndexOf(".")),
+    relativePath: e.path,
+    absolutePath: e.fullPath,
+    // e.stats should always exist as alwaysStat is true.
+    size: e.stats!.size,
+    type: mime.getType(e.basename),
+  }));
+};
+
+export interface Photo {
+  name: string;
+  absolutePath: string;
+  // Relative to LIBRARY_DIR.
+  relativePath: string;
+  height: number;
+  width: number;
+  type: string | null,
+  isDirectory: false;
+}
+
+export interface PhotoDirectory {
+  name: string;
+  // Relative to LIBRARY_DIR.
+  relativePath: string;
+  subdirectories: PhotoDirectory[];
+  photos: Photo[];
+  entries: { [name: string]: PhotoDirectory | Photo };
+  isDirectory: true;
+}
+
+const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo> => {
+  const fullPath = join(dir, e.name);
+  const dimensions = await getImageSize(fullPath);
+  if (!dimensions || dimensions.height === undefined || dimensions.width === undefined) {
+    throw new Error(`Failed to get dimensions of ${fullPath}`);
+  }
+
+  return {
+    name: e.name,
+    absolutePath: fullPath,
+    relativePath: relative(rel, fullPath),
+    type: mime.getType(e.name),
+    height: dimensions.height,
+    width: dimensions.width,
+    isDirectory: false,
+  };
+};
+
+export const listPhotos = async (dir: string, photoExtensions: string[], rel: string): Promise<PhotoDirectory> => {
+  const raw = await fs.readdir(dir, {withFileTypes: true});
+
+  // Note that relative paths on entry objects are relative to $dir, and probably
+  // not to the actual LIBRARY_DIR.
+
+  const entries: { [name: string]: Photo | PhotoDirectory } = {};
+
+  const [photos, subdirectories] = await Promise.all([
+    Promise.all(raw
+      .filter(e => e.isFile() && hasExtension(e.name, photoExtensions))
+      .map(e => buildPhoto(dir, e, rel))
+    ),
+    Promise.all(raw
+      .filter(e => e.isDirectory())
+      .map(e => listPhotos(join(dir, e.name), photoExtensions, rel))
+    ),
+  ]);
+
+  for (const entry of [...photos, ...subdirectories]) {
+    entries[entry.name] = entry;
+  }
+
+  return {
+    name: basename(dir),
+    relativePath: relative(rel, dir),
+    photos,
+    subdirectories,
+    entries,
+    isDirectory: true,
+  };
+};

@@ -1,0 +1,27 @@
+include ../common/common.pug
+
++Page("Cabinet Videos", "photo")
+  #header
+    h1#title= name
+    input#search(placeholder="Search...")
+    #toolbar
+      button#button-upload Upload
+      button#button-select Select
+      button#button-rename Rename
+      button#button-delete Delete
+  #library
+    ul#folders
+      each folder in folders
+        li.folder(data-name=folder.name)
+          a(href=`/photo/${folder.path}`)= folder.name
+    ul#thumbnails
+      each photo in photos
+        li.thumbnail(data-name=photo.name data-height=photo.height data-width=photo.width)
+          a(
+            href=`/photo/${photo.path}`
+            style=`background-image: url(/photo/${photo.path})`
+          )
+  #preview
+    #targets
+      #target-left(data-direction=-1)
+      #target-right(data-direction=1)

@@ -1,0 +1,13 @@
+include ../common/common.pug
+
++Page("Sign in to Cabinet", "login")
+  form(method="post")
+    if error
+      p#error= error
+    label
+      span Username
+      input(name="username" autofocus)
+    label
+      span Password
+      input(name="password" type="password")
+    button Sign in

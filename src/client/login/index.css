@@ -1,0 +1,43 @@
+body {
+  display: flex;
+  min-height: 100vh;
+}
+
+form {
+  margin: auto;
+  padding: 1rem;
+  width: 25rem;
+  max-width: 100%;
+}
+
+#error {
+  font-size: 0.875rem;
+  padding: 0.75rem;
+  background: #ffc8cc;
+  color: #ae0018;
+}
+
+label {
+  margin: 1rem 0;
+}
+
+label, span, input {
+  display: block;
+  width: 100%;
+}
+
+input {
+  background: #ddd;
+  padding: 0.5rem;
+  border: 1px solid #555;
+  border-radius: 0.25rem;
+}
+
+button {
+  background: #555;
+  border: 1px solid #ddd;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  padding: 0.5rem 2rem;
+  color: #ddd;
+}
