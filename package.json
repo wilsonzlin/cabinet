@@ -2,7 +2,7 @@
   "name": "cabinet",
   "version": "0.0.1",
   "description": "Command-line zero-configuration photo/video HTTP server and client",
-  "main": "build/main.js",
+  "bin": "build/main.js",
   "files": [
     "build/**"
   ],
