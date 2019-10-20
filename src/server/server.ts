@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import crypto from "crypto";
-import express, {Response} from "express";
+import express, {Request, Response} from "express";
 import {createReadStream} from "fs";
 import https from "https";
 import {join} from "path";
@@ -22,8 +22,7 @@ export const startServer = (
   {
     clientPath,
 
-    users,
-    writeUser,
+    authentication,
 
     SSL,
     port,
@@ -33,8 +32,10 @@ export const startServer = (
   }: {
     clientPath: string;
 
-    users: User[];
-    writeUser: (user: User) => Promise<void>;
+    authentication?: {
+      users: User[];
+      writeUser: (user: User) => Promise<void>;
+    };
 
     SSL?: {
       key: string;
@@ -77,32 +78,41 @@ export const startServer = (
     const generateSession = () => crypto.randomBytes(10).toString("hex");
     const authenticateWithSession = (id: string) => sessions.get(id);
 
+
     // Login API.
-    unauthenticated.get("/login", (req, res) => sendPage(res, LoginPage, {}));
+    const getLoginRedirect = (req: Request) => req.query.from && req.query.from[0] === "/" ? req.query.from : "/";
+    unauthenticated.get("/login", (req, res) => {
+      if (authentication) {
+        return sendPage(res, LoginPage, {});
+      }
+      return res.redirect(getLoginRedirect(req));
+    });
     unauthenticated.post("/login", bodyParser.urlencoded({
       extended: false,
       parameterLimit: 2,
     }), async (req, res) => {
-      const from = req.query.from && req.query.from[0] === "/" ? req.query.from : "/app";
+      const from = getLoginRedirect(req);
       const username = req.body.username;
       const password = req.body.password;
 
-      if (typeof username != "string" || typeof password != "string") {
-        return res.status(400).end();
-      }
+      if (authentication) {
+        if (typeof username != "string" || typeof password != "string") {
+          return res.status(400).end();
+        }
 
-      const user = users.find(u => u.username === username);
-      if (!user || !await bcrypt.compare(password, user.password)) {
-        return sendPage(res, LoginPage, {
-          error: "Unknown username or password",
-        }, 401);
-      }
+        const user = authentication.users.find(u => u.username === username);
+        if (!user || !await bcrypt.compare(password, user.password)) {
+          return sendPage(res, LoginPage, {
+            error: "Unknown username or password",
+          }, 401);
+        }
 
-      const sessionId = generateSession();
-      sessions.set(sessionId, user);
-      res.cookie(SESSION_NAME, sessionId, {
-        httpOnly: true,
-      });
+        const sessionId = generateSession();
+        sessions.set(sessionId, user);
+        res.cookie(SESSION_NAME, sessionId, {
+          httpOnly: true,
+        });
+      }
 
       return res.redirect(from);
     });
@@ -115,6 +125,11 @@ export const startServer = (
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
+
+      // No authentication required.
+      if (!authentication) {
+        return next();
+      }
 
       // Get user from session.
       const sessionId = req.cookies[SESSION_NAME];
@@ -140,7 +155,7 @@ export const startServer = (
         videos: videos.map((v, i) => ({
           id: i,
           title: v.title,
-          favourite: req.user.favouriteVideos.has(v.relativePath),
+          favourite: authentication ? req.user.favouriteVideos.has(v.relativePath) : false,
         })),
       }));
     // Photo folder or file.
@@ -173,24 +188,26 @@ export const startServer = (
     });
 
     // Favourite videos.
-    authenticated.put("/user/video/favourites/:videoId", (req, res) => {
-      const video = videos[req.params.videoId];
-      if (!video) {
-        return res.status(404).end();
-      }
-      req.user.favouriteVideos.add(video);
-      writeUser(req.user);
-      return res.end();
-    });
-    authenticated.delete("/user/video/favourites/:videoId", (req, res) => {
-      const video = videos[req.params.videoId];
-      if (!video) {
-        return res.status(404).end();
-      }
-      req.user.favouriteVideos.delete(video);
-      writeUser(req.user);
-      return res.end();
-    });
+    if (authentication) {
+      authenticated.put("/user/video/favourites/:videoId", (req, res) => {
+        const video = videos[req.params.videoId];
+        if (!video) {
+          return res.status(404).end();
+        }
+        req.user.favouriteVideos.add(video);
+        authentication.writeUser(req.user);
+        return res.end();
+      });
+      authenticated.delete("/user/video/favourites/:videoId", (req, res) => {
+        const video = videos[req.params.videoId];
+        if (!video) {
+          return res.status(404).end();
+        }
+        req.user.favouriteVideos.delete(video);
+        authentication.writeUser(req.user);
+        return res.end();
+      });
+    }
 
     // Stream video.
     authenticated.get("/stream/:videoId", (req, res) => {

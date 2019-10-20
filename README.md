@@ -14,28 +14,9 @@ with a single command and zero configuration.
 
 ## Quick start
 
-**1\. Create a folder for storing user profiles and a new user in that profile.**
-
-Passwords are hashed using `bcrypt`; one way to generate the hash for a password is to use `npx bcrypt-cli "PLAINTEXT_PASSWORD" 10`.
-
-```bash
-mkdir /path/to/profiles
-cd /path/to/profiles
-cat << 'EOD' > USERNAME.json
-{
- "username": USERNAME,
- "password": BCRYPT_PASSWORD_HASH,
- "favouriteVideos": []
-}
-EOD
-``` 
-
-**2\. Run the server.**
-
 ```bash
 npx @wzlin/cabinet \
   --library /path/to/library/folder
-  --users /path/to/folder/containing/users
   --port PORT_TO_LISTEN_ON
 ```
 
@@ -44,7 +25,7 @@ npx @wzlin/cabinet \
 |Name|Default|Description|
 |---|---|---|
 |`--library`|**Required**|Absolute path to the folder containing photos and videos (including in subdirectories).|
-|`--users`|**Required**|Absolute path to the folder containing user profiles.|
+|`--users`||Absolute path to the folder containing user profiles. Required for authentication.|
 |`--port`|Random port between 1024 and 9999 (inclusive).|Port to listen on.|
 |`--video`|`mp4`|Comma-separated file extensions to consider as video files.|
 |`--photo`|`png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp`|Comma-separated file extensions to consider as photo files.|
@@ -81,3 +62,34 @@ To uninstall:
 ```bash
 npm uninstall -g @wzlin/cabinet
 ```
+
+## Profiles and authentication
+
+It's possible to enable users. Using the app will require logging in, and users can have personal data such as favourite videos.
+
+**NOTE:** This feature is provided for convenience, not hardened security.
+
+**WARNING:** It's advised to enable HTTPS when using this feature, as otherwise passwords will be sent over the network in plaintext.
+
+### Creating a new user
+
+Users are stored as JSON files in a folder; the name is not relevant, although it might be convenient to name them as `USERNAME.json`. 
+
+To set up users for the first time, create a folder for storing user profiles, and pass the absolute path to it as the `--users` argument.
+
+To create a new user, create a new `.json` file with the following structure:
+
+```json
+{
+ "username": USERNAME,
+ "password": BCRYPT_PASSWORD_HASH,
+ "favouriteVideos": []
+}
+```
+
+Passwords are hashed using bcrypt. A convenient way to generate the hash for a password is to use `npx bcrypt-cli "PLAINTEXT_PASSWORD" 10`.
+
+### Behaviour
+
+- If there are no users, authentication will be disabled; the server will act like as if `--users` was never provided.
+- Having two users with the same username is undefined behaviour.

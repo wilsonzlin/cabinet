@@ -7,7 +7,7 @@ import {getUsers, writeUser} from "./server/user";
 const args = minimist(process.argv.slice(2));
 
 const LIBRARY_DIR: string = args.library;
-const USERS_DIR: string = args.users;
+const USERS_DIR: string | undefined = args.users;
 const VIDEO_EXTENSIONS: string[] = (args.video || "mp4").split(",");
 const PHOTO_EXTENSIONS: string[] = (args.photo || "png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp").split(",");
 const PORT: number = args.port || Math.floor(Math.random() * 8976 + 1024);
@@ -18,7 +18,7 @@ const SSL_DHPARAM: string | undefined = args.dh;
 (async function () {
   const [photosRoot, users, videos] = await Promise.all([
     listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR),
-    getUsers(USERS_DIR),
+    USERS_DIR ? getUsers(USERS_DIR) : [],
     listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS),
   ]);
 
@@ -31,9 +31,11 @@ const SSL_DHPARAM: string | undefined = args.dh;
     clientPath: join(__dirname, "client"),
     photosRoot,
     port: PORT,
-    users,
+    authentication: users.length ? {
+      users,
+      writeUser: user => writeUser(USERS_DIR!, user),
+    } : undefined,
     videos,
-    writeUser: user => writeUser(USERS_DIR, user),
   });
 
   console.log(`Server started on port ${PORT}`);
