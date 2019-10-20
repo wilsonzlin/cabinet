@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import minimist from "minimist";
 import {join} from "path";
 import {listPhotos, listVideos} from "./server/library";

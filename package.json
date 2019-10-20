@@ -7,7 +7,7 @@
     "build/**"
   ],
   "scripts": {
-    "build": "npm run clean && tsc && npm run buildClient",
+    "build": "npm run clean && tsc && chmod +x build/main.js && npm run buildClient",
     "buildClient": "node compile/client.js",
     "clean": "rm -rf build",
     "prepublishOnly": "npm run build",
