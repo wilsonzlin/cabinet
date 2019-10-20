@@ -1,6 +1,6 @@
 {
   "name": "@wzlin/cabinet",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Command-line zero-configuration photo/video HTTP server and client",
   "bin": "build/main.js",
   "files": [
