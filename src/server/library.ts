@@ -56,11 +56,20 @@ export interface PhotoDirectory {
   isDirectory: true;
 }
 
-const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo> => {
+const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo | undefined> => {
   const fullPath = join(dir, e.name);
-  const dimensions = await getImageSize(fullPath);
+
+  let dimensions;
+  try {
+    dimensions = await getImageSize(fullPath);
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+
   if (!dimensions || dimensions.height === undefined || dimensions.width === undefined) {
-    throw new Error(`Failed to get dimensions of ${fullPath}`);
+    console.error(`Failed to get dimensions of ${fullPath}`);
+    return;
   }
 
   return {
@@ -86,7 +95,7 @@ export const listPhotos = async (dir: string, photoExtensions: string[], rel: st
     Promise.all(raw
       .filter(e => e.isFile() && hasExtension(e.name, photoExtensions))
       .map(e => buildPhoto(dir, e, rel))
-    ),
+    ).then(photos => photos.filter(p => p) as Photo[]),
     Promise.all(raw
       .filter(e => e.isDirectory())
       .map(e => listPhotos(join(dir, e.name), photoExtensions, rel))
