@@ -28,7 +28,7 @@ a {
   color: inherit;
 }
 
-button {
+button, input, select, textarea {
   background: transparent;
   border: 0;
   margin: 0;
@@ -39,6 +39,15 @@ button {
 
   color: inherit;
   font: inherit;
+}
+
+input {
+  cursor: text;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font: inherit;
+  margin: 0;
 }
 
 ul, ol {

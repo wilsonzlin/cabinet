@@ -91,11 +91,10 @@
       const $entry = this._current;
       if ($entry) {
         const offsetTop = $entry.getBoundingClientRect().top;
-        // TODO Change to $list height
-        const windowHeight = document.documentElement.clientHeight;
-        if (offsetTop > windowHeight * 0.9) {
-          $list.scrollTop += offsetTop - $list.clientHeight + 150;
-        } else if (offsetTop < windowHeight * 0.1) {
+        const listHeight = $list.clientHeight;
+        if (offsetTop > listHeight * 0.95) {
+          $list.scrollTop += offsetTop - $list.clientHeight + 120;
+        } else if (offsetTop < listHeight * 0.15) {
           $list.scrollTop += offsetTop - 150;
         }
       }
@@ -108,10 +107,13 @@
         $entry.dataset.current = true;
         uiState.loaded = true;
       } else {
-        $video.src = null;
+        // Setting to null, undefined, or "" in Firefox actually loads "null", "undefined", or "".
+        $video.removeAttribute("src");
         $title.textContent = "";
         $progress.max = 0;
-        uiState.loaded = uiState.playing = false;
+        // Browsers don't consistently fire "pause" or "ended" events when changing
+        // sources, so set engaged state here.
+        uiState.loaded = uiState.playing = uiState.engaged = false;
       }
 
       if (this._current) {
@@ -125,11 +127,13 @@
     next () {
       if (this._current && this._current.nextElementSibling) {
         this.current = this._current.nextElementSibling;
+        this.scrollToCurrent();
       }
     },
     previous () {
       if (this._current && this._current.previousElementSibling) {
         this.current = this._current.previousElementSibling;
+        this.scrollToCurrent();
       }
     },
   };
@@ -138,7 +142,7 @@
   $progress.addEventListener("mouseleave", () => uiState.hoveringProgress = false);
   $progress.addEventListener("input", () => $video.currentTime = $progress.value);
 
-  $video.addEventListener("ended", () => uiState.playing = false);
+  $video.addEventListener("ended", () => uiState.playing = uiState.engaged = false);
   $video.addEventListener("loadedmetadata", () => $progress.max = $video.duration);
   $video.addEventListener("play", () => uiState.playing = true);
   $video.addEventListener("pause", () => uiState.playing = uiState.engaged = false);
@@ -148,8 +152,6 @@
   let playerSingleClickSetTimeout;
   // This event listener handles single clicks/taps for toggling playback
   // and two or more clicks/taps for rewinding/fast-forwarding.
-  // TODO Gestures
-  // TODO This does not make it convenient to pause on touch
   configureTargets(direction => {
     clearTimeout(playerSingleClickSetTimeout);
     if (playerLastClickTime + 500 >= Date.now()) {
@@ -159,39 +161,44 @@
       }
     } else {
       playerSingleClickSetTimeout = setTimeout(() => {
-        if (uiState.usingTouch && uiState.engaged) {
-          uiState.engaged = false;
-        } else {
-          videoControl.togglePlayback();
-        }
-      }, 200);
+        videoControl.togglePlayback();
+      }, 160);
     }
     playerLastClickTime = Date.now();
   });
 
-  let lastTouchStart;
-  window.addEventListener("touchstart", e => {
-    uiState.usingTouch = true;
-    lastTouchStart = Date.now();
-  });
-
+  let lastTouchStart = -Infinity;
   let engagedSetTimeout;
-  window.addEventListener("mousemove", e => {
+  window.addEventListener("touchstart", () => {
+    lastTouchStart = Date.now();
+    uiState.usingTouch = true;
+    uiState.engaged = false;
+  }, true);
+  // Don't set engaged state until touch has ended.
+  window.addEventListener("touchend", () => {
     clearTimeout(engagedSetTimeout);
+    engagedSetTimeout = setTimeout(() => {
+      if (uiState.playing) {
+        uiState.engaged = true;
+      }
+    }, 5000);
+  }, true);
+  window.addEventListener("mousemove", () => {
     // This is necessary as mousemove events are also emitted while touching,
     // so we need to ensure that this was caused by a mouse and not touch input.
     // If it's been long enough since we've last seen a touch event (or one
     // has never occured), we assume that the input is (or has changed to) a mouse.
-    const usingMouse = lastTouchStart === undefined || Date.now() > lastTouchStart + 500;
-    if (usingMouse) {
-      uiState.usingTouch = false;
-      uiState.engaged = false;
+    if (lastTouchStart + 500 >= Date.now()) {
+      return;
     }
+    clearTimeout(engagedSetTimeout);
+    uiState.usingTouch = false;
+    uiState.engaged = false;
     engagedSetTimeout = setTimeout(() => {
       if (uiState.playing && !uiState.hoveringProgress) {
         uiState.engaged = true;
       }
-    }, usingMouse ? 1000 : 3000);
+    }, 1000);
   }, true);
 
   const toggleFullscreen = () => {
@@ -208,7 +215,7 @@
     }
   };
 
-  const onFullscreenChange = e => {
+  const onFullscreenChange = () => {
     uiState.fullscreen = !!(
       document.fullscreenElement ||
       document.webkitFullscreenElement ||
@@ -264,31 +271,11 @@
         videoControl.next();
         break;
 
-      case 70: // f
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-          $search.focus();
-        }
-        break;
-
       case 27: // Escape
         // NOTE: Most browsers won't trigger a keydown event if fullscreen and user pressed Esc
         if (uiState.fullscreen) {
           e.preventDefault(); // Prevent escaping fullscreen on macOS
           toggleFullscreen();
-        }
-        break;
-      }
-    } else {
-      switch (e.keyCode) {
-      case 27: // Escape
-        e.preventDefault(); // Prevent escaping fullscreen on macOS
-        $search.blur();
-        break;
-
-      case 70: // f
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
         }
         break;
       }

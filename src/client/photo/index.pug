@@ -2,7 +2,10 @@ include ../common/common.pug
 
 +Page("Cabinet Videos", "photo")
   #header
-    h1#title= name
+    #titles
+      button#button-up ⬆
+      h1#title= name
+      h2#preview-title
     input#search(placeholder="Search...")
     #toolbar
       button#button-upload Upload
@@ -19,7 +22,7 @@ include ../common/common.pug
         li.thumbnail(data-name=photo.name data-height=photo.height data-width=photo.width)
           a(
             href=`/photo/${photo.path}`
-            style=`background-image: url(/photo/${photo.path})`
+            style=`background-image: url("/photo/${encodeURIComponent(photo.path).replace('%2F', '/')}")`
           )
   #preview
     #targets

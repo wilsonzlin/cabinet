@@ -93,3 +93,41 @@ Passwords are hashed using bcrypt. A convenient way to generate the hash for a p
 
 - If there are no users, authentication will be disabled; the server will act like as if `--users` was never provided.
 - Having two users with the same username is undefined behaviour.
+
+## Client app
+
+- To browse and watch videos, visit `/videos`.
+- To explore and view photos, visit `/photos`.
+
+Going to `/` will show links to view photos or videos.
+
+### Videos
+
+#### Keyboard shortcuts
+
+|Shortcut|Action|
+|---|---|
+|`Space` or `k`|Play/pause.|
+|`j`|Rewind 5 seconds.|
+|`l`|Fast-forward 5 seconds.|
+|`Left`|Rewind 10 seconds.|
+|`Right`|Fast-forward 10 seconds.|
+|`0`|Rewind to start.|
+|`s`|Stop.|
+|`a`|Previous video.|
+|`d`|Next video.|
+|`Ctrl/Cmd`+`f`|Focus search input.|
+|`Esc` while search input is focused|Stop focusing search input.|
+|`Esc`|Exit fullscreen.|
+
+### Photos
+
+#### Keyboard shortcuts
+
+|Shortcut|Action|
+|---|---|
+|`Left`|Previous photo.|
+|`Right`|Next photo.|
+|`Ctrl/Cmd`+`f`|Focus search input.|
+|`Esc` while search input is focused|Stop focusing search input.|
+|`Esc`|Exit preview.|

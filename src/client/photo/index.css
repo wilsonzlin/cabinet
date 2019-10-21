@@ -4,17 +4,6 @@ a {
   height: 100%;
 }
 
-button {
-  font-weight: 500;
-
-  margin: 0.25rem;
-  padding: 0.75rem;
-
-  color: #666;
-
-  text-transform: uppercase;
-}
-
 #header {
   background: black;
   height: 3rem;
@@ -31,15 +20,30 @@ button {
   height: calc(100vh - 3rem);
 }
 
-#title {
-  padding: 0 1rem;
+#titles {
+  display: flex;
+  align-items: center;
 
-  font-weight: 500;
   font-size: 1.25rem;
+  padding: 0 0.5rem;
 
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+#titles > button {
+  color: #666;
+  padding: 0 0.5rem;
+}
+
+#title {
+  font-weight: 500;
+}
+
+#preview-title {
+  padding-left: 0.5rem;
+  color: #aaa;
 }
 
 #search {
@@ -48,7 +52,6 @@ button {
   border-radius: 0.25rem;
   width: 35rem;
 
-  border: 0;
   box-shadow: inset 0 0 0.75rem #333;
 
   padding: 0.5rem 1rem;
@@ -63,6 +66,17 @@ button {
 
 #toolbar {
   font-size: 0.875rem;
+}
+
+#toolbar > button {
+  font-weight: 500;
+
+  margin: 0.25rem;
+  padding: 0.75rem;
+
+  color: #666;
+
+  text-transform: uppercase;
 }
 
 .s-previewing #button-upload,
@@ -94,8 +108,6 @@ button {
   margin: 0 1rem 1rem 0;
 
   word-wrap: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .folder > a {
@@ -111,6 +123,8 @@ button {
 .thumbnail {
   display: block;
   margin-bottom: 0.75rem;
+  /* Placeholder to show frame while loading. */
+  background: #333;
 }
 
 .thumbnail > a {

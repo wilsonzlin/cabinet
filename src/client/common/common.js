@@ -31,6 +31,32 @@ const configureSearch = (
 
     onSearchEnd && onSearchEnd();
   });
+
+  window.addEventListener("keydown", e => {
+    if (document.activeElement !== $input) {
+      switch (e.keyCode) {
+      case 70: // f
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          $input.focus();
+        }
+        break;
+      }
+    } else {
+      switch (e.keyCode) {
+      case 27: // Escape
+        e.preventDefault(); // Prevent escaping fullscreen on macOS
+        $input.blur();
+        break;
+
+      case 70: // f
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+        }
+        break;
+      }
+    }
+  });
 };
 
 const configureTargets = onClick => {

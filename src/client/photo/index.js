@@ -5,10 +5,24 @@
     "previewing",
   ]);
 
+  const $buttonUp = document.querySelector("#button-up");
   const $folders = document.querySelector("#folders");
   const $preview = document.querySelector("#preview");
+  const $previewTitle = document.querySelector("#preview-title");
   const $search = document.querySelector("#search");
   const $thumbnails = document.querySelector("#thumbnails");
+
+  $buttonUp.addEventListener("click", () => {
+    if (uiState.previewing) {
+      history.back();
+    } else {
+      if (location.href.endsWith("/")) {
+        location.href = "../";
+      } else {
+        location.href = "./";
+      }
+    }
+  });
 
   configureSearch({
     $input: $search,
@@ -23,7 +37,10 @@
   $thumbnails.addEventListener("click", e => {
     if (e.target.tagName === "A") {
       e.preventDefault();
-      loadPhoto(e.target.parentNode);
+      const $thumb = e.target.parentNode;
+      const index = Array.prototype.indexOf.call($thumbnails.children, $thumb);
+      loadPhoto($thumb);
+      history.pushState(index, undefined, null);
     }
   });
 
@@ -88,11 +105,13 @@
   const loadPhoto = $thumb => {
     currentPhoto = $thumb;
     uiState.previewing = true;
-    $preview.style.backgroundImage = `url(${$thumb.children[0].href})`;
+    $previewTitle.textContent = $thumb.dataset.name;
+    $preview.style.backgroundImage = `url("${$thumb.children[0].href}")`;
   };
   const unloadPhoto = () => {
     currentPhoto = undefined;
     uiState.previewing = false;
+    $previewTitle.textContent = "";
     $preview.style.backgroundImage = "";
   };
   const previousPhoto = () => {
@@ -103,6 +122,13 @@
     const $next = currentPhoto.nextElementSibling || $thumbnails.children[0];
     loadPhoto($next);
   };
+  window.addEventListener("popstate", e => {
+    if (e.state) {
+      loadPhoto($thumbnails.children[e.state]);
+    } else {
+      unloadPhoto();
+    }
+  });
 
   window.addEventListener("keydown", e => {
     switch (e.keyCode) {
@@ -121,7 +147,7 @@
     case 27: // Escape
       if (uiState.previewing) {
         e.preventDefault();
-        unloadPhoto();
+        history.back();
       }
       break;
     }

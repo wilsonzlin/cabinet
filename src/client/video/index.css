@@ -151,6 +151,11 @@ body.s-engaged * {
   object-fit: contain;
 }
 
+body:not(.s-loaded) #video {
+  /* Need to hide as some browsers simply show the last frame when stopped. */
+  display: none;
+}
+
 #overlay {
   text-shadow: 0 0 0.5rem black;
 
