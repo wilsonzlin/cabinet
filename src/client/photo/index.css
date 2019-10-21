@@ -95,6 +95,7 @@ a {
    */
   flex-grow: 1;
   padding: 1rem;
+  /* Prevent expensive and possible cyclic reflowThumbnail calls. */
   overflow-y: scroll;
 }
 

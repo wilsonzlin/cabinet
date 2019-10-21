@@ -159,25 +159,27 @@
   reflowThumbnails();
 
   window.addEventListener("keydown", e => {
-    switch (e.keyCode) {
-    case 37: // Left
-      if (uiState.previewing) {
-        navigation.previous();
-      }
-      break;
+    if (document.activeElement !== $search && !e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+      switch (e.keyCode) {
+      case 37: // Left
+        if (uiState.previewing) {
+          navigation.previous();
+        }
+        break;
 
-    case 39: // Right
-      if (uiState.previewing) {
-        navigation.next();
-      }
-      break;
+      case 39: // Right
+        if (uiState.previewing) {
+          navigation.next();
+        }
+        break;
 
-    case 27: // Escape
-      if (uiState.previewing) {
-        e.preventDefault();
-        navigation.end();
+      case 27: // Escape
+        if (uiState.previewing) {
+          e.preventDefault();
+          navigation.end();
+        }
+        break;
       }
-      break;
     }
   }, true);
 })();

@@ -99,7 +99,7 @@ export const listPhotos = async (dir: string, photoExtensions: string[], rel: st
     Promise.all(raw
       .filter(e => e.isDirectory())
       .map(e => listPhotos(join(dir, e.name), photoExtensions, rel))
-    ),
+    ).then(dirs => dirs.filter(d => d.subdirectories.length + d.photos.length)),
   ]);
 
   for (const entry of [...photos, ...subdirectories]) {

@@ -235,7 +235,7 @@
   }
 
   window.addEventListener("keydown", e => {
-    if (document.activeElement !== $search) {
+    if (document.activeElement !== $search && !e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
       switch (e.keyCode) {
       case 32: // Space
       case 75: // k
