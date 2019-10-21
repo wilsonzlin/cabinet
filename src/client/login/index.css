@@ -17,13 +17,13 @@ form {
   color: #ae0018;
 }
 
-label {
-  margin: 1rem 0;
-}
-
 label, span, input {
   display: block;
   width: 100%;
+}
+
+label {
+  margin: 1rem 0;
 }
 
 input {
@@ -31,6 +31,7 @@ input {
   padding: 0.5rem;
   border: 1px solid #555;
   border-radius: 0.25rem;
+  color: #333;
 }
 
 button {
