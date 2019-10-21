@@ -1,11 +1,3 @@
-body {
-  display: flex;
-}
-
-body > * {
-  height: 100vh;
-}
-
 #cover {
   display: none;
   position: fixed;
@@ -134,7 +126,7 @@ body.s-engaged * {
 
 #player {
   flex-grow: 1;
-  position: relative; /* For #overlay */
+  position: relative; /* For #overlay. */
 }
 
 #player:-webkit-full-screen {

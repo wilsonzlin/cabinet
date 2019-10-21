@@ -1,8 +1,3 @@
-body {
-  display: flex;
-  min-height: 100vh;
-}
-
 form {
   margin: auto;
   padding: 1rem;

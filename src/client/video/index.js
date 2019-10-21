@@ -107,6 +107,8 @@
         $entry.dataset.current = true;
         uiState.loaded = true;
       } else {
+        // This is necessary because removeAttribute only hides video in Firefox; audio still continues.
+        $video.pause();
         // Setting to null, undefined, or "" in Firefox actually loads "null", "undefined", or "".
         $video.removeAttribute("src");
         $title.textContent = "";

@@ -1,3 +1,7 @@
+body {
+  flex-direction: column;
+}
+
 a {
   display: block;
   width: 100%;
@@ -6,6 +10,7 @@ a {
 
 #header {
   background: black;
+  /* Use fixed height for #preview. */
   height: 3rem;
 
   display: flex;
@@ -13,11 +18,6 @@ a {
   justify-content: space-between;
 
   box-shadow: 0.125rem 0 1rem #111;
-}
-
-#library, #preview {
-  /* Fill remaining space not used by #header. */
-  height: calc(100vh - 3rem);
 }
 
 #titles {
@@ -85,12 +85,17 @@ a {
 }
 
 #library {
+  /* We want to make sure this is always in the document i.e. never set to
+     display: none.
+     This is because laying out and rendering the thumbnails is expensive.
+     It's also because the reflowThumbnails function retrieves the width
+     of #library, which could fail if it doesn't get laid out quick enough
+     (race conditions).
+     This means that #preview should be a fixed overlay.
+   */
+  flex-grow: 1;
   padding: 1rem;
   overflow-y: scroll;
-}
-
-.s-previewing #library {
-  display: none;
 }
 
 #folders {
@@ -132,7 +137,14 @@ a {
 }
 
 #preview {
-  background: no-repeat center / contain;
+  background: rgba(0, 0, 0, 0.95) no-repeat center / contain;
+
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
 }
 
 body:not(.s-previewing) #preview {

@@ -5,6 +5,8 @@
     "previewing",
   ]);
 
+  const folderTitle = document.title;
+
   const $buttonUp = document.querySelector("#button-up");
   const $folders = document.querySelector("#folders");
   const $preview = document.querySelector("#preview");
@@ -30,30 +32,85 @@
     getEntryValue: $li => $li.dataset.name,
   });
 
-  const THUMBNAILS_MIN_ROW_HEIGHT = 210;
-  const THUMBNAILS_THUMBNAIL_MARGIN = 5;
-  const THUMBNAILS_REFLOW_DEBOUNCE = 400;
+  const getIndexOfThumbnail = $thumb => Array.prototype.indexOf.call($thumbnails.children, $thumb);
+  const getThumbnailUrl = $thumb => $thumb.children[0].href;
+  const getFirstThumbnail = () => $thumbnails.children[0];
+  const getLastThumbnail = () => $thumbnails.children[$thumbnails.children.length - 1];
+
+  const preview = {
+    // Unfortunately setting document.title here is needed as Firefox
+    // does not update or keep titles automatically.
+    current: undefined,
+    load ($thumb) {
+      this.current = $thumb;
+      uiState.previewing = true;
+      $previewTitle.textContent = $thumb.dataset.name;
+      $preview.style.backgroundImage = `url("${getThumbnailUrl($thumb)}")`;
+      document.title = `${$thumb.dataset.name} - Cabinet Photos`;
+    },
+    unload () {
+      this.current = undefined;
+      uiState.previewing = false;
+      $previewTitle.textContent = "";
+      $preview.style.backgroundImage = "";
+      document.title = folderTitle;
+    },
+  };
+
+  window.addEventListener("popstate", e => {
+    if (e.state) {
+      preview.load($thumbnails.children[e.state]);
+    } else {
+      preview.unload();
+    }
+  });
+
+  const navigation = {
+    _updateUrl ($thumb) {
+      const idx = getIndexOfThumbnail($thumb);
+      history.replaceState(idx, undefined, getThumbnailUrl($thumb));
+    },
+    start ($thumb) {
+      preview.load($thumb);
+      history.pushState(undefined, undefined, undefined);
+      this._updateUrl($thumb);
+    },
+    end () {
+      history.back();
+    },
+    next () {
+      const $next = preview.current.nextElementSibling || getFirstThumbnail();
+      preview.load($next);
+      this._updateUrl($next);
+    },
+    previous () {
+      const $prev = preview.current.previousElementSibling || getLastThumbnail();
+      preview.load($prev);
+      this._updateUrl($prev);
+    },
+  };
 
   $thumbnails.addEventListener("click", e => {
     if (e.target.tagName === "A") {
       e.preventDefault();
-      const $thumb = e.target.parentNode;
-      const index = Array.prototype.indexOf.call($thumbnails.children, $thumb);
-      loadPhoto($thumb);
-      history.pushState(index, undefined, null);
+      navigation.start(e.target.parentNode);
     }
   });
 
   configureTargets(dir => {
     switch (dir) {
     case -1:
-      previousPhoto();
+      navigation.previous();
       break;
     case 1:
-      nextPhoto();
+      navigation.next();
       break;
     }
   });
+
+  const THUMBNAILS_MIN_ROW_HEIGHT = 210;
+  const THUMBNAILS_THUMBNAIL_MARGIN = 5;
+  const THUMBNAILS_REFLOW_DEBOUNCE = 400;
 
   let reflowThumbnailsSetTimeout;
   let reflowThumbnailsRAF;
@@ -101,53 +158,24 @@
   window.addEventListener("orientationchange", reflowThumbnails);
   reflowThumbnails();
 
-  let currentPhoto = undefined;
-  const loadPhoto = $thumb => {
-    currentPhoto = $thumb;
-    uiState.previewing = true;
-    $previewTitle.textContent = $thumb.dataset.name;
-    $preview.style.backgroundImage = `url("${$thumb.children[0].href}")`;
-  };
-  const unloadPhoto = () => {
-    currentPhoto = undefined;
-    uiState.previewing = false;
-    $previewTitle.textContent = "";
-    $preview.style.backgroundImage = "";
-  };
-  const previousPhoto = () => {
-    const $prev = currentPhoto.previousElementSibling || $thumbnails.children[$thumbnails.children.length - 1];
-    loadPhoto($prev);
-  };
-  const nextPhoto = () => {
-    const $next = currentPhoto.nextElementSibling || $thumbnails.children[0];
-    loadPhoto($next);
-  };
-  window.addEventListener("popstate", e => {
-    if (e.state) {
-      loadPhoto($thumbnails.children[e.state]);
-    } else {
-      unloadPhoto();
-    }
-  });
-
   window.addEventListener("keydown", e => {
     switch (e.keyCode) {
     case 37: // Left
       if (uiState.previewing) {
-        previousPhoto();
+        navigation.previous();
       }
       break;
 
     case 39: // Right
       if (uiState.previewing) {
-        nextPhoto();
+        navigation.next();
       }
       break;
 
     case 27: // Escape
       if (uiState.previewing) {
         e.preventDefault();
-        history.back();
+        navigation.end();
       }
       break;
     }
