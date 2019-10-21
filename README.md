@@ -87,7 +87,7 @@ To create a new user, create a new `.json` file with the following structure:
 }
 ```
 
-Passwords are hashed using bcrypt. A convenient way to generate the hash for a password is to use `npx bcrypt-cli "PLAINTEXT_PASSWORD" 10`.
+Passwords are hashed using bcrypt. A convenient way to generate the hash for a password is to use `npx @wzlin/bcrypt-cli`.
 
 ### Behaviour
 

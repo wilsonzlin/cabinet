@@ -18,45 +18,6 @@ function processLastModifiedStat (stats) {
   return Math.floor(stats.mtime.getTime() / 1000);
 }
 
-function lstatFile (path) {
-  return new Promise((resolve, reject) => {
-    fs.lstat(path, (err, stats) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      resolve(stats);
-    });
-  });
-}
-
-function readFile (path) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, "utf8", (err, data) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      resolve(data);
-    });
-  });
-}
-
-function writeFile (path, data) {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(path, data, err => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
-
 function BadHTTPStatusException (statusCode) {
   this.statusCode = statusCode;
   this.message = "Bad HTTP response status: " + statusCode;
