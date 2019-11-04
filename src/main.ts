@@ -11,7 +11,7 @@ const args = minimist(process.argv.slice(2));
 
 const LIBRARY_DIR: string = args.library;
 const USERS_DIR: string | undefined = args.users;
-const VIDEO_EXTENSIONS: string[] = (args.video || "mp4").split(",");
+const VIDEO_EXTENSIONS: string[] = (args.video || "mp4,m4v").split(",");
 const PHOTO_EXTENSIONS: string[] = (args.photo || "png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp").split(",");
 const PORT: number = args.port || Math.floor(Math.random() * 8976 + 1024);
 const SSL_KEY: string | undefined = args.key;

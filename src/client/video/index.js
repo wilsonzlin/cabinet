@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 (() => {
   Document.prototype.exitFullscreen =
@@ -15,11 +15,11 @@
 
   const [hiddenPropertyName, visibilityChangeEventName] = (() => {
     if (document.hidden !== undefined) {
-      return ["hidden", "visibilitychange"];
+      return ['hidden', 'visibilitychange'];
     } else if (document.msHidden !== undefined) {
-      return ["msHidden", "msvisibilitychange"];
+      return ['msHidden', 'msvisibilitychange'];
     } else if (document.webkitHidden !== undefined) {
-      return ["webkitHidden", "webkitvisibilitychange"];
+      return ['webkitHidden', 'webkitvisibilitychange'];
     }
   })();
 
@@ -32,48 +32,76 @@
    *  - usingTouch: User is using touch input.
    */
   const uiState = createUiState([
-    "engaged",
-    "fullscreen",
-    "hoveringProgress",
-    "loaded",
-    "playing",
-    "usingTouch",
+    'engaged',
+    'fullscreen',
+    'hoveringProgress',
+    'loaded',
+    'playing',
+    'usingTouch',
   ]);
 
-  const $buttonCoverClose = document.querySelector("#button-cover-close");
-  const $buttonFullscreen = document.querySelector("#button-fullscreen");
-  const $buttonNext = document.querySelector("#button-next");
-  const $buttonPlayback = document.querySelector("#button-playback");
-  const $buttonPrevious = document.querySelector("#button-previous");
-  const $buttonStop = document.querySelector("#button-stop");
-  const $cover = document.querySelector("#cover");
-  const $list = document.querySelector("#list");
-  const $pane = document.querySelector("#pane");
-  const $player = document.querySelector("#player");
-  const $progress = document.querySelector("#progress");
-  const $search = document.querySelector("#search");
-  const $title = document.querySelector("#title");
-  const $video = document.querySelector("#video");
+  const $buttonCoverClose = document.querySelector('#button-cover-close');
+  const $buttonFullscreen = document.querySelector('#button-fullscreen');
+  const $buttonNext = document.querySelector('#button-next');
+  const $buttonPlayback = document.querySelector('#button-playback');
+  const $buttonPrevious = document.querySelector('#button-previous');
+  const $buttonStop = document.querySelector('#button-stop');
+  const $cover = document.querySelector('#cover');
+  const $list = document.querySelector('#list');
+  const $pane = document.querySelector('#pane');
+  const $player = document.querySelector('#player');
+  const $progress = document.querySelector('#progress');
+  const $search = document.querySelector('#search');
+  const $targets = document.querySelector('#targets');
+  const $titleName = document.querySelector('#title-name');
+  const $titleError = document.querySelector('#title-error');
+  const $video = document.querySelector('#video');
 
-  $buttonFullscreen.addEventListener("click", () => toggleFullscreen());
-  $buttonNext.addEventListener("click", () => videoControl.next());
-  $buttonPlayback.addEventListener("click", () => videoControl.togglePlayback());
-  $buttonPrevious.addEventListener("click", () => videoControl.previous());
-  $buttonStop.addEventListener("click", () => videoControl.current = null);
+  const $rippleElements = [];
+  const ripples = (...ripples) => {
+    let next$RippleIdx = 0;
+    for (const [x, y, $parent] of ripples) {
+      const $ripple = $rippleElements[next$RippleIdx] =
+        $rippleElements[next$RippleIdx] || document.createElement('div');
+
+      $ripple.classList.remove('ripple');
+      Object.assign($ripple.style, {
+        left: `${x}px`,
+        top: `${y}px`,
+      });
+      $parent.appendChild($ripple);
+      // Reflow the element so the animation plays again.
+      // In Edge if $ripple doesn't move the animation won't repeat otherwise.
+      $ripple.clientWidth;
+      $ripple.classList.add('ripple');
+      $ripple.clientWidth;
+
+      next$RippleIdx++;
+    }
+    $rippleElements.splice(next$RippleIdx).forEach($r => $r.remove());
+  };
+  const ripple = (x, y, $parent) => {
+    ripples([x, y, $parent]);
+  };
+
+  $buttonFullscreen.addEventListener('click', () => toggleFullscreen());
+  $buttonNext.addEventListener('click', () => videoControl.next());
+  $buttonPlayback.addEventListener('click', () => videoControl.togglePlayback());
+  $buttonPrevious.addEventListener('click', () => videoControl.previous());
+  $buttonStop.addEventListener('click', () => videoControl.current = null);
 
   // TODO Should mute/pause as well?
-  const toggleCover = force => $cover.style.display = (force || document[hiddenPropertyName]) ? "block" : "none";
+  const toggleCover = force => $cover.style.display = (force || document[hiddenPropertyName]) ? 'block' : 'none';
 
   document.addEventListener(visibilityChangeEventName, () => toggleCover());
 
-  window.addEventListener("focus", () => toggleCover(false));
-  window.addEventListener("blur", () => toggleCover(true));
+  window.addEventListener('focus', () => toggleCover(false));
+  window.addEventListener('blur', () => toggleCover(true));
 
-  $buttonCoverClose.addEventListener("click", () => toggleCover(false));
+  $buttonCoverClose.addEventListener('click', () => toggleCover(false));
 
-  $list.addEventListener("click", e => {
-    if (e.target.tagName === "A") {
-      e.preventDefault();
+  $list.addEventListener('click', e => {
+    if (e.target.classList.contains('entry-link')) {
       videoControl.current = e.target.parentNode;
     }
   });
@@ -100,31 +128,39 @@
       }
     },
     set current ($entry) {
+      if ($entry === this._current) {
+        return;
+      }
+
       if ($entry) {
         const $link = $entry.children[1];
-        $video.src = $link.href;
-        $title.textContent = $link.textContent;
+        $video.src = $link.dataset.url;
+        $titleName.textContent = $link.textContent;
         $entry.dataset.current = true;
         uiState.loaded = true;
       } else {
         // This is necessary because removeAttribute only hides video in Firefox; audio still continues.
         $video.pause();
         // Setting to null, undefined, or "" in Firefox actually loads "null", "undefined", or "".
-        $video.removeAttribute("src");
-        $title.textContent = "";
+        $video.removeAttribute('src');
+        $titleName.textContent = '';
         $progress.max = 0;
         // Browsers don't consistently fire "pause" or "ended" events when changing
         // sources, so set engaged state here.
         uiState.loaded = uiState.playing = uiState.engaged = false;
       }
 
+      $titleError.textContent = '';
       if (this._current) {
         delete this._current.dataset.current;
       }
       this._current = $entry;
     },
     togglePlayback () {
-      uiState.playing ? $video.pause() : $video.play();
+      // Firefox seems to insist on playing even if no video is loaded.
+      if (this._current) {
+        uiState.playing ? $video.pause() : $video.play();
+      }
     },
     next () {
       if (this._current && this._current.nextElementSibling) {
@@ -140,59 +176,66 @@
     },
   };
 
-  $progress.addEventListener("mouseenter", () => uiState.hoveringProgress = true);
-  $progress.addEventListener("mouseleave", () => uiState.hoveringProgress = false);
-  $progress.addEventListener("input", () => $video.currentTime = $progress.value);
+  touch.onMouse($progress, 'mouseenter', () => uiState.hoveringProgress = true);
+  touch.onMouse($progress, 'mouseleave', () => uiState.hoveringProgress = false);
+  $progress.addEventListener('input', () => $video.currentTime = $progress.value);
 
-  $video.addEventListener("ended", () => uiState.playing = uiState.engaged = false);
-  $video.addEventListener("loadedmetadata", () => $progress.max = $video.duration);
-  $video.addEventListener("play", () => uiState.playing = true);
-  $video.addEventListener("pause", () => uiState.playing = uiState.engaged = false);
-  $video.addEventListener("timeupdate", () => $progress.value = $video.currentTime);
-
-  let playerLastClickTime;
-  let playerSingleClickSetTimeout;
-  // This event listener handles single clicks/taps for toggling playback
-  // and two or more clicks/taps for rewinding/fast-forwarding.
-  configureTargets(direction => {
-    clearTimeout(playerSingleClickSetTimeout);
-    if (playerLastClickTime + 500 >= Date.now()) {
-      // Chained fast-forward with 2+ clicks/taps
-      if (uiState.loaded) {
-        $video.currentTime += 10 * direction;
-      }
-    } else {
-      playerSingleClickSetTimeout = setTimeout(() => {
-        videoControl.togglePlayback();
-      }, 160);
-    }
-    playerLastClickTime = Date.now();
+  $video.addEventListener('ended', () => uiState.playing = uiState.engaged = false);
+  $video.addEventListener('loadedmetadata', () => $progress.max = $video.duration);
+  $video.addEventListener('play', () => uiState.playing = true);
+  $video.addEventListener('pause', () => uiState.playing = uiState.engaged = false);
+  $video.addEventListener('timeupdate', () => $progress.value = $video.currentTime);
+  $video.addEventListener('error', e => {
+    uiState.playing = uiState.engaged = uiState.loaded = false;
+    console.error($video.error);
+    $titleError.textContent = $video.error.message;
   });
 
-  let lastTouchStart = -Infinity;
+  // This event listener handles and two or more chained clicks/taps for rewinding/fast-forwarding,
+  // and tapping with two fingers for toggling playback.
+  // The first tap is always used to just disengage. This is because moving the mouse automatically
+  // disengages but touch users don't have an easy way to disengage.
+  let playerLastPressTime;
+  // Often a tap with two fingers is registered as a touch event with one touch, followed almost
+  // instantly with another event with two touches.
+  let oneTouchSetTimeout;
+  configureTargets((direction, e) => {
+    clearTimeout(oneTouchSetTimeout);
+    if (uiState.loaded) {
+      if (e.touches && e.touches.length === 2) {
+        videoControl.togglePlayback();
+        ripples(...touch.getRelativeTouchCoordiates(e.touches, $targets).map(([x, y]) => [x, y, $targets]));
+        return;
+      }
+
+      if (Date.now() < playerLastPressTime + 500) {
+        // Chained fast-forward with 2+ clicks/taps
+        oneTouchSetTimeout = setTimeout((direction, $target) => {
+          $video.currentTime += 10 * direction;
+          ripple(...touch.getOffsetCoordinatesOfEvent(e), $target);
+        }, 100, direction, e.target);
+      }
+      playerLastPressTime = Date.now();
+    }
+  });
+
+  // Note that Edge will send mouse events even if the user is touching,
+  // so for consistency use one idle timeout for both mouse and touch.
+  // https://github.com/MicrosoftEdge/WebAppsDocs/issues/39
+  const IDLE_MS_BEFORE_ENGAGED = 7500;
   let engagedSetTimeout;
-  window.addEventListener("touchstart", () => {
-    lastTouchStart = Date.now();
-    uiState.usingTouch = true;
-    uiState.engaged = false;
-  }, true);
+  touch.onChange(usingTouch => uiState.usingTouch = usingTouch);
+  document.addEventListener('touchstart', () => uiState.engaged = false, true);
   // Don't set engaged state until touch has ended.
-  window.addEventListener("touchend", () => {
+  document.addEventListener('touchend', () => {
     clearTimeout(engagedSetTimeout);
     engagedSetTimeout = setTimeout(() => {
       if (uiState.playing) {
         uiState.engaged = true;
       }
-    }, 5000);
+    }, IDLE_MS_BEFORE_ENGAGED);
   }, true);
-  window.addEventListener("mousemove", () => {
-    // This is necessary as mousemove events are also emitted while touching,
-    // so we need to ensure that this was caused by a mouse and not touch input.
-    // If it's been long enough since we've last seen a touch event (or one
-    // has never occured), we assume that the input is (or has changed to) a mouse.
-    if (lastTouchStart + 500 >= Date.now()) {
-      return;
-    }
+  touch.onMouse(document, 'mousemove', () => {
     clearTimeout(engagedSetTimeout);
     uiState.usingTouch = false;
     uiState.engaged = false;
@@ -200,13 +243,13 @@
       if (uiState.playing && !uiState.hoveringProgress) {
         uiState.engaged = true;
       }
-    }, 1000);
+    }, IDLE_MS_BEFORE_ENGAGED);
   }, true);
 
   const toggleFullscreen = () => {
     if (navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform)) {
       uiState.fullscreen = !uiState.fullscreen;
-      $pane.style.display = uiState.fullscreen ? "none" : "";
+      $pane.style.display = uiState.fullscreen ? 'none' : '';
       return;
     }
 
@@ -226,15 +269,15 @@
     );
   };
   for (const event of [
-    "fullscreenchange",
-    "webkitfullscreenchange",
-    "mozfullscreenchange",
-    "msfullscreenchange",
+    'fullscreenchange',
+    'webkitfullscreenchange',
+    'mozfullscreenchange',
+    'msfullscreenchange',
   ]) {
     window.addEventListener(event, onFullscreenChange);
   }
 
-  window.addEventListener("keydown", e => {
+  window.addEventListener('keydown', e => {
     if (document.activeElement !== $search && !e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
       switch (e.keyCode) {
       case 32: // Space

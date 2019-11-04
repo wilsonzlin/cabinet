@@ -1,27 +1,27 @@
-"use strict";
+'use strict';
 
 (() => {
   const uiState = createUiState([
-    "previewing",
+    'previewing',
   ]);
 
   const folderTitle = document.title;
 
-  const $buttonUp = document.querySelector("#button-up");
-  const $folders = document.querySelector("#folders");
-  const $preview = document.querySelector("#preview");
-  const $previewTitle = document.querySelector("#preview-title");
-  const $search = document.querySelector("#search");
-  const $thumbnails = document.querySelector("#thumbnails");
+  const $buttonUp = document.querySelector('#button-up');
+  const $folders = document.querySelector('#folders');
+  const $preview = document.querySelector('#preview');
+  const $previewTitle = document.querySelector('#preview-title');
+  const $search = document.querySelector('#search');
+  const $thumbnails = document.querySelector('#thumbnails');
 
-  $buttonUp.addEventListener("click", () => {
+  $buttonUp.addEventListener('click', () => {
     if (uiState.previewing) {
       history.back();
     } else {
-      if (location.href.endsWith("/")) {
-        location.href = "../";
+      if (location.href.endsWith('/')) {
+        location.href = '../';
       } else {
-        location.href = "./";
+        location.href = './';
       }
     }
   });
@@ -51,13 +51,13 @@
     unload () {
       this.current = undefined;
       uiState.previewing = false;
-      $previewTitle.textContent = "";
-      $preview.style.backgroundImage = "";
+      $previewTitle.textContent = '';
+      $preview.style.backgroundImage = '';
       document.title = folderTitle;
     },
   };
 
-  window.addEventListener("popstate", e => {
+  window.addEventListener('popstate', e => {
     if (e.state) {
       preview.load($thumbnails.children[e.state]);
     } else {
@@ -90,8 +90,8 @@
     },
   };
 
-  $thumbnails.addEventListener("click", e => {
-    if (e.target.tagName === "A") {
+  $thumbnails.addEventListener('click', e => {
+    if (e.target.tagName === 'A') {
       e.preventDefault();
       navigation.start(e.target.parentNode);
     }
@@ -128,8 +128,8 @@
             currentRow.push(thumbs.shift());
             currentRowHeight =
               (totalWidth
-               - (THUMBNAILS_THUMBNAIL_MARGIN + 1)
-               * (Math.max(0, currentRow.length - 1))
+                - (THUMBNAILS_THUMBNAIL_MARGIN + 1)
+                * (Math.max(0, currentRow.length - 1))
               )
               / currentRow.reduce((base, $thumb) => {
                 const width = +$thumb.dataset.width;
@@ -146,7 +146,7 @@
             Object.assign($thumb.style, {
               height: `${height}px`,
               width: `${ratio * height}px`,
-              marginRight: i < currentRow.length - 1 ? `${THUMBNAILS_THUMBNAIL_MARGIN}px` : "",
+              marginRight: i < currentRow.length - 1 ? `${THUMBNAILS_THUMBNAIL_MARGIN}px` : '',
             });
           }
         }
@@ -154,11 +154,11 @@
     }, THUMBNAILS_REFLOW_DEBOUNCE);
   };
 
-  window.addEventListener("resize", reflowThumbnails);
-  window.addEventListener("orientationchange", reflowThumbnails);
+  window.addEventListener('resize', reflowThumbnails);
+  window.addEventListener('orientationchange', reflowThumbnails);
   reflowThumbnails();
 
-  window.addEventListener("keydown", e => {
+  window.addEventListener('keydown', e => {
     if (document.activeElement !== $search && !e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
       switch (e.keyCode) {
       case 37: // Left

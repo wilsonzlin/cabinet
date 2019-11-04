@@ -2,6 +2,13 @@
   box-sizing: border-box;
 }
 
+*:not(input):not(textarea) {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 ::-moz-focus-inner {
   border: 0;
 }
@@ -11,6 +18,9 @@
 }
 
 html {
+  /* Prevent panning, pinching, and double-tapping to move/scale viewport. */
+  touch-action: none;
+
   font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, Segoe UI, Oxygen, Ubuntu, Cantarell, Open Sans, sans-serif;
   font-size: 16px;
   line-height: 1.5;
@@ -66,11 +76,16 @@ li {
   display: block;
 }
 
+.ripple-target {
+  position: relative;
+  overflow: hidden;
+}
+
 #targets {
   display: flex;
   align-items: stretch;
 }
 
-#targets > * {
+#targets > :not(.ripple) {
   flex: 1 0 0;
 }

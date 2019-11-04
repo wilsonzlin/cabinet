@@ -1,3 +1,30 @@
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(800);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(800);
+    opacity: 0;
+  }
+}
+
+.ripple {
+  animation-name: ripple;
+  animation-duration: 0.5s;
+  animation-fill-mode: forwards;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 100%;
+  height: 1px;
+  width: 1px;
+  position: absolute;
+  pointer-events: none;
+}
+
 #cover {
   display: none;
   position: fixed;
@@ -97,13 +124,12 @@ body.s-engaged * {
 
 .entry-link {
   color: #ddd;
-  text-decoration: none;
+  text-align: left;
   font-size: 0.75rem;
-  outline: 0;
   padding: 0.5rem 0.5rem 0.5rem 0;
 
   flex-grow: 1;
-  word-wrap: break-word;
+  word-break: break-all;
 }
 
 #pane-controls {
@@ -176,16 +202,19 @@ body:not(.s-loaded) #video {
 
 #title {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
-  height: 3rem;
-  line-height: 3rem;
+  padding: 1rem;
 
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+#title-error {
+  color: orange;
+  font-size: 0.875rem;
+}
+
 .s-engaged #title {
-  transform: translateY(-3rem);
+  transform: translateY(-100%);
 }
 
 #player-controls {
