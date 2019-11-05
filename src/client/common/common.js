@@ -59,6 +59,34 @@ const configureSearch = (
   });
 };
 
+// Get size and position information for an element that doesn't change in size
+// or position unless the viewport changes.
+const position = (() => {
+  let cache;
+
+  const resetCache = () => cache = new WeakMap();
+  resetCache();
+
+  window.addEventListener('resize', resetCache);
+  window.addEventListener('orientationchange', resetCache);
+
+  const computeIfAbsent = $elem => {
+    const cached = cache.get($elem);
+    if (cached) {
+      return cached;
+    }
+    const rect = $elem.getBoundingClientRect();
+    cache.set($elem, rect);
+    return rect;
+  };
+
+  return Object.fromEntries([
+    ...['top', 'right', 'bottom', 'left', 'width', 'height']
+      .map(prop => [prop, $elem => computeIfAbsent($elem)[prop]]),
+    ['all', $elem => computeIfAbsent($elem)],
+  ]);
+})();
+
 // Note that Edge will send mouse events even if the user is touching.
 // https://github.com/MicrosoftEdge/WebAppsDocs/issues/39
 const touch = (() => {
@@ -74,23 +102,29 @@ const touch = (() => {
 
   // NOTE: Edge does not support touch events on `window`.
   const changeListeners = [];
-  ['touchstart', 'touchmove', 'touchend'].forEach(event =>
+  for (const event of ['touchstart', 'touchmove', 'touchend']) {
     document.addEventListener(event, () => {
       lastTouchEvent = Date.now();
       if (!usingTouch) {
         usingTouch = true;
-        changeListeners.forEach(listener => listener(usingTouch));
+        for (const listener of changeListeners) {
+          listener(usingTouch);
+        }
       }
-    }, true));
+    }, true);
+  }
 
-  ['mousedown', 'mousemove', 'mouseup'].forEach(event =>
+  for (const event of ['mousedown', 'mousemove', 'mouseup']) {
     document.addEventListener(event, () => {
       const newUsingTouch = mouseEventIsActuallyTouch();
       if (newUsingTouch !== usingTouch) {
         usingTouch = newUsingTouch;
-        changeListeners.forEach(listener => listener(usingTouch));
+        for (const listener of changeListeners) {
+          listener(usingTouch);
+        }
       }
-    }, true));
+    }, true);
+  }
 
   return {
     mouseEventIsActuallyTouch,
@@ -109,19 +143,19 @@ const touch = (() => {
       return [clientX - rect.left, clientY - rect.top];
     },
     getRelativeTouchCoordiates (touches, $elem) {
-      const rect = $elem.getBoundingClientRect();
+      const rect = position.all($elem);
       const positions = [];
       for (const touch of touches) {
         positions.push(this.getRelativeCoordinates(touch.clientX, touch.clientY, rect));
       }
       return positions;
     },
-    getOffsetCoordinatesOfEvent (e) {
+    getEventCoordinatesRelativeToTarget (e) {
       if (e.touches && e.touches.length) {
         return this.getRelativeTouchCoordiates([e.touches[0]], e.target)[0];
       }
       // e.offset{X,Y} doesn't seem to work reliably.
-      return this.getRelativeCoordinates(e.clientX, e.clientY, e.target.getBoundingClientRect());
+      return this.getRelativeCoordinates(e.clientX, e.clientY, position.all(e.target));
     }
   };
 })();
@@ -135,7 +169,7 @@ const configureTargets = onPress => {
     // points is provided as the target. However, when the user switches back to one touch
     // input, Firefox still keeps using the outer element as the target.
     if ($target === $targets) {
-      const pos = touch.getOffsetCoordinatesOfEvent(e, $targets);
+      const pos = touch.getEventCoordinatesRelativeToTarget(e, $targets);
       dir = pos[0] <= $targets.offsetWidth / 2 ? -1 : 1;
     } else {
       dir = $target === $targets.firstElementChild ? -1 : 1;
@@ -145,3 +179,39 @@ const configureTargets = onPress => {
   $targets.addEventListener('touchstart', eventListener);
   touch.onMouse($targets, 'mousedown', eventListener);
 };
+
+const ripples = (() => {
+  const $rippleElements = [];
+
+  const ripples = (...ripples) => {
+    let next$RippleIdx = 0;
+    for (const [$container, [x, y]] of ripples) {
+      const $ripple = $rippleElements[next$RippleIdx] =
+        $rippleElements[next$RippleIdx] || document.createElement('div');
+
+      $ripple.classList.remove('ripple');
+      Object.assign($ripple.style, {
+        left: `${x}px`,
+        top: `${y}px`,
+      });
+      $container.appendChild($ripple);
+      // Reflow the element so the animation plays again.
+      // In Edge if $ripple doesn't move the animation won't repeat otherwise.
+      $ripple.clientWidth;
+      $ripple.classList.add('ripple');
+      $ripple.clientWidth;
+
+      next$RippleIdx++;
+    }
+    for (const $r of $rippleElements.splice(next$RippleIdx)) {
+      $r.remove();
+    }
+  };
+
+  return {
+    one($container, coordinates) {
+      ripples([$container, coordinates]);
+    },
+    many: ripples,
+  };
+})();

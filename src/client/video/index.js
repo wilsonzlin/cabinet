@@ -44,54 +44,42 @@
   const $buttonFullscreen = document.querySelector('#button-fullscreen');
   const $buttonNext = document.querySelector('#button-next');
   const $buttonPlayback = document.querySelector('#button-playback');
+  const $buttonPlaybackTouchOnly = document.querySelector('#button-playback-touch-only');
   const $buttonPrevious = document.querySelector('#button-previous');
   const $buttonStop = document.querySelector('#button-stop');
   const $cover = document.querySelector('#cover');
-  const $list = document.querySelector('#list');
+  const $$entry = [...document.querySelectorAll('.entry')];
+  const $folders = document.querySelector('#folders');
   const $pane = document.querySelector('#pane');
   const $player = document.querySelector('#player');
   const $progress = document.querySelector('#progress');
   const $search = document.querySelector('#search');
+  const $speed = document.querySelector('#speed');
   const $targets = document.querySelector('#targets');
   const $titleName = document.querySelector('#title-name');
   const $titleError = document.querySelector('#title-error');
   const $video = document.querySelector('#video');
 
-  const $rippleElements = [];
-  const ripples = (...ripples) => {
-    let next$RippleIdx = 0;
-    for (const [x, y, $parent] of ripples) {
-      const $ripple = $rippleElements[next$RippleIdx] =
-        $rippleElements[next$RippleIdx] || document.createElement('div');
-
-      $ripple.classList.remove('ripple');
-      Object.assign($ripple.style, {
-        left: `${x}px`,
-        top: `${y}px`,
-      });
-      $parent.appendChild($ripple);
-      // Reflow the element so the animation plays again.
-      // In Edge if $ripple doesn't move the animation won't repeat otherwise.
-      $ripple.clientWidth;
-      $ripple.classList.add('ripple');
-      $ripple.clientWidth;
-
-      next$RippleIdx++;
-    }
-    $rippleElements.splice(next$RippleIdx).forEach($r => $r.remove());
-  };
-  const ripple = (x, y, $parent) => {
-    ripples([x, y, $parent]);
-  };
-
   $buttonFullscreen.addEventListener('click', () => toggleFullscreen());
   $buttonNext.addEventListener('click', () => videoControl.next());
   $buttonPlayback.addEventListener('click', () => videoControl.togglePlayback());
+  $buttonPlaybackTouchOnly.addEventListener('touchstart', () => {
+    const $b = $buttonPlaybackTouchOnly;
+    videoControl.togglePlayback();
+    // Show ripple through centre of button regardless of where tapped.
+    ripples.one($targets, touch.getRelativeCoordinates(
+      position.left($b) + position.width($b) / 2,
+      position.top($b) + position.height($b) / 2,
+      position.all($targets)
+    ));
+  });
   $buttonPrevious.addEventListener('click', () => videoControl.previous());
   $buttonStop.addEventListener('click', () => videoControl.current = null);
 
   // TODO Should mute/pause as well?
-  const toggleCover = force => $cover.style.display = (force || document[hiddenPropertyName]) ? 'block' : 'none';
+  const toggleCover = (shouldShow = document[hiddenPropertyName]) => $cover.style.display = shouldShow
+    ? 'block'
+    : 'none';
 
   document.addEventListener(visibilityChangeEventName, () => toggleCover());
 
@@ -100,7 +88,7 @@
 
   $buttonCoverClose.addEventListener('click', () => toggleCover(false));
 
-  $list.addEventListener('click', e => {
+  $folders.addEventListener('click', e => {
     if (e.target.classList.contains('entry-link')) {
       videoControl.current = e.target.parentNode;
     }
@@ -108,9 +96,14 @@
 
   configureSearch({
     $input: $search,
-    getEntries: () => $list.children,
+    getEntries: () => $$entry,
     getEntryValue: $entry => $entry.children[1].textContent,
     onSearchEnd: () => videoControl.scrollToCurrent(),
+  });
+
+  // Probably don't need to sync with $video.onratechange, as only $speed should be able to set speed.
+  $speed.addEventListener('change', e => {
+    $video.playbackRate = +e.target.value;
   });
 
   const videoControl = {
@@ -119,11 +112,11 @@
       const $entry = this._current;
       if ($entry) {
         const offsetTop = $entry.getBoundingClientRect().top;
-        const listHeight = $list.clientHeight;
+        const listHeight = position.height($folders);
         if (offsetTop > listHeight * 0.95) {
-          $list.scrollTop += offsetTop - $list.clientHeight + 120;
+          $folders.scrollTop += offsetTop - $folders.clientHeight + 120;
         } else if (offsetTop < listHeight * 0.15) {
-          $list.scrollTop += offsetTop - 150;
+          $folders.scrollTop += offsetTop - 150;
         }
       }
     },
@@ -163,16 +156,17 @@
       }
     },
     next () {
-      if (this._current && this._current.nextElementSibling) {
-        this.current = this._current.nextElementSibling;
-        this.scrollToCurrent();
-      }
+      // This should end if currently the last video and start from beginning if nothing loaded.
+      this.current = $$entry[$$entry.indexOf(this._current) + 1] || null;
+      this.scrollToCurrent();
     },
     previous () {
-      if (this._current && this._current.previousElementSibling) {
-        this.current = this._current.previousElementSibling;
-        this.scrollToCurrent();
-      }
+      // This should end if currently the first video and start from end if nothing loaded.
+      this.current = (this._current == null
+        ? $$entry[$$entry.length - 1]
+        : $$entry[$$entry.indexOf(this._current) - 1])
+        || null;
+      this.scrollToCurrent();
     },
   };
 
@@ -192,28 +186,21 @@
   });
 
   // This event listener handles and two or more chained clicks/taps for rewinding/fast-forwarding,
-  // and tapping with two fingers for toggling playback.
-  // The first tap is always used to just disengage. This is because moving the mouse automatically
-  // disengages but touch users don't have an easy way to disengage.
+  // and tapping just once for toggling engagement.
+  // Balance wait time between average duration between two or more clicks/taps and maximum delay
+  // before UI feels unresponsive.
+  const CHAINED_PRESSES_WAIT_MS = 300;
   let playerLastPressTime;
-  // Often a tap with two fingers is registered as a touch event with one touch, followed almost
-  // instantly with another event with two touches.
-  let oneTouchSetTimeout;
+  let singleTouchTimeout;
   configureTargets((direction, e) => {
-    clearTimeout(oneTouchSetTimeout);
+    clearTimeout(singleTouchTimeout);
     if (uiState.loaded) {
-      if (e.touches && e.touches.length === 2) {
-        videoControl.togglePlayback();
-        ripples(...touch.getRelativeTouchCoordiates(e.touches, $targets).map(([x, y]) => [x, y, $targets]));
-        return;
-      }
-
-      if (Date.now() < playerLastPressTime + 500) {
+      if (Date.now() - playerLastPressTime < CHAINED_PRESSES_WAIT_MS) {
         // Chained fast-forward with 2+ clicks/taps
-        oneTouchSetTimeout = setTimeout((direction, $target) => {
-          $video.currentTime += 10 * direction;
-          ripple(...touch.getOffsetCoordinatesOfEvent(e), $target);
-        }, 100, direction, e.target);
+        $video.currentTime += 10 * direction;
+        ripples.one(e.target, touch.getEventCoordinatesRelativeToTarget(e));
+      } else if (e.touches) {
+        singleTouchTimeout = setTimeout(engaged => uiState.engaged = engaged, CHAINED_PRESSES_WAIT_MS, !uiState.engaged);
       }
       playerLastPressTime = Date.now();
     }
@@ -225,7 +212,9 @@
   const IDLE_MS_BEFORE_ENGAGED = 7500;
   let engagedSetTimeout;
   touch.onChange(usingTouch => uiState.usingTouch = usingTouch);
-  document.addEventListener('touchstart', () => uiState.engaged = false, true);
+  // Don't use capturing listener, as $targets.ontouchdown is set to toggle engaged state
+  // on single tap, which would otherwise immediately undo this event listener's effects.
+  document.addEventListener('touchstart', () => uiState.engaged = false);
   // Don't set engaged state until touch has ended.
   document.addEventListener('touchend', () => {
     clearTimeout(engagedSetTimeout);

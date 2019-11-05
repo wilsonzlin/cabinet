@@ -1,29 +1,4 @@
-@keyframes ripple {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(800);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(800);
-    opacity: 0;
-  }
-}
 
-.ripple {
-  animation-name: ripple;
-  animation-duration: 0.5s;
-  animation-fill-mode: forwards;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 100%;
-  height: 1px;
-  width: 1px;
-  position: absolute;
-  pointer-events: none;
-}
 
 #cover {
   display: none;
@@ -90,12 +65,19 @@ body.s-engaged * {
   padding-left: 1rem;
 }
 
-#list {
+#folders {
   overflow-x: hidden;
   overflow-y: auto;
   flex-grow: 1;
 
   -webkit-overflow-scrolling: touch;
+}
+
+.folder-name {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: bold;
+  word-break: break-all;
 }
 
 .entry {
@@ -191,9 +173,12 @@ body:not(.s-loaded) #video {
 }
 
 #title, #player-controls {
+  transition: 0.3s linear;
+}
+
+#title, #player-controls {
   flex: 0 0 auto;
   padding: 0 1rem;
-  transition: 0.3s linear;
 }
 
 #targets {
@@ -234,6 +219,45 @@ body:not(.s-loaded) #video {
   padding: 0 0.5rem;
 
   font-size: 1.25rem;
+}
+
+#touch-only-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Don't make pointer events impossible in invisible container. */
+  pointer-events: none;
+}
+
+#touch-only-controls > * {
+  pointer-events: auto;
+}
+
+.s-engaged #button-playback-touch-only,
+body:not(.s-usingTouch) #button-playback-touch-only,
+body:not(.s-loaded) #button-playback-touch-only {
+  display: none;
+}
+
+#button-playback-touch-only {
+  text-shadow: inherit;
+  cursor: pointer;
+  font-size: 4rem;
+}
+
+.s-playing #button-playback-touch-only::before {
+  content: "⏸";
+}
+
+body:not(.s-playing) #button-playback-touch-only::before {
+  content: "▶";
 }
 
 .s-playing #button-playback::before {

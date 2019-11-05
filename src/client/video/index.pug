@@ -14,9 +14,20 @@ include ../common/common.pug
       #targets.ripple-target
         .target.ripple-target
         .target.ripple-target
+      #touch-only-controls
+        button#button-playback-touch-only
       #player-controls
         button#button-playback
         input#progress(type="range" value=0 min=0 step=0.1)
+        select#speed
+          option 0.25
+          option 0.5
+          option 0.75
+          option(selected) 1.0
+          option 1.25
+          option 1.5
+          option 1.75
+          option 2
         button#button-fullscreen
 
   #pane
@@ -25,16 +36,20 @@ include ../common/common.pug
         placeholder="Search..."
       )
       button#button-settings ⚙
-    ul#list
-      each video in videos
-        li.entry(data-id=video.id, data-favourite=video.favourite)
-          button.entry-fav ★
-          // It's too much hassle to use an <a> as we have to then prevent
-          // all the default UA behaviour, some of which are not preventable
-          // on old browsers. For example, Edge has no way of hiding the
-          // distracting URL popup when focus is left on the link after
-          // touching, even when blurred afterwards.
-          button.entry-link(data-url=`/stream/${video.id}`)= video.title
+    dl#folders
+      each folder in folders
+        dt.folder-name= folder.name
+        dd.folder-videos-container
+          ul.folder-videos-list
+            each video in folder.videos
+              li.entry(data-id=video.id, data-favourite=video.favourite)
+                button.entry-fav ★
+                // It's too much hassle to use an <a> as we have to then prevent
+                // all the default UA behaviour, some of which are not preventable
+                // on old browsers. For example, Edge has no way of hiding the
+                // distracting URL popup when focus is left on the link after
+                // touching, even when blurred afterwards.
+                button.entry-link(data-url=`/stream/${video.id}`)= video.title
     #pane-controls
       button#button-previous(title="Previous") ⏮
       button#button-stop(title="Stop") ⏹

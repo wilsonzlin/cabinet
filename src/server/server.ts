@@ -5,7 +5,7 @@ import crypto from "crypto";
 import express, {Request, Response} from "express";
 import {createReadStream} from "fs";
 import https from "https";
-import {join} from "path";
+import {dirname, join} from "path";
 import pug, {compileTemplate, LocalsObject} from "pug";
 import {Photo, PhotoDirectory, Video} from "./library";
 import {User} from "./user";
@@ -150,14 +150,29 @@ export const startServer = (
     // Static client.
     authenticated.get("/", (req, res) =>
       sendPage(res, LandingPage, {}));
-    authenticated.get("/video", (req, res) =>
-      sendPage(res, VideoPage, {
-        videos: videos.map((v, i) => ({
+    authenticated.get("/video", (req, res) => {
+      const videosByDir = videos.reduce((folders, v, i) => {
+        const folderName = dirname(v.relativePath);
+        if (!folders.has(folderName)) {
+          folders.set(folderName, []);
+        }
+        folders.get(folderName)!.push({
           id: i,
           title: v.title,
-          favourite: authentication ? req.user.favouriteVideos.has(v.relativePath) : false,
-        })),
-      }));
+          favourite: !!(authentication && req.user.favouriteVideos.has(v.relativePath)),
+        });
+        return folders;
+      }, new Map<string, { id: number, title: string, favourite: boolean }[]>());
+
+      return sendPage(res, VideoPage, {
+        folders: [...videosByDir.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([folder, videos]) => ({
+            name: folder,
+            videos: videos,
+          })),
+      });
+    });
     // Photo folder or file.
     authenticated.get(/^\/photo(\/?|.*)$/, (req, res) => {
       const pathComponents = req.params[0].split("/").filter(p => p);
