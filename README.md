@@ -9,7 +9,7 @@ with a single command and zero configuration.
 
 ## Requirements
 
-- [Node.js >= 7 and npm >= 5.2.](https://nodejs.org)
+- [Node.js 7 or higher.](https://nodejs.org)
 - Modern browser or IE 11.
 
 ## Quick start

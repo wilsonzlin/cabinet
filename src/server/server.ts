@@ -78,7 +78,6 @@ export const startServer = (
     const generateSession = () => crypto.randomBytes(10).toString("hex");
     const authenticateWithSession = (id: string) => sessions.get(id);
 
-
     // Login API.
     const getLoginRedirect = (req: Request) => req.query.from && req.query.from[0] === "/" ? req.query.from : "/";
     unauthenticated.get("/login", (req, res) => {

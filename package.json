@@ -28,8 +28,7 @@
     "url": "https://github.com/wilsonzlin/cabinet/issues"
   },
   "engines": {
-    "node": ">=7",
-    "npm": ">=5.2"
+    "node": ">=7"
   },
   "homepage": "https://github.com/wilsonzlin/cabinet#readme",
   "dependencies": {
