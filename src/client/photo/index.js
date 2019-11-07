@@ -97,7 +97,7 @@
     }
   });
 
-  configureTargets(dir => {
+  targets.configure(dir => {
     switch (dir) {
     case -1:
       navigation.previous();

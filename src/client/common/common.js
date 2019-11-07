@@ -91,20 +91,35 @@ const position = (() => {
 // https://github.com/MicrosoftEdge/WebAppsDocs/issues/39
 const touch = (() => {
   let usingTouch = false;
-  let lastTouchEvent = -Infinity;
+  let lastTouchStartTime = -Infinity;
+  let lastTouchEventTime = -Infinity;
+  let lastTouches;
+  let touchHasMoved = false;
 
   // This is necessary as mousemove events are also emitted while touching,
   // so we need to ensure that this was caused by a mouse and not touch input.
   // If it's been long enough since we've last seen a touch event (or one
   // has never occured), we assume that the input is (or has changed to) a mouse.
   // https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Supporting_both_TouchEvent_and_MouseEvent
-  const mouseEventIsActuallyTouch = () => Date.now() - lastTouchEvent <= 500;
+  const mouseEventIsActuallyTouch = () => Date.now() - lastTouchEventTime <= 500;
 
   // NOTE: Edge does not support touch events on `window`.
   const changeListeners = [];
   for (const event of ['touchstart', 'touchmove', 'touchend']) {
-    document.addEventListener(event, () => {
-      lastTouchEvent = Date.now();
+    document.addEventListener(event, e => {
+      lastTouchEventTime = Date.now();
+      // Note that touchend does not have touches.
+      if (e.type === 'touchstart') {
+        lastTouchStartTime = Date.now();
+        touchHasMoved = false;
+        lastTouches = e.touches;
+      } else if (e.type === 'touchmove') {
+        // Humans aren't stable and inputs aren't accurate, so assume that any
+        // touchmove events within some time of the touchstart should not
+        // actually be interpreted as movement.
+        touchHasMoved = Date.now() - lastTouchStartTime > 150;
+        lastTouches = e.touches;
+      }
       if (!usingTouch) {
         usingTouch = true;
         for (const listener of changeListeners) {
@@ -127,7 +142,13 @@ const touch = (() => {
   }
 
   return {
-    mouseEventIsActuallyTouch,
+    isTouchEvent: mouseEventIsActuallyTouch,
+    lastTouches () {
+      return lastTouches;
+    },
+    moved () {
+      return touchHasMoved;
+    },
     onChange (listener) {
       changeListeners.push(listener);
     },
@@ -142,43 +163,47 @@ const touch = (() => {
     getRelativeCoordinates (clientX, clientY, rect) {
       return [clientX - rect.left, clientY - rect.top];
     },
-    getRelativeTouchCoordiates (touches, $elem) {
+    getRelativeTouchCoordiates (touch, $elem) {
       const rect = position.all($elem);
-      const positions = [];
-      for (const touch of touches) {
-        positions.push(this.getRelativeCoordinates(touch.clientX, touch.clientY, rect));
-      }
-      return positions;
+      return this.getRelativeCoordinates(touch.clientX, touch.clientY, rect);
     },
-    getEventCoordinatesRelativeToTarget (e) {
+    getRelativeEventCoordinates (e, $target = e.target) {
       if (e.touches && e.touches.length) {
-        return this.getRelativeTouchCoordiates([e.touches[0]], e.target)[0];
+        return this.getRelativeTouchCoordiates(e.touches[0], $target);
       }
       // e.offset{X,Y} doesn't seem to work reliably.
-      return this.getRelativeCoordinates(e.clientX, e.clientY, position.all(e.target));
+      return this.getRelativeCoordinates(e.clientX, e.clientY, position.all($target));
     }
   };
 })();
 
-const configureTargets = onPress => {
+const targets = (() => {
   const $targets = document.querySelector('#targets');
-  const eventListener = e => {
-    const $target = e.target;
+
+  const getDirection = event => {
+    const $target = event.target;
+
     let dir;
     // When there are multiple touches, usually the highest element that contains all touch
     // points is provided as the target. However, when the user switches back to one touch
     // input, Firefox still keeps using the outer element as the target.
     if ($target === $targets) {
-      const pos = touch.getEventCoordinatesRelativeToTarget(e, $targets);
+      const pos = touch.getRelativeEventCoordinates(event, $targets);
       dir = pos[0] <= $targets.offsetWidth / 2 ? -1 : 1;
     } else {
       dir = $target === $targets.firstElementChild ? -1 : 1;
     }
-    onPress(dir, e);
+    return dir;
   };
-  $targets.addEventListener('touchstart', eventListener);
-  touch.onMouse($targets, 'mousedown', eventListener);
-};
+
+  return {
+    configure (onPress) {
+      const eventListener = e => onPress(getDirection(e), e);
+      $targets.addEventListener('click', eventListener);
+    },
+    getDirection,
+  };
+})();
 
 const ripples = (() => {
   const $rippleElements = [];
@@ -209,7 +234,10 @@ const ripples = (() => {
   };
 
   return {
-    one($container, coordinates) {
+    none () {
+      ripples();
+    },
+    one ($container, coordinates) {
       ripples([$container, coordinates]);
     },
     many: ripples,

@@ -96,11 +96,11 @@ li {
     opacity: 1;
   }
   50% {
-    transform: scale(800);
+    transform: scale(250);
     opacity: 1;
   }
   100% {
-    transform: scale(800);
+    transform: scale(250);
     opacity: 0;
   }
 }

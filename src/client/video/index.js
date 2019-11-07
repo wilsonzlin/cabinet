@@ -128,6 +128,8 @@
       if ($entry) {
         const $link = $entry.children[1];
         $video.src = $link.dataset.url;
+        // playbackRate resets on new media.
+        $video.playbackRate = $speed.value;
         $titleName.textContent = $link.textContent;
         $entry.dataset.current = true;
         uiState.loaded = true;
@@ -182,25 +184,45 @@
   $video.addEventListener('error', e => {
     uiState.playing = uiState.engaged = uiState.loaded = false;
     console.error($video.error);
-    $titleError.textContent = $video.error.message;
+    $titleError.textContent = $video.error && $video.error.message || 'An unknown error occurred';
   });
 
   // This event listener handles and two or more chained clicks/taps for rewinding/fast-forwarding,
   // and tapping just once for toggling engagement.
   // Balance wait time between average duration between two or more clicks/taps and maximum delay
   // before UI feels unresponsive.
-  const CHAINED_PRESSES_WAIT_MS = 300;
+  const CHAINED_PRESSES_WAIT_MS = 250;
   let playerLastPressTime;
-  let singleTouchTimeout;
-  configureTargets((direction, e) => {
-    clearTimeout(singleTouchTimeout);
+  let singlePressTimeout;
+  touch.onMouse($targets, 'click', e => {
+    clearTimeout(singlePressTimeout);
     if (uiState.loaded) {
       if (Date.now() - playerLastPressTime < CHAINED_PRESSES_WAIT_MS) {
+        toggleFullscreen();
+        // Undo single click effects.
+        videoControl.togglePlayback();
+        ripples.none();
+        playerLastPressTime = undefined;
+      } else {
+        videoControl.togglePlayback();
+        ripples.one($targets, touch.getRelativeEventCoordinates(e, $targets));
+        playerLastPressTime = Date.now();
+      }
+    }
+  });
+  // Only disengage if intentional touch, with no movement over screen.
+  $targets.addEventListener('touchend', e => {
+    clearTimeout(singlePressTimeout);
+    if (uiState.loaded && !touch.moved()) {
+      if (Date.now() - playerLastPressTime < CHAINED_PRESSES_WAIT_MS) {
         // Chained fast-forward with 2+ clicks/taps
-        $video.currentTime += 10 * direction;
-        ripples.one(e.target, touch.getEventCoordinatesRelativeToTarget(e));
-      } else if (e.touches) {
-        singleTouchTimeout = setTimeout(engaged => uiState.engaged = engaged, CHAINED_PRESSES_WAIT_MS, !uiState.engaged);
+        uiState.engaged = false;
+        $video.currentTime += 10 * targets.getDirection(e);
+        ripples.one(e.target, touch.getRelativeTouchCoordiates(touch.lastTouches()[0], e.target));
+      } else {
+        // If no more taps happen with the next CHAINED_PRESSES_WAIT_MS,
+        // toggle engagement.
+        singlePressTimeout = setTimeout(engaged => uiState.engaged = engaged, CHAINED_PRESSES_WAIT_MS, !uiState.engaged);
       }
       playerLastPressTime = Date.now();
     }
@@ -212,9 +234,6 @@
   const IDLE_MS_BEFORE_ENGAGED = 7500;
   let engagedSetTimeout;
   touch.onChange(usingTouch => uiState.usingTouch = usingTouch);
-  // Don't use capturing listener, as $targets.ontouchdown is set to toggle engaged state
-  // on single tap, which would otherwise immediately undo this event listener's effects.
-  document.addEventListener('touchstart', () => uiState.engaged = false);
   // Don't set engaged state until touch has ended.
   document.addEventListener('touchend', () => {
     clearTimeout(engagedSetTimeout);
