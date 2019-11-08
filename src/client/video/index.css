@@ -122,7 +122,8 @@ body.s-engaged * {
 }
 
 #pane-controls > button {
-  flex: 1 0 0;
+  /* IE 11 doesn't support `flex: 1 0 0`. */
+  width: 33.33%;
   background: black;
 }
 

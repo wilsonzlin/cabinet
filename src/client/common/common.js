@@ -5,7 +5,12 @@ const createUiState = states => states.reduce((proxy, name) => Object.defineProp
     return document.body.classList.contains(`s-${name}`);
   },
   set (value) {
-    document.body.classList.toggle(`s-${name}`, value);
+    // IE 11 doesn't support .toggle with $force argument.
+    if (value) {
+      document.body.classList.add(`s-${name}`);
+    } else {
+      document.body.classList.remove(`s-${name}`);
+    }
   }
 }), {});
 

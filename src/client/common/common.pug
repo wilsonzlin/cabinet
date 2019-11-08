@@ -10,8 +10,12 @@ mixin Page(title, component)
       link(rel="stylesheet" href="/static/common/common.css")
       link(rel="stylesheet" href=`/static/${component}/index.css`)
 
-      script(defer src="/static/common/core-js.min.js")
-      script(defer src="/static/common/common.js")
-      script(defer src=`/static/${component}/index.js`)
+      if _useCompatAssets
+        script(defer src="/static/common/core-js.min.js")
+        script(defer src="/static/common/common.js.compat")
+        script(defer src=`/static/${component}/index.js.compat`)
+      else
+        script(defer src="/static/common/common.js")
+        script(defer src=`/static/${component}/index.js`)
   body
     block
