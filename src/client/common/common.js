@@ -216,6 +216,8 @@ const ripples = (() => {
   const ripples = (...ripples) => {
     let next$RippleIdx = 0;
     for (const [$container, [x, y]] of ripples) {
+      $container.classList.add('ripple-target');
+
       const $ripple = $rippleElements[next$RippleIdx] =
         $rippleElements[next$RippleIdx] || document.createElement('div');
 
@@ -247,4 +249,47 @@ const ripples = (() => {
     },
     many: ripples,
   };
+})();
+
+const prefs = (() => {
+  const $container = document.querySelector('#prefs-container');
+
+  const $close = document.querySelector('#prefs-close');
+  $close.addEventListener('click', () => $container.hidden = true);
+
+  const handlers = {};
+  const intf = {
+    open () {
+      $container.hidden = false;
+    },
+    onChange (name, handler) {
+      handlers[name] = handler;
+    },
+  };
+
+  const $options = document.querySelector('#prefs-options');
+  for (const $ctl of $options.querySelectorAll('[name]')) {
+    // Remove 'pref-' prefix.
+    const name = $ctl.name.slice(5);
+    const prop = $ctl.checked !== undefined ? 'checked' : 'value';
+    $ctl.addEventListener('change', () => {
+      handlers[name] && handlers[name]($ctl[prop]);
+    });
+    Object.defineProperty(intf, name, {
+      get () {
+        return $ctl[prop];
+      },
+      set (val) {
+        $ctl[prop] = val;
+      },
+    });
+  }
+
+  for (const $lbl of $options.querySelectorAll('label')) {
+    $lbl.addEventListener('click', e => {
+      ripples.one($lbl, touch.getRelativeEventCoordinates(e, $lbl));
+    });
+  }
+
+  return intf;
 })();

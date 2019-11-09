@@ -46,6 +46,7 @@
   const $buttonPlayback = document.querySelector('#button-playback');
   const $buttonPlaybackTouchOnly = document.querySelector('#button-playback-touch-only');
   const $buttonPrevious = document.querySelector('#button-previous');
+  const $buttonSettings = document.querySelector('#button-settings');
   const $buttonStop = document.querySelector('#button-stop');
   const $cover = document.querySelector('#cover');
   const $$entry = [...document.querySelectorAll('.entry')];
@@ -59,6 +60,8 @@
   const $titleName = document.querySelector('#title-name');
   const $titleError = document.querySelector('#title-error');
   const $video = document.querySelector('#video');
+
+  $buttonSettings.addEventListener('click', () => prefs.open());
 
   $buttonFullscreen.addEventListener('click', () => toggleFullscreen());
   $buttonNext.addEventListener('click', () => videoControl.next());
@@ -77,9 +80,8 @@
   $buttonStop.addEventListener('click', () => videoControl.current = null);
 
   // TODO Should mute/pause as well?
-  const toggleCover = (shouldShow = document[hiddenPropertyName]) => $cover.style.display = shouldShow
-    ? 'block'
-    : 'none';
+  const toggleCover = (shouldShow = document[hiddenPropertyName]) =>
+    $cover.style.display = shouldShow && prefs.usePrivacyCover ? 'block' : 'none';
 
   document.addEventListener(visibilityChangeEventName, () => toggleCover());
 

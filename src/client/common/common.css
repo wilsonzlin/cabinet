@@ -52,14 +52,12 @@ button, input, select, textarea {
   outline: 0;
   padding: 0;
 
-  cursor: pointer;
-
   color: inherit;
   font: inherit;
 }
 
-input {
-  cursor: text;
+button, select, label, input[type="checkbox"], input[type="radio"] {
+  cursor: pointer;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -76,9 +74,47 @@ li {
   display: block;
 }
 
-.ripple-target {
-  position: relative;
-  overflow: hidden;
+#prefs-container {
+  background: rgba(0, 0, 0, 0.9);
+
+  position: fixed;
+  z-index: 10;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: auto;
+
+  display: flex;
+}
+
+#prefs {
+  margin: auto;
+
+  background: black;
+  box-shadow: 0 0 1.5rem rgba(255, 255, 255, 0.2);
+
+  width: 35rem;
+  max-width: 100%;
+}
+
+#prefs-menu {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  margin: 0.5rem 1rem;
+
+  font-size: 1.25rem;
+}
+
+#prefs-options > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0;
 }
 
 #targets {
@@ -103,6 +139,11 @@ li {
     transform: scale(250);
     opacity: 0;
   }
+}
+
+.ripple-target {
+  position: relative;
+  overflow: hidden;
 }
 
 .ripple {

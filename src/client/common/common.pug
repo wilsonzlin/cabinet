@@ -19,3 +19,11 @@ mixin Page(title, component)
         script(defer src=`/static/${component}/index.js`)
   body
     block
+
+mixin Prefs
+  #prefs-container(hidden)
+    #prefs
+      #prefs-menu
+        button#prefs-close ✕
+      #prefs-options
+        block
