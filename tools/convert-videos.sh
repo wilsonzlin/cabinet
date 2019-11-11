@@ -35,6 +35,11 @@ while [[ $# -gt 0 ]]; do
     shift # past argument
     ;;
 
+  --touch)
+    TOUCH=true
+    shift # past argument
+    ;;
+
   *) # unknown option
     error "Unknown option $key"
     ;;
@@ -44,6 +49,7 @@ done
 if [ -z "$SOURCE" ]; then error "No source folder"; fi
 if [ -z "$OUTPUT" ]; then error "No output folder"; fi
 if [ -z "$DRY_RUN" ]; then DRY_RUN=false; fi
+if [ -z "$TOUCH" ]; then TOUCH=false; fi
 
 # NOTE: These will fail as this script exits on errors.
 source_dir_abs="$(realpath -e "$SOURCE")"
@@ -55,6 +61,11 @@ find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)
 
   # Get absolute path to converted output file with extension replaced with 'mp4'.
   dest="$output_dir_abs/${rel_path%.*}.mp4"
+  # First convert to a temporary file so that if conversion does not finish successfully (e.g. script or system crashes),
+  # when this script is run again, it will detect incompletion and restart the process.
+  # We will acquire a lock later to ensure that other concurrently running scripts recognise that this file is in
+  # processing rather than a failed past attempt.
+  dest_incomplete="$dest.incomplete"
 
   # Ensure folder containing output exists.
   mkdir -p "$(dirname "$dest")"
@@ -69,12 +80,22 @@ find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)
     continue
   fi
 
+  # Touch mode only creates the file entries in the file system without writing any data.
+  # This might be useful for testing purposes.
+  # Files created by touching can be removed by finding files with zero bytes and deleting them.
+  if [ "$TOUCH" = true ]; then
+    touch "$dest"
+    continue
+  fi
+
+  # If file cannot be locked, skip processing this file, as some other concurrent execution of this script most likely
+  # has the lock and is currently processing this file.
+  # Note that we want to overwrite output if it has no lock, as this implies that the original conversion process for
+  # the file stopped without completing successfully, or that the file did not exist and acquiring the lock created it.
   echo
-  # `-E` option ensures that if file cannot be locked, `flock` exits with zero so that it's not considered an error.
-  # This prevents the script from exiting prematurely and instead simply skips processing this file, as some other
-  # concurrent execution of this script most likely has the lock and is currently processing this file.
-  flock -xnE 0 "$dest" ffmpeg \
+  flock -xn "$dest_incomplete" ffmpeg \
     -hide_banner \
+    -y \
     -i "$file" \
     -c:v libx264 \
     -map_metadata -1 \
@@ -83,7 +104,10 @@ find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)
     -max_muxing_queue_size 1048576 \
     -movflags \
     +faststart \
-    "$dest" < /dev/null || continue
+    -f mp4 \
+    "$dest_incomplete" < /dev/null || continue
+  # WARNING: Make sure that if flock or ffmpeg fails this is not run!
+  mv "$dest_incomplete" "$dest"
   echo
 done
 
