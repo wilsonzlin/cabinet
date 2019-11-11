@@ -14,6 +14,14 @@ require_value() {
   echo "$2"
 }
 
+get_file_size() {
+  echo "$(du --apparent-size -b "$1" | cut -f 1)"
+}
+
+format_size() {
+  echo "$(numfmt --to=iec-i --suffix=B --format="%.2f" "$1")"
+}
+
 while [[ $# -gt 0 ]]; do
   key="$1"
   value="$2"
@@ -40,6 +48,11 @@ while [[ $# -gt 0 ]]; do
     shift # past argument
     ;;
 
+  --stat)
+    STAT=true
+    shift # past argument
+    ;;
+
   *) # unknown option
     error "Unknown option $key"
     ;;
@@ -50,65 +63,94 @@ if [ -z "$SOURCE" ]; then error "No source folder"; fi
 if [ -z "$OUTPUT" ]; then error "No output folder"; fi
 if [ -z "$DRY_RUN" ]; then DRY_RUN=false; fi
 if [ -z "$TOUCH" ]; then TOUCH=false; fi
+if [ -z "$STAT" ]; then STAT=false; fi
 
 # NOTE: These will fail as this script exits on errors.
 source_dir_abs="$(realpath -e "$SOURCE")"
 output_dir_abs="$(realpath -e "$OUTPUT")"
 
-find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)$' -print0 | while IFS= read -r -d $'\0' file; do
-  # Get relative path from source folder to source file.
-  rel_path="$(realpath --relative-to="$source_dir_abs" "$file")"
+# Use command grouping to allow statistical variables to be used after loop.
+find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)$' -print0 | {
+  # Variables for statistics, only used if $STAT is true.
+  total_source_size=0
+  total_output_size=0
+  files_count=0
 
-  # Get absolute path to converted output file with extension replaced with 'mp4'.
-  dest="$output_dir_abs/${rel_path%.*}.mp4"
-  # First convert to a temporary file so that if conversion does not finish successfully (e.g. script or system crashes),
-  # when this script is run again, it will detect incompletion and restart the process.
-  # We will acquire a lock later to ensure that other concurrently running scripts recognise that this file is in
-  # processing rather than a failed past attempt.
-  dest_incomplete="$dest.incomplete"
+  while IFS= read -r -d $'\0' file; do
+    # Get relative path from source folder to source file.
+    rel_path="$(realpath --relative-to="$source_dir_abs" "$file")"
 
-  # Ensure folder containing output exists.
-  mkdir -p "$(dirname "$dest")"
+    # Get absolute path to converted output file with extension replaced with 'mp4'.
+    dest="$output_dir_abs/${rel_path%.*}.mp4"
+    # First convert to a temporary file so that if conversion does not finish successfully (e.g. script or system crashes),
+    # when this script is run again, it will detect incompletion and restart the process.
+    # We will acquire a lock later to ensure that other concurrently running scripts recognise that this file is in
+    # processing rather than a failed past attempt.
+    dest_incomplete="$dest.incomplete"
 
-  # Don't convert if already converted.
-  if [ -f "$dest" ]; then
-    continue
+    # Ensure folder containing output exists.
+    mkdir -p "$(dirname "$dest")"
+
+    # Don't convert if already converted.
+    if [ -f "$dest" ]; then
+      if [ "$STAT" = true ]; then
+        total_source_size=$((total_source_size + $(get_file_size "$file")))
+        total_output_size=$((total_output_size + $(get_file_size "$dest")))
+        files_count=$((files_count + 1))
+      fi
+      continue
+    fi
+
+    if [ "$STAT" = true ]; then
+      continue
+    fi
+
+    echo -e "\033[0;32m\033[1m[$(date "+%a %d %b %H:%M")] Converting:\033[0m $rel_path"
+    if [ "$DRY_RUN" = true ]; then
+      continue
+    fi
+
+    # Touch mode only creates the file entries in the file system without writing any data.
+    # This might be useful for testing purposes.
+    # Files created by touching can be removed by finding files with zero bytes and deleting them.
+    if [ "$TOUCH" = true ]; then
+      touch "$dest"
+      continue
+    fi
+
+    # If file cannot be locked, skip processing this file, as some other concurrent execution of this script most likely
+    # has the lock and is currently processing this file.
+    # Note that we want to overwrite output if it has no lock, as this implies that the original conversion process for
+    # the file stopped without completing successfully, or that the file did not exist and acquiring the lock created it.
+    echo
+    flock -xn "$dest_incomplete" ffmpeg \
+      -hide_banner \
+      -y \
+      -i "$file" \
+      -c:v libx264 \
+      -map_metadata -1 \
+      -preset veryfast \
+      -crf 17 \
+      -max_muxing_queue_size 1048576 \
+      -movflags \
+      +faststart \
+      -f mp4 \
+      "$dest_incomplete" < /dev/null || continue
+    # WARNING: Make sure that if flock or ffmpeg fails this is not run!
+    mv "$dest_incomplete" "$dest"
+    echo
+  done
+
+  if [ "$STAT" = true ]; then
+    avg_source_size="$(bc -l <<< "$total_source_size / $files_count")"
+    avg_output_size="$(bc -l <<< "$total_output_size / $files_count")"
+    ratio="$(bc -l <<< "scale=2; $avg_output_size * 100 / $avg_source_size")"
+    echo "Average source size: $(format_size $avg_source_size)"
+    echo "Average output size: $(format_size $avg_output_size)"
+    echo "Total source size: $(format_size $total_source_size)"
+    echo "Total output size: $(format_size $total_output_size)"
+    echo "Total output size compared to source: $ratio%"
   fi
-
-  echo -e "\033[0;32m\033[1m[$(date "+%a %d %b %H:%M")] Converting:\033[0m $rel_path"
-  if [ "$DRY_RUN" = true ]; then
-    continue
-  fi
-
-  # Touch mode only creates the file entries in the file system without writing any data.
-  # This might be useful for testing purposes.
-  # Files created by touching can be removed by finding files with zero bytes and deleting them.
-  if [ "$TOUCH" = true ]; then
-    touch "$dest"
-    continue
-  fi
-
-  # If file cannot be locked, skip processing this file, as some other concurrent execution of this script most likely
-  # has the lock and is currently processing this file.
-  # Note that we want to overwrite output if it has no lock, as this implies that the original conversion process for
-  # the file stopped without completing successfully, or that the file did not exist and acquiring the lock created it.
-  echo
-  flock -xn "$dest_incomplete" ffmpeg \
-    -hide_banner \
-    -y \
-    -i "$file" \
-    -c:v libx264 \
-    -map_metadata -1 \
-    -preset veryfast \
-    -crf 17 \
-    -max_muxing_queue_size 1048576 \
-    -movflags \
-    +faststart \
-    -f mp4 \
-    "$dest_incomplete" < /dev/null || continue
-  # WARNING: Make sure that if flock or ffmpeg fails this is not run!
-  mv "$dest_incomplete" "$dest"
-  echo
-done
+}
 
 exit 0
