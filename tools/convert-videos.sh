@@ -70,7 +70,10 @@ find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)
   fi
 
   echo
-  ffmpeg \
+  # `-E` option ensures that if file cannot be locked, `flock` exits with zero so that it's not considered an error.
+  # This prevents the script from exiting prematurely and instead simply skips processing this file, as some other
+  # concurrent execution of this script most likely has the lock and is currently processing this file.
+  flock -xnE 0 "$dest" ffmpeg \
     -hide_banner \
     -i "$file" \
     -c:v libx264 \
@@ -80,7 +83,7 @@ find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)
     -max_muxing_queue_size 1048576 \
     -movflags \
     +faststart \
-    "$dest" < /dev/null
+    "$dest" < /dev/null || continue
   echo
 done
 
