@@ -8,6 +8,9 @@ include ../common/common.pug
     label
       span Use privacy cover
       input(type="checkbox" name="pref-usePrivacyCover")
+    label
+      span Group videos by folder
+      input(type="checkbox" name="pref-groupVideosByFolder" checked)
 
   #player
     video#video(autoplay)
@@ -54,7 +57,7 @@ include ../common/common.pug
                 // on old browsers. For example, Edge has no way of hiding the
                 // distracting URL popup when focus is left on the link after
                 // touching, even when blurred afterwards.
-                button.entry-link(data-url=`/stream/${video.id}`)= video.title
+                button.entry-link= video.title
     #pane-controls
       button#button-previous(title="Previous") ⏮
       button#button-stop(title="Stop") ⏹

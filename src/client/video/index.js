@@ -51,6 +51,7 @@
   const $cover = document.querySelector('#cover');
   const $$entry = [...document.querySelectorAll('.entry')];
   const $folders = document.querySelector('#folders');
+  const $$folderName = document.querySelectorAll('.folder-name');
   const $pane = document.querySelector('#pane');
   const $player = document.querySelector('#player');
   const $progress = document.querySelector('#progress');
@@ -82,17 +83,21 @@
   // TODO Should mute/pause as well?
   const toggleCover = (shouldShow = document[hiddenPropertyName]) =>
     $cover.style.display = shouldShow && prefs.usePrivacyCover ? 'block' : 'none';
-
   document.addEventListener(visibilityChangeEventName, () => toggleCover());
-
   window.addEventListener('focus', () => toggleCover(false));
   window.addEventListener('blur', () => toggleCover(true));
-
   $buttonCoverClose.addEventListener('click', () => toggleCover(false));
 
-  $folders.addEventListener('click', e => {
-    if (e.target.classList.contains('entry-link')) {
-      videoControl.current = e.target.parentNode;
+  $folders.addEventListener('click', ({target: $t}) => {
+    const $entry = $t.parentNode;
+    if ($t.classList.contains('entry-link')) {
+      videoControl.current = $entry;
+    } else if ($t.classList.contains('entry-fav')) {
+      fetch(`/user/video/favourites/${$entry.dataset.id}`, {
+        method: 'POST',
+      })
+        .then(res => res.json())
+        .then(({isFavourite}) => attr($entry, 'favourite', isFavourite));
     }
   });
 
@@ -100,7 +105,19 @@
     $input: $search,
     getEntries: () => $$entry,
     getEntryValue: $entry => $entry.children[1].textContent,
-    onSearchEnd: () => videoControl.scrollToCurrent(),
+    onSearchEnd: () => {
+      videoControl.scrollToCurrent();
+      for (const $name of $$folderName) {
+        $name.hidden = [...$name
+          .nextElementSibling // .folder-videos-container.
+          .firstElementChild // .folder-videos-list.
+          .children // [.entry, .entry, .entry, ...].
+        ].every($entry => $entry.hidden);
+      }
+    },
+  });
+  prefs.onChange('groupVideosByFolder', val => {
+    cls($folders, 'folders-show-titles', val);
   });
 
   // Probably don't need to sync with $video.onratechange, as only $speed should be able to set speed.
@@ -128,11 +145,10 @@
       }
 
       if ($entry) {
-        const $link = $entry.children[1];
-        $video.src = $link.dataset.url;
+        $video.src = `/stream/${$entry.dataset.id}`;
         // playbackRate resets on new media.
         $video.playbackRate = $speed.value;
-        $titleName.textContent = $link.textContent;
+        $titleName.textContent = $entry.children[1].textContent;
         $entry.dataset.current = true;
         uiState.loaded = true;
       } else {

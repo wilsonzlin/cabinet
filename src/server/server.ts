@@ -243,23 +243,17 @@ export const startServer = (
 
     // Favourite videos.
     if (authentication) {
-      authenticated.put("/user/video/favourites/:videoId", (req, res) => {
-        const video = videos[req.params.videoId];
+      authenticated.post("/user/video/favourites/:videoId", (req, res) => {
+        const video: Video = videos[req.params.videoId];
         if (!video) {
           return res.status(404).end();
         }
-        req.user.favouriteVideos.add(video);
-        authentication.writeUser(req.user);
-        return res.end();
-      });
-      authenticated.delete("/user/video/favourites/:videoId", (req, res) => {
-        const video = videos[req.params.videoId];
-        if (!video) {
-          return res.status(404).end();
+        const videoPath = video.relativePath;
+        if (!req.user.favouriteVideos.delete(videoPath)) {
+          req.user.favouriteVideos.add(videoPath);
         }
-        req.user.favouriteVideos.delete(video);
         authentication.writeUser(req.user);
-        return res.end();
+        return res.json({isFavourite: req.user.favouriteVideos.has(videoPath)});
       });
     }
 

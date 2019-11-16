@@ -78,6 +78,10 @@ body.s-engaged * {
   word-break: break-all;
 }
 
+#folders:not(.folders-show-titles) .folder-name {
+  display: none;
+}
+
 .entry {
   display: flex;
   align-items: center;

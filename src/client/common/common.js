@@ -1,16 +1,28 @@
 'use strict';
 
+const cls = ($elem, name, toggle) => {
+  // IE 11 doesn't support .toggle with $force argument.
+  if (toggle) {
+    $elem.classList.add(name);
+  } else {
+    $elem.classList.remove(name);
+  }
+};
+
+const attr = ($elem, name, toggle) => {
+  if (toggle) {
+    $elem.dataset[name] = '';
+  } else {
+    delete $elem.dataset[name];
+  }
+};
+
 const createUiState = states => states.reduce((proxy, name) => Object.defineProperty(proxy, name, {
   get () {
     return document.body.classList.contains(`s-${name}`);
   },
   set (value) {
-    // IE 11 doesn't support .toggle with $force argument.
-    if (value) {
-      document.body.classList.add(`s-${name}`);
-    } else {
-      document.body.classList.remove(`s-${name}`);
-    }
+    cls(document.body, `s-${name}`, value);
   }
 }), {});
 
@@ -264,17 +276,33 @@ const prefs = (() => {
     },
     onChange (name, handler) {
       handlers[name] = handler;
+      // Call handler immediately with current value.
+      handler(intf[name]);
     },
   };
+
+  // Call any registered handler when value changes.
+  $container.addEventListener('change', e => {
+    const $target = e.target;
+    // Remove 'pref-' prefix.
+    const name = $target.name.slice(5);
+    if (typeof name != 'string') {
+      return;
+    }
+    const handler = handlers[name];
+    if (!handler) {
+      return;
+    }
+    handler(intf[name]);
+  });
 
   const $options = document.querySelector('#prefs-options');
   for (const $ctl of $options.querySelectorAll('[name]')) {
     // Remove 'pref-' prefix.
     const name = $ctl.name.slice(5);
+    // Use `checked` property as value if available.
     const prop = $ctl.checked !== undefined ? 'checked' : 'value';
-    $ctl.addEventListener('change', () => {
-      handlers[name] && handlers[name]($ctl[prop]);
-    });
+    // Define getters and setters that retrieve values from DOM state.
     Object.defineProperty(intf, name, {
       get () {
         return $ctl[prop];
