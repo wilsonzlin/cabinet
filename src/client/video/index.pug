@@ -7,10 +7,16 @@ include ../common/common.pug
   +Prefs
     label
       span Use privacy cover
-      input(type="checkbox" name="pref-usePrivacyCover")
+      input(type="checkbox" name="pref-usePrivacyCover" checked=preferences.usePrivacyCover)
     label
       span Group videos by folder
-      input(type="checkbox" name="pref-groupVideosByFolder" checked)
+      input(type="checkbox" name="pref-groupVideosByFolder" checked=preferences.groupVideosByFolder)
+    label
+      span Hide disliked videos
+      input(type="checkbox" name="pref-hideDislikedVideos" checked=preferences.hideDislikedVideos)
+    label
+      span Show video thumbnails
+      input(type="checkbox" name="pref-showVideoThumbnails" checked=preferences.showVideoThumbnails)
 
   #player
     video#video(autoplay)
@@ -27,6 +33,9 @@ include ../common/common.pug
       #player-controls
         button#button-playback
         input#progress(type="range" value=0 min=0 step=0.1)
+        if _signedIn
+          button#button-like &#x1F44D
+          button#button-dislike &#x1F44E
         select#speed
           option 0.25
           option 0.5
@@ -50,14 +59,19 @@ include ../common/common.pug
         dd.folder-videos-container
           ul.folder-videos-list
             each video in folder.videos
-              li.entry(data-id=video.id, data-favourite=video.favourite)
-                button.entry-fav ★
-                // It's too much hassle to use an <a> as we have to then prevent
-                // all the default UA behaviour, some of which are not preventable
-                // on old browsers. For example, Edge has no way of hiding the
-                // distracting URL popup when focus is left on the link after
-                // touching, even when blurred afterwards.
-                button.entry-link= video.title
+              // It's too much hassle to use an <a> as we have to then prevent
+              // all the default UA behaviour, some of which are not preventable
+              // on old browsers. For example, Edge has no way of hiding the
+              // distracting URL popup when focus is left on the link after
+              // touching, even when blurred afterwards.
+              li.entry(
+                data-id=video.id,
+                data-liked=video.liked,
+                data-disliked=video.disliked,
+              )
+                if video.preview
+                  img.entry-preview(src=video.preview)
+                span.entry-title= video.title
     #pane-controls
       button#button-previous(title="Previous") ⏮
       button#button-stop(title="Stop") ⏹

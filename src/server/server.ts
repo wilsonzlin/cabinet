@@ -1,17 +1,17 @@
-import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
-import cookieParser from "cookie-parser";
-import crypto from "crypto";
-import express, {Request, Response} from "express";
-import {createReadStream} from "fs";
-import https from "https";
-import bcd from "mdn-browser-compat-data";
-import {SimpleSupportStatement} from "mdn-browser-compat-data/types";
-import {dirname, join} from "path";
-import pug, {compileTemplate, LocalsObject} from "pug";
-import useragent from "useragent";
-import {Photo, PhotoDirectory, Video} from "./library";
-import {User} from "./user";
+import bcrypt from 'bcrypt';
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+import crypto from 'crypto';
+import express, {Request, Response} from 'express';
+import {createReadStream} from 'fs';
+import https from 'https';
+import bcd from 'mdn-browser-compat-data';
+import {SimpleSupportStatement} from 'mdn-browser-compat-data/types';
+import {basename, dirname, join} from 'path';
+import pug, {compileTemplate, LocalsObject} from 'pug';
+import useragent from 'useragent';
+import {Photo, PhotoDirectory, Video} from './library';
+import {DefaultVideoPreferences, hasProp, User} from './user';
 
 declare global {
   namespace Express {
@@ -35,9 +35,9 @@ const FEATURE_SUPPORT_REQUIREMENTS = [
   bcd.javascript.builtins.Object.fromEntries,
 ];
 
-const notUndefined = <T> (val: T | undefined): val is T => val != undefined;
+const notUndefined = <T>(val: T | undefined): val is T => val != undefined;
 
-const getMajorFromSemVer = (semVer: string): number => Number.parseInt(semVer.split(".", 1)[0], 10);
+const getMajorFromSemVer = (semVer: string): number => Number.parseInt(semVer.split('.', 1)[0], 10);
 
 const shouldUseCompatAssets = (ua: string | undefined): boolean => {
   if (ua === undefined) {
@@ -45,7 +45,7 @@ const shouldUseCompatAssets = (ua: string | undefined): boolean => {
   }
 
   const parsed = useragent.parse(ua);
-  const family = parsed.family.toLowerCase().replace(/ /g, "_");
+  const family = parsed.family.toLowerCase().replace(/ /g, '_');
   const version = Number.parseInt(parsed.major, 10);
 
   return !FEATURE_SUPPORT_REQUIREMENTS.every(feat =>
@@ -68,6 +68,7 @@ export const startServer = (
 
     videos,
     photosRoot,
+    previewsDirectory,
   }: {
     clientPath: string;
 
@@ -85,48 +86,48 @@ export const startServer = (
 
     videos: Video[];
     photosRoot: PhotoDirectory;
-  }
+    previewsDirectory?: string;
+  },
 ) => {
   return new Promise(onServerListening => {
     const unauthenticated = express();
     unauthenticated.use(cookieParser());
 
-    const globalPageVariables = {};
-    const LandingPage = pug.compileFile(join(clientPath, "landing", "index.pug"));
-    const LoginPage = pug.compileFile(join(clientPath, "login", "index.pug"));
-    const VideoPage = pug.compileFile(join(clientPath, "video", "index.pug"));
-    const PhotoPage = pug.compileFile(join(clientPath, "photo", "index.pug"));
+    const LandingPage = pug.compileFile(join(clientPath, 'landing', 'index.pug'));
+    const LoginPage = pug.compileFile(join(clientPath, 'login', 'index.pug'));
+    const VideoPage = pug.compileFile(join(clientPath, 'video', 'index.pug'));
+    const PhotoPage = pug.compileFile(join(clientPath, 'photo', 'index.pug'));
     const sendPage = (req: Request, res: Response, page: compileTemplate, locals: LocalsObject, status: number = 200) => res
       .status(status)
-      .contentType("text/html").send(page({
-        ...globalPageVariables,
+      .contentType('text/html').send(page({
         ...locals,
-        _useCompatAssets: shouldUseCompatAssets(req.headers["user-agent"]),
+        _signedIn: !!authentication,
+        _useCompatAssets: shouldUseCompatAssets(req.headers['user-agent']),
       }));
 
     // Static client.
-    unauthenticated.use("/static", express.static(clientPath, {
-      dotfiles: "allow",
+    unauthenticated.use('/static', express.static(clientPath, {
+      dotfiles: 'allow',
       etag: false,
       index: false,
       lastModified: false,
     }));
 
     // Session implementation.
-    const SESSION_NAME = "CabinetSession";
+    const SESSION_NAME = 'CabinetSession';
     const sessions = new Map<string, User>();
-    const generateSession = () => crypto.randomBytes(10).toString("hex");
+    const generateSession = () => crypto.randomBytes(10).toString('hex');
     const authenticateWithSession = (id: string) => sessions.get(id);
 
     // Login API.
-    const getLoginRedirect = (req: Request) => req.query.from && req.query.from[0] === "/" ? req.query.from : "/";
-    unauthenticated.get("/login", (req, res) => {
+    const getLoginRedirect = (req: Request) => req.query.from && req.query.from[0] === '/' ? req.query.from : '/';
+    unauthenticated.get('/login', (req, res) => {
       if (authentication) {
         return sendPage(req, res, LoginPage, {});
       }
       return res.redirect(getLoginRedirect(req));
     });
-    unauthenticated.post("/login", bodyParser.urlencoded({
+    unauthenticated.post('/login', bodyParser.urlencoded({
       extended: false,
       parameterLimit: 2,
     }), async (req, res) => {
@@ -135,14 +136,14 @@ export const startServer = (
       const password = req.body.password;
 
       if (authentication) {
-        if (typeof username != "string" || typeof password != "string") {
+        if (typeof username != 'string' || typeof password != 'string') {
           return res.status(400).end();
         }
 
         const user = authentication.users.find(u => u.username === username);
         if (!user || !await bcrypt.compare(password, user.password)) {
           return sendPage(req, res, LoginPage, {
-            error: "Unknown username or password",
+            error: 'Unknown username or password',
           }, 401);
         }
 
@@ -161,9 +162,9 @@ export const startServer = (
     unauthenticated.use(authenticated);
     authenticated.use(cookieParser(), (req, res, next) => {
       // Disable caching.
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
 
       // No authentication required.
       if (!authentication) {
@@ -179,7 +180,7 @@ export const startServer = (
       }
 
       // Reject session.
-      res.cookie(SESSION_NAME, "", {
+      res.cookie(SESSION_NAME, '', {
         expires: new Date(2000, 0, 1),
         httpOnly: true,
       });
@@ -187,9 +188,10 @@ export const startServer = (
     });
 
     // Static client.
-    authenticated.get("/", (req, res) =>
+    authenticated.get('/', (req, res) =>
       sendPage(req, res, LandingPage, {}));
-    authenticated.get("/video", (req, res) => {
+    // Video app.
+    authenticated.get('/video', (req, res) => {
       const videosByDir = videos.reduce((folders, v, i) => {
         const folderName = dirname(v.relativePath);
         if (!folders.has(folderName)) {
@@ -198,12 +200,21 @@ export const startServer = (
         folders.get(folderName)!.push({
           id: i,
           title: v.title,
-          favourite: !!(authentication && req.user.favouriteVideos.has(v.relativePath)),
+          liked: !!(authentication && req.user.likedVideos.has(v.relativePath)),
+          disliked: !!(authentication && req.user.dislikedVideos.has(v.relativePath)),
+          preview: previewsDirectory && `/video/${i}/thumb/5`,
         });
         return folders;
-      }, new Map<string, { id: number, title: string, favourite: boolean }[]>());
+      }, new Map<string, {
+        id: number;
+        title: string;
+        liked: boolean;
+        disliked: boolean;
+        preview?: string;
+      }[]>());
 
       return sendPage(req, res, VideoPage, {
+        preferences: authentication && req.user.videoPreferences || DefaultVideoPreferences,
         folders: [...videosByDir.entries()]
           .sort((a, b) => a[0].localeCompare(b[0]))
           .map(([folder, videos]) => ({
@@ -214,7 +225,7 @@ export const startServer = (
     });
     // Photo folder or file.
     authenticated.get(/^\/photo(\/?|.*)$/, (req, res) => {
-      const pathComponents = req.params[0].split("/").filter(p => p);
+      const pathComponents = req.params[0].split('/').filter(p => p);
       let entry: Photo | PhotoDirectory | undefined = photosRoot;
       while (entry && entry.isDirectory && pathComponents.length) {
         const name = pathComponents.shift()!;
@@ -241,24 +252,69 @@ export const startServer = (
       return res.sendFile(entry.absolutePath);
     });
 
-    // Favourite videos.
+    // Video app APIs.
     if (authentication) {
-      authenticated.post("/user/video/favourites/:videoId", (req, res) => {
+      authenticated.post('/user/video/:videoId/like', (req, res) => {
         const video: Video = videos[req.params.videoId];
         if (!video) {
           return res.status(404).end();
         }
         const videoPath = video.relativePath;
-        if (!req.user.favouriteVideos.delete(videoPath)) {
-          req.user.favouriteVideos.add(videoPath);
+        if (!req.user.likedVideos.delete(videoPath)) {
+          req.user.likedVideos.add(videoPath);
         }
         authentication.writeUser(req.user);
-        return res.json({isFavourite: req.user.favouriteVideos.has(videoPath)});
+        return res.json({liked: req.user.likedVideos.has(videoPath)});
+      });
+      authenticated.post('/user/video/:videoId/dislike', (req, res) => {
+        const video: Video = videos[req.params.videoId];
+        if (!video) {
+          return res.status(404).end();
+        }
+        const videoPath = video.relativePath;
+        if (!req.user.dislikedVideos.delete(videoPath)) {
+          req.user.dislikedVideos.add(videoPath);
+        }
+        authentication.writeUser(req.user);
+        return res.json({disliked: req.user.dislikedVideos.has(videoPath)});
+      });
+      authenticated.put('/user/video/preferences/:prefId', bodyParser.json({
+        strict: true,
+      }), (req, res) => {
+        const preference = req.params.prefId;
+        if (!hasProp(req.user.videoPreferences, preference)) {
+          return res.status(404).end();
+        }
+        // TODO Validate
+        req.user.videoPreferences[preference] = req.body.value;
+        authentication.writeUser(req.user);
+        return res.end();
       });
     }
 
     // Stream video.
-    authenticated.get("/stream/:videoId", (req, res) => {
+    if (previewsDirectory) {
+      authenticated.get('/video/:videoId/thumb/:thumbPos', (req, res) => {
+        const video: Video = videos[req.params.videoId];
+        if (!video) {
+          return res.status(404).end();
+        }
+
+        const pos = req.params.thumbPos;
+        if (!/^[0-9]$/.test(pos)) {
+          return res.status(404).end();
+        }
+
+        const {relativePath} = video;
+
+        res.sendFile(join(
+          previewsDirectory,
+          relativePath,
+          `${req.params.thumbPos}.jpg`,
+        ));
+      });
+    }
+    authenticated.get('/stream/:videoId', (req, res) => {
       const video = videos[req.params.videoId];
       if (!video) {
         return res.status(404).end();
@@ -291,16 +347,16 @@ export const startServer = (
       }
 
       res.status(206).set({
-        "Content-Range": `bytes ${start}-${end}/${total}`,
-        "Accept-Ranges": "bytes",
-        "Content-Length": size,
-        "Content-Type": video.type,
+        'Content-Range': `bytes ${start}-${end}/${total}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': size,
+        'Content-Type': video.type,
       });
 
       const stream = createReadStream(absolutePath, {start, end, autoClose: true});
-      stream.on("error", err => err.status(500).end(`Internal streaming error: ${err}`));
+      stream.on('error', err => err.status(500).end(`Internal streaming error: ${err}`));
       stream.pipe(res);
-      req.on("close", () => stream.destroy());
+      req.on('close', () => stream.destroy());
       return;
     });
 

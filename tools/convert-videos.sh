@@ -15,11 +15,11 @@ require_value() {
 }
 
 get_file_size() {
-  echo "$(du --apparent-size -b "$1" | cut -f 1)"
+  du --apparent-size -b "$1" | cut -f 1
 }
 
 format_size() {
-  echo "$(numfmt --to=iec-i --suffix=B --format="%.2f" "$1")"
+  numfmt --to=iec-i --suffix=B --format="%.2f" "$1"
 }
 
 while [[ $# -gt 0 ]]; do

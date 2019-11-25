@@ -71,11 +71,16 @@ body.s-engaged * {
   -webkit-overflow-scrolling: touch;
 }
 
+.folder-name, .entry-title {
+  /* overflow-wrap: anywhere is not supported in Chrome, and word-wrap has been deprecated. */
+  /* We want to break a word only if necessary i.e. no break points in a very long word. */
+  word-break: break-word;
+}
+
 .folder-name {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   font-weight: bold;
-  word-break: break-all;
 }
 
 #folders:not(.folders-show-titles) .folder-name {
@@ -85,35 +90,46 @@ body.s-engaged * {
 .entry {
   display: flex;
   align-items: center;
+
+  cursor: pointer;
 }
 
 .entry[data-current] {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.entry-fav {
-  color: yellow;
-  font-size: 1.25rem;
+.entry[data-liked] {
+  font-weight: bolder;
+}
 
-  opacity: 0;
+.entry[data-disliked] {
+  opacity: 0.5;
+}
 
-  padding: 0 0.5rem;
+.folders-hide-disliked .entry[data-disliked] {
+  display: none;
+}
 
+.entry-preview {
+  width: 5rem;
+  margin: 0.5rem;
   flex: 0 0 auto;
 }
 
-.entry[data-favourite] .entry-fav {
-  opacity: 1;
+#folders:not(.folders-show-thumbnails) .entry-preview {
+  display: none;
 }
 
-.entry-link {
+#folders:not(.folders-show-thumbnails) .entry-title {
+  margin-left: 1.5rem;
+}
+
+.entry-title {
   color: #ddd;
-  text-align: left;
   font-size: 0.75rem;
-  padding: 0.5rem 0.5rem 0.5rem 0;
+  margin: 0.5rem;
 
   flex-grow: 1;
-  word-break: break-all;
 }
 
 #pane-controls {

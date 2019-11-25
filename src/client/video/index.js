@@ -41,7 +41,9 @@
   ]);
 
   const $buttonCoverClose = document.querySelector('#button-cover-close');
+  const $buttonDislike = document.querySelector('#button-dislike');
   const $buttonFullscreen = document.querySelector('#button-fullscreen');
+  const $buttonLike = document.querySelector('#button-like');
   const $buttonNext = document.querySelector('#button-next');
   const $buttonPlayback = document.querySelector('#button-playback');
   const $buttonPlaybackTouchOnly = document.querySelector('#button-playback-touch-only');
@@ -62,6 +64,29 @@
   const $titleError = document.querySelector('#title-error');
   const $video = document.querySelector('#video');
 
+  // Button only rendered when signed in.
+  $buttonLike && $buttonLike.addEventListener('click', () => {
+    const $entry = videoControl.current;
+    if ($entry) {
+      fetch(`/user/video/${$entry.dataset.id}/like`, {
+        method: 'POST',
+      })
+        .then(res => res.json())
+        .then(({liked}) => attr($entry, 'liked', liked));
+    }
+  });
+  // Button only rendered when signed in.
+  $buttonDislike && $buttonDislike.addEventListener('click', () => {
+    const $entry = videoControl.current;
+    if ($entry) {
+      fetch(`/user/video/${$entry.dataset.id}/dislike`, {
+        method: 'POST',
+      })
+        .then(res => res.json())
+        .then(({disliked}) => attr($entry, 'disliked', disliked));
+    }
+  });
+
   $buttonSettings.addEventListener('click', () => prefs.open());
 
   $buttonFullscreen.addEventListener('click', () => toggleFullscreen());
@@ -74,7 +99,7 @@
     ripples.one($targets, touch.getRelativeCoordinates(
       position.left($b) + position.width($b) / 2,
       position.top($b) + position.height($b) / 2,
-      position.all($targets)
+      position.all($targets),
     ));
   });
   $buttonPrevious.addEventListener('click', () => videoControl.previous());
@@ -88,42 +113,32 @@
   window.addEventListener('blur', () => toggleCover(true));
   $buttonCoverClose.addEventListener('click', () => toggleCover(false));
 
-  $folders.addEventListener('click', ({target: $t}) => {
-    const $entry = $t.parentNode;
-    if ($t.classList.contains('entry-link')) {
-      videoControl.current = $entry;
-    } else if ($t.classList.contains('entry-fav')) {
-      fetch(`/user/video/favourites/${$entry.dataset.id}`, {
-        method: 'POST',
-      })
-        .then(res => res.json())
-        .then(({isFavourite}) => attr($entry, 'favourite', isFavourite));
-    }
-  });
+  for (const $entry of $$entry) {
+    $entry.addEventListener('click', () => videoControl.current = $entry);
+  }
 
   configureSearch({
     $input: $search,
     getEntries: () => $$entry,
-    getEntryValue: $entry => $entry.children[1].textContent,
+    getEntryValue: $entry => $entry.textContent,
     onSearchEnd: () => {
       videoControl.scrollToCurrent();
       for (const $name of $$folderName) {
-        $name.hidden = [...$name
-          .nextElementSibling // .folder-videos-container.
-          .firstElementChild // .folder-videos-list.
-          .children // [.entry, .entry, .entry, ...].
+        $name.hidden = [
+          ...$name
+            .nextElementSibling // .folder-videos-container.
+            .firstElementChild // .folder-videos-list.
+            .children, // [.entry, .entry, .entry, ...].
         ].every($entry => $entry.hidden);
       }
     },
   });
-  prefs.onChange('groupVideosByFolder', val => {
-    cls($folders, 'folders-show-titles', val);
-  });
+  prefs.onChange('groupVideosByFolder', val => cls($folders, 'folders-show-titles', val));
+  prefs.onChange('hideDislikedVideos', val => cls($folders, 'folders-hide-disliked', val));
+  prefs.onChange('showVideoThumbnails', val => cls($folders, 'folders-show-thumbnails', val));
 
   // Probably don't need to sync with $video.onratechange, as only $speed should be able to set speed.
-  $speed.addEventListener('change', e => {
-    $video.playbackRate = +e.target.value;
-  });
+  $speed.addEventListener('change', e => $video.playbackRate = +e.target.value);
 
   const videoControl = {
     _current: null,
@@ -139,6 +154,9 @@
         }
       }
     },
+    get current () {
+      return this._current;
+    },
     set current ($entry) {
       if ($entry === this._current) {
         return;
@@ -148,7 +166,7 @@
         $video.src = `/stream/${$entry.dataset.id}`;
         // playbackRate resets on new media.
         $video.playbackRate = $speed.value;
-        $titleName.textContent = $entry.children[1].textContent;
+        $titleName.textContent = $entry.textContent;
         $entry.dataset.current = true;
         uiState.loaded = true;
       } else {
@@ -328,7 +346,18 @@
         break;
 
       case 48: // 0 (Zero)
-        $video.currentTime = 0;
+      case 49:
+      case 50:
+      case 51:
+      case 52:
+      case 53:
+      case 54:
+      case 55:
+      case 56:
+      case 57: // 9
+        if (uiState.loaded) {
+          $video.currentTime = $video.duration * (e.keyCode - 48) / 10;
+        }
         break;
 
       case 83: // s

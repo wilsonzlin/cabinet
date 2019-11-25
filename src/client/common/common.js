@@ -23,7 +23,7 @@ const createUiState = states => states.reduce((proxy, name) => Object.defineProp
   },
   set (value) {
     cls(document.body, `s-${name}`, value);
-  }
+  },
 }), {});
 
 const configureSearch = (
@@ -32,13 +32,13 @@ const configureSearch = (
     getEntries,
     getEntryValue,
     onSearchEnd,
-  }
+  },
 ) => {
   $input.addEventListener('input', () => {
     const term = $input.value.trim();
     const regexp = term && RegExp(
       term.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'),
-      'i'
+      'i',
     );
 
     for (const $entry of getEntries()) {
@@ -190,7 +190,7 @@ const touch = (() => {
       }
       // e.offset{X,Y} doesn't seem to work reliably.
       return this.getRelativeCoordinates(e.clientX, e.clientY, position.all($target));
-    }
+    },
   };
 })();
 
@@ -264,10 +264,27 @@ const ripples = (() => {
 })();
 
 const prefs = (() => {
+  const component = location.pathname.split('/').filter(p => p)[0];
+
   const $container = document.querySelector('#prefs-container');
+  if (!$container) {
+    // Page does not use preferences.
+    return;
+  }
 
   const $close = document.querySelector('#prefs-close');
   $close.addEventListener('click', () => $container.hidden = true);
+
+  const syncSetting = name =>
+    fetch(`/user/${component}/preferences/${name}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        value: intf[name],
+      }),
+    });
 
   const handlers = {};
   const intf = {
@@ -294,6 +311,7 @@ const prefs = (() => {
       return;
     }
     handler(intf[name]);
+    syncSetting(name);
   });
 
   const $options = document.querySelector('#prefs-options');
@@ -309,6 +327,7 @@ const prefs = (() => {
       },
       set (val) {
         $ctl[prop] = val;
+        syncSetting(prop);
       },
     });
   }

@@ -11,9 +11,11 @@
     "forceConsistentCasingInFileNames": true,
     "lib": [
       "es5",
-      "es6",
-      "es7",
-      "es2017"
+      "es2015",
+      "es2016",
+      "es2017",
+      "es2018",
+      "es2019"
     ],
     "module": "commonjs",
     "noErrorTruncation": true,
