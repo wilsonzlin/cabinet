@@ -37,6 +37,7 @@
     'hoveringProgress',
     'loaded',
     'playing',
+    'hideList',
     'usingTouch',
   ]);
 
@@ -54,7 +55,9 @@
   const $$entry = [...document.querySelectorAll('.entry')];
   const $folders = document.querySelector('#folders');
   const $$folderName = document.querySelectorAll('.folder-name');
-  const $pane = document.querySelector('#pane');
+  const $notification = document.querySelector('#notification');
+  const $notificationText = document.querySelector('#notification-text');
+  const $notificationProgress = document.querySelector('#notification-progress');
   const $player = document.querySelector('#player');
   const $progress = document.querySelector('#progress');
   const $search = document.querySelector('#search');
@@ -63,6 +66,32 @@
   const $titleName = document.querySelector('#title-name');
   const $titleError = document.querySelector('#title-error');
   const $video = document.querySelector('#video');
+
+  const notification = (() => {
+    const TIMEOUT_ANIMATION_CLASS = 'notification-progress-animate-timeout';
+    const VISIBLE_CLASS = 'notification-visible';
+
+    // Keep in sync with #notification style.
+    const TRANSITION_DURATION = 300;
+
+    let timeout;
+    return {
+      notify (msg, duration = 1200) {
+        clearTimeout(timeout);
+
+        cls($notification, VISIBLE_CLASS, true);
+
+        cls($notificationProgress, TIMEOUT_ANIMATION_CLASS, false);
+        reflow($notificationProgress);
+        cls($notificationProgress, TIMEOUT_ANIMATION_CLASS, true);
+        $notificationProgress.style.animationDuration = `${duration}ms`;
+        reflow($notificationProgress);
+
+        $notificationText.textContent = msg;
+        timeout = setTimeout(() => cls($notification, VISIBLE_CLASS, false), duration - TRANSITION_DURATION);
+      },
+    };
+  })();
 
   // Button only rendered when signed in.
   $buttonLike && $buttonLike.addEventListener('click', () => {
@@ -206,6 +235,32 @@
         || null;
       this.scrollToCurrent();
     },
+    seekRelative (seconds) {
+      if (this.current) {
+        $video.currentTime += seconds;
+        if (seconds > 0) {
+          notification.notify(`Fast forward ${seconds}s`);
+        } else {
+          notification.notify(`Rewind ${-seconds}s`);
+        }
+      }
+    },
+    // Value between 0 and 100 (inclusive).
+    seekPercentile (percentile) {
+      if (this.current) {
+        $video.currentTime = $video.duration * percentile / 100;
+        switch (percentile) {
+        case 0:
+          notification.notify(`Jump to beginning`);
+          break;
+        case 50:
+          notification.notify(`Jump to middle`);
+          break;
+        default:
+          notification.notify(`Jump to ${percentile}%`);
+        }
+      }
+    },
   };
 
   touch.onMouse($progress, 'mouseenter', () => uiState.hoveringProgress = true);
@@ -253,7 +308,7 @@
       if (Date.now() - playerLastPressTime < CHAINED_PRESSES_WAIT_MS) {
         // Chained fast-forward with 2+ clicks/taps
         uiState.engaged = false;
-        $video.currentTime += 10 * targets.getDirection(e);
+        videoControl.seekRelative(10 * targets.getDirection(e));
         ripples.one(e.target, touch.getRelativeTouchCoordiates(touch.lastTouches()[0], e.target));
       } else {
         // If no more taps happen with the next CHAINED_PRESSES_WAIT_MS,
@@ -264,21 +319,13 @@
     }
   });
 
-  // Note that Edge will send mouse events even if the user is touching,
-  // so for consistency use one idle timeout for both mouse and touch.
+  // Only engage after idle with mouse input.
+  // Note that Edge does not support touch events:
   // https://github.com/MicrosoftEdge/WebAppsDocs/issues/39
   const IDLE_MS_BEFORE_ENGAGED = 7500;
   let engagedSetTimeout;
   touch.onChange(usingTouch => uiState.usingTouch = usingTouch);
   // Don't set engaged state until touch has ended.
-  document.addEventListener('touchend', () => {
-    clearTimeout(engagedSetTimeout);
-    engagedSetTimeout = setTimeout(() => {
-      if (uiState.playing) {
-        uiState.engaged = true;
-      }
-    }, IDLE_MS_BEFORE_ENGAGED);
-  }, true);
   touch.onMouse(document, 'mousemove', () => {
     clearTimeout(engagedSetTimeout);
     uiState.usingTouch = false;
@@ -291,12 +338,6 @@
   }, true);
 
   const toggleFullscreen = () => {
-    if (navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform)) {
-      uiState.fullscreen = !uiState.fullscreen;
-      $pane.style.display = uiState.fullscreen ? 'none' : '';
-      return;
-    }
-
     if (uiState.fullscreen) {
       document.exitFullscreen();
     } else {
@@ -332,17 +373,13 @@
 
       case 74: // j
       case 76: // l
-        if (uiState.loaded) {
-          $video.currentTime += 5 * (e.keyCode - 75);
-        }
+        videoControl.seekRelative(5 * (e.keyCode - 75));
         break;
 
       case 37: // Left
       case 39: // Right
         e.preventDefault();
-        if (uiState.loaded) {
-          $video.currentTime += 10 * (e.keyCode - 38);
-        }
+        videoControl.seekRelative(10 * (e.keyCode - 38));
         break;
 
       case 48: // 0 (Zero)
@@ -355,9 +392,7 @@
       case 55:
       case 56:
       case 57: // 9
-        if (uiState.loaded) {
-          $video.currentTime = $video.duration * (e.keyCode - 48) / 10;
-        }
+        videoControl.seekPercentile((e.keyCode - 48) * 10);
         break;
 
       case 83: // s

@@ -120,6 +120,7 @@ li {
 #targets {
   display: flex;
   align-items: stretch;
+  height: 100%;
 }
 
 .target {

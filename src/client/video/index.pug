@@ -20,16 +20,20 @@ include ../common/common.pug
 
   #player
     video#video(autoplay)
-
     #overlay
       #title
         #title-name
         #title-error
-      #targets
-        .target
-        .target
-      #touch-only-controls
-        button#button-playback-touch-only
+      #overlay-middle
+        #targets
+          .target
+          .target
+        #touch-only-controls
+          button#button-playback-touch-only
+        #notification
+          #notification-text
+          #notification-progress-container
+            #notification-progress
       #player-controls
         button#button-playback
         input#progress(type="range" value=0 min=0 step=0.1)

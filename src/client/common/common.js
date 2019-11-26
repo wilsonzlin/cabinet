@@ -17,6 +17,8 @@ const attr = ($elem, name, toggle) => {
   }
 };
 
+const reflow = $elem => $elem.clientWidth;
+
 const createUiState = states => states.reduce((proxy, name) => Object.defineProperty(proxy, name, {
   get () {
     return document.body.classList.contains(`s-${name}`);
@@ -241,9 +243,9 @@ const ripples = (() => {
       $container.appendChild($ripple);
       // Reflow the element so the animation plays again.
       // In Edge if $ripple doesn't move the animation won't repeat otherwise.
-      $ripple.clientWidth;
+      reflow($ripple);
       $ripple.classList.add('ripple');
-      $ripple.clientWidth;
+      reflow($ripple);
 
       next$RippleIdx++;
     }

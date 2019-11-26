@@ -31,6 +31,10 @@ body.s-engaged * {
   border-left: 1px solid #444;
 }
 
+.s-hideList #pane {
+  display: none;
+}
+
 #pane-toolbar {
   flex: 0 0 auto;
   margin: 1rem;
@@ -71,7 +75,7 @@ body.s-engaged * {
   -webkit-overflow-scrolling: touch;
 }
 
-.folder-name, .entry-title {
+.folder-name, .entry-title, #notification {
   /* overflow-wrap: anywhere is not supported in Chrome, and word-wrap has been deprecated. */
   /* We want to break a word only if necessary i.e. no break points in a very long word. */
   word-break: break-word;
@@ -200,10 +204,6 @@ body:not(.s-loaded) #video {
   padding: 0 1rem;
 }
 
-#targets {
-  flex-grow: 1;
-}
-
 #title {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
   padding: 1rem;
@@ -221,23 +221,65 @@ body:not(.s-loaded) #video {
   transform: translateY(-100%);
 }
 
-#player-controls {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.75) 100%);
-  height: 2rem;
+#overlay-middle {
+  flex-grow: 1;
 
+  /* For #notification and #touch-only-controls. */
+  position: relative;
+}
+
+#notification {
+  position: absolute;
+
+  right: 2rem;
+  top: 1rem;
+
+  width: 10rem;
+  text-align: right;
+
+  opacity: 0;
+
+  /* Keep in sync with TRANSITION_DURATION style. */
+  transition: opacity 300ms ease-in;
+}
+
+#notification.notification-visible {
+  opacity: 1;
+}
+
+#notification-text {
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+#notification-progress-container {
+  overflow: hidden;
   display: flex;
-  align-items: center;
+  justify-content: flex-end;
 }
 
-.s-engaged #player-controls {
-  transform: translateY(2rem);
+#notification-progress {
+  height: 0.125rem;
+  border-radius: 0.125rem;
+  background: rgba(255, 255, 255, 0.25);
+
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
 }
 
-#player-controls > button {
-  flex: 0 0 auto;
-  padding: 0 0.5rem;
+@keyframes notification-timeout {
+  0% {
+    width: 100%;
+  }
 
-  font-size: 1.25rem;
+  100% {
+    width: 0;
+  }
+}
+
+.notification-progress-animate-timeout {
+  animation-name: notification-timeout;
 }
 
 #touch-only-controls {
@@ -277,6 +319,25 @@ body:not(.s-loaded) #button-playback-touch-only {
 
 body:not(.s-playing) #button-playback-touch-only::before {
   content: "▶";
+}
+
+#player-controls {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.75) 100%);
+  height: 2rem;
+
+  display: flex;
+  align-items: center;
+}
+
+.s-engaged #player-controls {
+  transform: translateY(2rem);
+}
+
+#player-controls > button {
+  flex: 0 0 auto;
+  padding: 0 0.5rem;
+
+  font-size: 1.25rem;
 }
 
 .s-playing #button-playback::before {
