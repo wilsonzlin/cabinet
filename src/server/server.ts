@@ -3,11 +3,11 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import express, {Request, Response} from 'express';
-import {createReadStream} from 'fs';
+import {createReadStream, promises as fs} from 'fs';
 import https from 'https';
 import bcd from 'mdn-browser-compat-data';
 import {SimpleSupportStatement} from 'mdn-browser-compat-data/types';
-import {basename, dirname, join} from 'path';
+import {dirname, join} from 'path';
 import pug, {compileTemplate, LocalsObject} from 'pug';
 import useragent from 'useragent';
 import {Photo, PhotoDirectory, Video} from './library';
@@ -35,7 +35,7 @@ const FEATURE_SUPPORT_REQUIREMENTS = [
   bcd.javascript.builtins.Object.fromEntries,
 ];
 
-const notUndefined = <T>(val: T | undefined): val is T => val != undefined;
+const notUndefined = <T> (val: T | undefined): val is T => val != undefined;
 
 const getMajorFromSemVer = (semVer: string): number => Number.parseInt(semVer.split('.', 1)[0], 10);
 
@@ -55,6 +55,41 @@ const shouldUseCompatAssets = (ua: string | undefined): boolean => {
       .some(stmt =>
         (stmt.version_added === true || stmt.version_added && version >= getMajorFromSemVer(stmt.version_added))
         && (!stmt.version_removed || stmt.version_removed !== true && version < getMajorFromSemVer(stmt.version_removed))));
+};
+
+const streamVideo = (req: Request, res: Response, path: string, fileSize: number, type: string): void => {
+  let start: number;
+  let end: number;
+
+  const range = req.headers.range;
+  if (range) {
+    const rangeParts = /^bytes=(0|[1-9][0-9]*)-(0|[1-9][0-9]*)?$/.exec(range);
+    if (!rangeParts) {
+      return res.status(400).end(`Invalid range`);
+    }
+    start = Number.parseInt(rangeParts[1], 10);
+    end = rangeParts[2] ? Number.parseInt(rangeParts[2], 10) : fileSize - 1;
+  } else {
+    start = 0;
+    end = fileSize - 1;
+  }
+
+  const streamLength = (end - start) + 1;
+  if (start < 0 || start > end || end < 1 || end >= fileSize || streamLength < 1) {
+    return res.status(404).end(`Invalid range: ${start}-${end}`);
+  }
+
+  res.status(206).set({
+    'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+    'Accept-Ranges': 'bytes',
+    'Content-Length': streamLength,
+    'Content-Type': type,
+  });
+
+  const stream = createReadStream(path, {start, end, autoClose: true});
+  stream.on('error', err => err.status(500).end(`Internal streaming error: ${err}`));
+  stream.pipe(res);
+  req.on('close', () => stream.destroy());
 };
 
 export const startServer = (
@@ -202,7 +237,7 @@ export const startServer = (
           title: v.title,
           liked: !!(authentication && req.user.likedVideos.has(v.relativePath)),
           disliked: !!(authentication && req.user.dislikedVideos.has(v.relativePath)),
-          preview: previewsDirectory && `/video/${i}/thumb/5`,
+          preview: previewsDirectory && `/video/${i}/thumb/50`,
         });
         return folders;
       }, new Map<string, {
@@ -313,6 +348,41 @@ export const startServer = (
           `${req.params.thumbPos}.jpg`,
         ));
       });
+      authenticated.get('/video/:videoId/montage', async (req, res) => {
+        const video: Video = videos[req.params.videoId];
+        if (!video) {
+          return res.status(404).end();
+        }
+
+        const {relativePath} = video;
+
+        res.sendFile(join(
+          previewsDirectory,
+          relativePath,
+          `montage.jpg`,
+        ));
+      });
+      authenticated.get('/video/:videoId/snippet', async (req, res) => {
+        const video: Video = videos[req.params.videoId];
+        if (!video) {
+          return res.status(404).end();
+        }
+
+        const {relativePath} = video;
+
+        const snippetPath = join(previewsDirectory, relativePath, 'snippet.mp4');
+        let size;
+        try {
+          size = (await fs.stat(snippetPath)).size;
+        } catch (err) {
+          if (err.code === 'ENOENT') {
+            return res.status(404).end();
+          }
+          throw err;
+        }
+
+        return streamVideo(req, res, snippetPath, size, 'video/mp4');
+      });
     }
     authenticated.get('/stream/:videoId', (req, res) => {
       const video = videos[req.params.videoId];
@@ -320,44 +390,12 @@ export const startServer = (
         return res.status(404).end();
       }
 
-      const {absolutePath, size: total} = video;
-      if (total < 1) {
+      const {absolutePath, size, type} = video;
+      if (size < 1) {
         return res.status(500).end(`File is empty`);
       }
 
-      let start: number;
-      let end: number;
-
-      const range = req.headers.range;
-      if (range) {
-        const rangeParts = /^bytes=(0|[1-9][0-9]*)-(0|[1-9][0-9]*)?$/.exec(range);
-        if (!rangeParts) {
-          return res.status(400).end(`Invalid range`);
-        }
-        start = Number.parseInt(rangeParts[1], 10);
-        end = rangeParts[2] ? Number.parseInt(rangeParts[2], 10) : total - 1;
-      } else {
-        start = 0;
-        end = total - 1;
-      }
-
-      const size = (end - start) + 1;
-      if (start < 0 || start > end || end < 1 || end >= total || size < 1) {
-        return res.status(404).end(`Invalid range: ${start}-${end}`);
-      }
-
-      res.status(206).set({
-        'Content-Range': `bytes ${start}-${end}/${total}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': size,
-        'Content-Type': video.type,
-      });
-
-      const stream = createReadStream(absolutePath, {start, end, autoClose: true});
-      stream.on('error', err => err.status(500).end(`Internal streaming error: ${err}`));
-      stream.pipe(res);
-      req.on('close', () => stream.destroy());
-      return;
+      return streamVideo(req, res, absolutePath, size, type);
     });
 
     // Start server

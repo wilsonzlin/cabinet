@@ -135,16 +135,16 @@ find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)
       -movflags \
       +faststart \
       -f mp4 \
-      "$dest_incomplete" < /dev/null || continue
+      "$dest_incomplete" </dev/null || continue
     # WARNING: Make sure that if flock or ffmpeg fails this is not run!
     mv "$dest_incomplete" "$dest"
     echo
   done
 
   if [ "$STAT" = true ]; then
-    avg_source_size="$(bc -l <<< "$total_source_size / $files_count")"
-    avg_output_size="$(bc -l <<< "$total_output_size / $files_count")"
-    ratio="$(bc -l <<< "scale=2; $avg_output_size * 100 / $avg_source_size")"
+    avg_source_size="$(bc -l <<<"$total_source_size / $files_count")"
+    avg_output_size="$(bc -l <<<"$total_output_size / $files_count")"
+    ratio="$(bc -l <<<"scale=2; $avg_output_size * 100 / $avg_source_size")"
     echo "Average source size: $(format_size $avg_source_size)"
     echo "Average output size: $(format_size $avg_output_size)"
     echo "Total source size: $(format_size $total_source_size)"

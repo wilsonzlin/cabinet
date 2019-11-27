@@ -322,7 +322,7 @@
   // Only engage after idle with mouse input.
   // Note that Edge does not support touch events:
   // https://github.com/MicrosoftEdge/WebAppsDocs/issues/39
-  const IDLE_MS_BEFORE_ENGAGED = 7500;
+  const IDLE_MS_BEFORE_ENGAGED = 1500;
   let engagedSetTimeout;
   touch.onChange(usingTouch => uiState.usingTouch = usingTouch);
   // Don't set engaged state until touch has ended.

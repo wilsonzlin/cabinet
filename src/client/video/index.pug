@@ -63,11 +63,11 @@ include ../common/common.pug
         dd.folder-videos-container
           ul.folder-videos-list
             each video in folder.videos
-              // It's too much hassle to use an <a> as we have to then prevent
-              // all the default UA behaviour, some of which are not preventable
-              // on old browsers. For example, Edge has no way of hiding the
-              // distracting URL popup when focus is left on the link after
-              // touching, even when blurred afterwards.
+              //- It's too much hassle to use an <a> as we have to then prevent
+              //- all the default UA behaviour, some of which are not preventable
+              //- on old browsers. For example, Edge has no way of hiding the
+              //- distracting URL popup when focus is left on the link after
+              //- touching, even when blurred afterwards.
               li.entry(
                 data-id=video.id,
                 data-liked=video.liked,
