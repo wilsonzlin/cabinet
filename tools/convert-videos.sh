@@ -65,7 +65,7 @@ if [ -z "$DRY_RUN" ]; then DRY_RUN=false; fi
 if [ -z "$TOUCH" ]; then TOUCH=false; fi
 if [ -z "$STAT" ]; then STAT=false; fi
 
-# NOTE: These will fail as this script exits on errors.
+# NOTE: These will always be valid as this script exits on errors.
 source_dir_abs="$(realpath -e "$SOURCE")"
 output_dir_abs="$(realpath -e "$OUTPUT")"
 
@@ -118,26 +118,31 @@ find "$source_dir_abs" -type f -regex '.+\.\(wmv\|mkv\|avi\|rm\|rmvb\|flv\|3gp\)
       continue
     fi
 
-    # If file cannot be locked, skip processing this file, as some other concurrent execution of this script most likely
-    # has the lock and is currently processing this file.
-    # Note that we want to overwrite output if it has no lock, as this implies that the original conversion process for
-    # the file stopped without completing successfully, or that the file did not exist and acquiring the lock created it.
     echo
-    flock -xn "$dest_incomplete" ffmpeg \
-      -hide_banner \
-      -y \
-      -i "$file" \
-      -c:v libx264 \
-      -map_metadata -1 \
-      -preset veryfast \
-      -crf 17 \
-      -max_muxing_queue_size 1048576 \
-      -movflags \
-      +faststart \
-      -f mp4 \
-      "$dest_incomplete" </dev/null || continue
-    # WARNING: Make sure that if flock or ffmpeg fails this is not run!
-    mv "$dest_incomplete" "$dest"
+    (
+      # If this fails, skip to the next file, as some other concurrent execution of this script most likely
+      # has the lock and is currently processing this file.
+      flock -xn 9 || exit 0
+      # ffmpeg has various non-zero exit codes that do not actually mean it failed, so ignore them and always treat as success.
+      # -y: overwrite the file created by lock.
+      # Redirect stdin to /dev/null to prevent reading from `find` result (i.e. files list this loop is iterating over).
+      ffmpeg \
+        -hide_banner \
+        -y \
+        -i "$file" \
+        -c:v libx264 \
+        -map_metadata -1 \
+        -preset veryfast \
+        -crf 17 \
+        -max_muxing_queue_size 1048576 \
+        -movflags \
+        +faststart \
+        -f mp4 \
+        "$dest_incomplete" </dev/null || exit 0
+      # WARNING: Make sure that if flock or ffmpeg fails this is not run!
+      # If this fails, let the script die.
+      mv "$dest_incomplete" "$dest"
+    ) 9>"$dest_incomplete"
     echo
   done
 
