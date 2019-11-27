@@ -22,7 +22,7 @@ body.s-engaged * {
 
 #pane {
   flex: 0 0 auto;
-  width: 18rem;
+  width: 25rem;
 
   display: flex;
   flex-direction: column;
@@ -115,7 +115,9 @@ body.s-engaged * {
 }
 
 .entry-preview {
-  width: 5rem;
+  position: relative;
+  width: 10rem;
+  height: 6rem;
   margin: 0.5rem;
   flex: 0 0 auto;
 }
@@ -124,16 +126,41 @@ body.s-engaged * {
   display: none;
 }
 
-#folders:not(.folders-show-thumbnails) .entry-title {
-  margin-left: 1.5rem;
+.entry-thumbnail, .entry-snippet {
+  background: black;
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+
+.entry-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 1;
+  z-index: 1;
+  transition: opacity 0.4s;
+}
+
+.entry-preview:hover .entry-thumbnail {
+  opacity: 0;
+}
+
+.entry-snippet {
+  object-fit: contain;
 }
 
 .entry-title {
   color: #ddd;
   font-size: 0.75rem;
-  margin: 0.5rem;
+  margin: 0.5rem 0.5rem 0.5rem 1rem;
 
   flex-grow: 1;
+}
+
+#folders.folders-show-thumbnails .entry-preview ~ .entry-title {
+  /* Decrease margin to the left of an entry title when previews are available AND showing. */
+  margin-left: 0.5rem;
 }
 
 #pane-controls {

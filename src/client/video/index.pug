@@ -74,7 +74,9 @@ include ../common/common.pug
                 data-disliked=video.disliked,
               )
                 if video.preview
-                  img.entry-preview(src=video.preview)
+                  .entry-preview
+                    img.entry-thumbnail(src=video.preview.thumbnail)
+                    video.entry-snippet(src=video.preview.snippet muted)
                 span.entry-title= video.title
     #pane-controls
       button#button-previous(title="Previous") ⏮

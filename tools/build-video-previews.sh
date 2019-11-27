@@ -28,6 +28,7 @@ exclusive_run() {
   mkdir -p "$(dirname "$file")"
   if [ ! -f "$file" ]; then
     subshell_error_code=0
+    # Use subshell to differentiate between ffmpeg and flock errors.
     (
       flock_error_code=0
       flock -xn 9 || flock_error_code=$?

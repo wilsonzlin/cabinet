@@ -237,7 +237,10 @@ export const startServer = (
           title: v.title,
           liked: !!(authentication && req.user.likedVideos.has(v.relativePath)),
           disliked: !!(authentication && req.user.dislikedVideos.has(v.relativePath)),
-          preview: previewsDirectory && `/video/${i}/thumb/50`,
+          preview: previewsDirectory ? {
+            thumbnail: `/video/${i}/thumb/50`,
+            snippet: `/video/${i}/snippet`,
+          } : undefined,
         });
         return folders;
       }, new Map<string, {
@@ -245,7 +248,10 @@ export const startServer = (
         title: string;
         liked: boolean;
         disliked: boolean;
-        preview?: string;
+        preview?: {
+          thumbnail: string;
+          snippet: string;
+        };
       }[]>());
 
       return sendPage(req, res, VideoPage, {
@@ -336,7 +342,7 @@ export const startServer = (
         }
 
         const pos = req.params.thumbPos;
-        if (!/^[0-9]$/.test(pos)) {
+        if (!/^[0-9]{1,2}$/.test(pos)) {
           return res.status(404).end();
         }
 

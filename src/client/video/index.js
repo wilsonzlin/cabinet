@@ -144,6 +144,12 @@
 
   for (const $entry of $$entry) {
     $entry.addEventListener('click', () => videoControl.current = $entry);
+    const $preview = $entry.querySelector('.entry-preview');
+    const $snippet = $entry.querySelector('.entry-snippet');
+    if ($preview) {
+      $preview.addEventListener('mouseenter', () => $snippet.currentTime = $snippet.play() | 0);
+      $preview.addEventListener('mouseleave', () => $snippet.pause());
+    }
   }
 
   configureSearch({
