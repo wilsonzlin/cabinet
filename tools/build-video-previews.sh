@@ -76,7 +76,7 @@ if [ -z "$OUTPUT" ]; then error "No output folder"; fi
 source_dir_abs="$(realpath -e "$SOURCE")"
 output_dir_abs="$(realpath -e "$OUTPUT")"
 
-for file in "$source_dir_abs"/**/*.{wmv,mkv,avi,rm,rmvb,flv,3gp,mp4,m4v}; do
+for file in "$source_dir_abs"/**/*.{mp4,m4v}; do
   # Get relative path from source folder to source file.
   rel_path="$(realpath --relative-to="$source_dir_abs" "$file")"
 
