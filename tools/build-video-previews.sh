@@ -10,6 +10,10 @@ error() {
   exit 1
 }
 
+pyexpr() {
+  python -c "print($1)"
+}
+
 # ffmpeg has various non-zero exit codes that do not actually mean it failed, so ignore them and always treat as success.
 # -y: overwrite the file created by lock.
 # Redirect stdin to /dev/null to prevent reading from this script's stdin.
@@ -38,8 +42,8 @@ function exclusive_run_helper() {
   "$@" || exit $?
 }
 
-exclusive_run_result=false
-# Use the exclusive_run_result global variable instead of return codes for this function,
+did_exclusive_run=false
+# Use the did_exclusive_run global variable instead of return codes for this function,
 # as we usually want to ignore failed lock acquisitions and don't want to handle each call.
 exclusive_run() {
   local file="$1"
@@ -48,11 +52,11 @@ exclusive_run() {
     lock_error_code=0
     exclusive_run_helper "$@" 9>"$file" || lock_error_code=$?
     if [[ $lock_error_code -eq 0 ]]; then
-      exclusive_run_result=true
+      did_exclusive_run=true
       return 0
     fi
   fi
-  exclusive_run_result=false
+  did_exclusive_run=false
 }
 
 while [[ $# -gt 0 ]]; do
@@ -125,44 +129,64 @@ for file in "$source_dir_abs"/**/*.{mp4,m4v}; do
 
   # Create montage.
   montage_dest="$output_dir_abs/$rel_path/montage.jpg"
+  montage_dest_incomplete="$output_dir_abs/$rel_path/montage.jpg.incomplete"
   nomontage="$output_dir_abs/$rel_path/.nomontage"
-  # Check before continuing as temporary montage shot files would have already been deleted.
   if [ -f "$nomontage" ] || [ -f "$montage_dest" ]; then
     continue
   fi
-  # We want to get a shot every 2 seconds except for the first and last 2 seconds.
-  montage_granularity="$(bc -l <<<"scale=0; $duration / 2 - 2")"
-  if [[ $montage_granularity -le 0 ]]; then
-    # Video is too short for a montage, so don't create one.
-    touch "$nomontage"
-    continue
-  fi
-  montage_shots=()
-  montage_failed=false
-  for ((montage_shot_no = 0; montage_shot_no < montage_granularity; montage_shot_no++)); do
-    montage_shot_pos="$((montage_shot_no * 2 + 2))"
-    # Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
-    montage_shot_dest="$output_dir_abs/$rel_path/montageshot${montage_shot_no}.jpg"
-    montage_shots+=("$montage_shot_dest")
-    exclusive_run "$montage_shot_dest" ff \
-      -ss "$montage_shot_pos" \
-      -i "$file" \
-      -vframes 1 \
-      -q:v 2 \
-      "$montage_shot_dest"
-    if [[ "$(stat --printf="%s" "$montage_shot_dest")" -eq "0" ]]; then
-      # Montage shot failed to be created. Don't create montage and don't try again in future.
-      # Keep empty shot file so that no other concurrent scripts try to recreate it and which shots failed are known.
-      montage_failed=true
-      break
+
+  # It's more difficult to allow concurrent generation of montage shots, as one would have to
+  # handle and coordinate cases where shots fail (and all montage attempts must be aborted),
+  # wait for shots to finish before generating montage, etc. Process each video's montage
+  # within a single instance of this script.
+  # Concurrently generating montage shots is probably slower too with the constant lock trashing.
+  (
+    flock -xn 9 || return 0
+
+    # We want to get a shot every 2 seconds except for first and last 2 seconds, up to 200 shots.
+    # More granularity would probably not be much use and exceed JPEG dimension limits.
+    montage_granularity="$(pyexpr "min(200, int($duration / 2))")"
+
+    if [[ $montage_granularity -le 2 ]]; then
+      # Video is too short for a montage, so don't create one.
+      touch "$nomontage"
+      return 0
     fi
-  done
-  if [ "$montage_failed" = true ]; then
-    touch "$nomontage"
-    continue
-  fi
-  exclusive_run "$montage_dest" convert "${montage_shots[@]}" +append -resize x120 "$montage_dest"
-  if [ "$exclusive_run_result" = true ]; then
+
+    montage_shots=()
+    montage_failed=false
+
+    # Ignore first and last shots.
+    for ((montage_shot_no = 1; montage_shot_no < montage_granularity; montage_shot_no++)); do
+      montage_shot_pos="$(bc -l <<<"scale=2; $duration * $montage_shot_no / $montage_granularity")"
+      # Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
+      montage_shot_dest="$output_dir_abs/$rel_path/montageshot${montage_shot_no}.jpg"
+      montage_shots+=("$montage_shot_dest")
+
+      # Shouldn't need to lock $montage_shot_dest.
+      ff \
+        -ss "$montage_shot_pos" \
+        -i "$file" \
+        -vframes 1 \
+        -q:v 2 \
+        "$montage_shot_dest"
+
+      if [[ "$(stat --printf="%s" "$montage_shot_dest")" -eq "0" ]]; then
+        # Montage shot failed to be created. Don't create montage and don't try again in future.
+        # Keep empty shot file so that no other concurrent scripts try to recreate it and which shots failed are known.
+        montage_failed=true
+        break
+      fi
+    done
+
+    if [ "$montage_failed" = true ]; then
+      touch "$nomontage"
+      return 0
+    fi
+
+    # Shouldn't need to lock $montage_dest.
+    convert "${montage_shots[@]}" +append -resize x120 "$montage_dest" || return $?
     rm -f "${montage_shots[@]}"
-  fi
+    mv "$montage_dest_incomplete" "$montage_dest"
+  ) 9>"$montage_dest_incomplete" || exit $?
 done
