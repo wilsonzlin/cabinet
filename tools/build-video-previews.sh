@@ -141,7 +141,7 @@ for file in "$source_dir_abs"/**/*.{mp4,m4v}; do
   # within a single instance of this script.
   # Concurrently generating montage shots is probably slower too with the constant lock trashing.
   (
-    flock -xn 9 || return 0
+    flock -xn 9 || exit 0
 
     # We want to get a shot every 2 seconds except for first and last 2 seconds, up to 200 shots.
     # More granularity would probably not be much use and exceed JPEG dimension limits.
@@ -150,7 +150,7 @@ for file in "$source_dir_abs"/**/*.{mp4,m4v}; do
     if [[ $montage_granularity -le 2 ]]; then
       # Video is too short for a montage, so don't create one.
       touch "$nomontage"
-      return 0
+      exit 0
     fi
 
     montage_shots=()
@@ -181,12 +181,13 @@ for file in "$source_dir_abs"/**/*.{mp4,m4v}; do
 
     if [ "$montage_failed" = true ]; then
       touch "$nomontage"
-      return 0
+      exit 0
     fi
 
     # Shouldn't need to lock $montage_dest.
-    convert "${montage_shots[@]}" +append -resize x120 "$montage_dest" || return $?
+    # Because of `set -e` and no `||` after subshell if this fails script will exit.
+    convert "${montage_shots[@]}" +append -resize x120 "$montage_dest"
     rm -f "${montage_shots[@]}"
     mv "$montage_dest_incomplete" "$montage_dest"
-  ) 9>"$montage_dest_incomplete" || exit $?
+  ) 9>"$montage_dest_incomplete"
 done
