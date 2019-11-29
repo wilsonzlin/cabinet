@@ -60,7 +60,7 @@ const ff = async (...args: (string | number)[]): Promise<void> =>
 export const buildVideoPreviews = async ({
   libraryDir,
   previewsDir,
-  concurrency = cpus().length,
+  concurrency = cpus().length * 2,
   fileExtensions,
   thumbnailPercentiles = [50],
   snippetDuration = 5,
@@ -184,7 +184,7 @@ export const buildVideoPreviews = async ({
         montageShots.push(montageShotDest);
 
         montageShotPromises.push(queueWaitable(async () => {
-          if (montageFailed || !(await isFile(montageShotDest))) {
+          if (montageFailed || await isFile(montageShotDest)) {
             return;
           }
 
