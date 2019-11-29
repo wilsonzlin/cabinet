@@ -36,9 +36,10 @@ const cmd = async (command: string, ...args: (string | number)[]): Promise<strin
 const job = async (command: string, errorOnBadStatus?: boolean, ...args: (string | number)[]): Promise<void> =>
   new Promise((resolve, reject) => {
     const proc = spawn(command, args.map(String), {stdio: ['ignore', 'inherit', 'inherit']});
-    proc.on('close', code => {
+    proc.on('error', console.error);
+    proc.on('exit', (code, sig) => {
       if (code !== 0 && errorOnBadStatus) {
-        reject(new Error(`Command failed with status ${code}: ${command}`));
+        reject(new Error(`Command exited with ${code ? `status ${code}` : `signal ${sig}`}: ${command}`));
       } else {
         resolve();
       }
@@ -108,8 +109,7 @@ export const buildVideoPreviews = async ({
         absPath,
       ));
     } catch (err) {
-      console.error(`Failed to retrieve duration for "${relPath}"`);
-      console.error(err);
+      console.error(`Failed to retrieve duration for "${relPath}": ${err.message}`);
       return;
     }
 
@@ -216,7 +216,8 @@ export const buildVideoPreviews = async ({
             } else {
               // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
               await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
-              await Promise.all(montageShots.map(s => fs.unlink(s)));
+              // Don't delete montage shots. They take a long time to generate and can be reused in case previous steps
+              // fail due to chance, system, misconfiguration, environment, bugs, edge cases, or inexperience.
             }
           });
     }
