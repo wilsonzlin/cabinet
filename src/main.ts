@@ -6,6 +6,7 @@ import {join} from 'path';
 import {listPhotos, listVideos} from './server/library';
 import {startServer} from './server/server';
 import {getUsers, writeUser} from './server/user';
+import {buildVideoPreviews} from './tool/buildVideoPreviews';
 
 const args = minimist(process.argv.slice(2));
 
@@ -20,6 +21,20 @@ const SSL_CERT: string | undefined = args.cert;
 const SSL_DHPARAM: string | undefined = args.dh;
 
 (async function () {
+  if (args['build-video-previews']) {
+    if (!PREVIEWS_DIR) {
+      throw new Error(`No preview directory provided`);
+    }
+
+    await buildVideoPreviews({
+      previewsDir: PREVIEWS_DIR,
+      libraryDir: LIBRARY_DIR,
+      fileExtensions: VIDEO_EXTENSIONS,
+    });
+    return;
+  }
+
+
   const [photosRoot, users, videos] = await Promise.all([
     listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR),
     USERS_DIR ? getUsers(USERS_DIR) : [],
