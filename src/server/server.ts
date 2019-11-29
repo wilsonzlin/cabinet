@@ -351,7 +351,7 @@ export const startServer = (
         res.sendFile(join(
           previewsDirectory,
           relativePath,
-          `${req.params.thumbPos}.jpg`,
+          `thumb${req.params.thumbPos}.jpg`,
         ));
       });
       authenticated.get('/video/:videoId/montage', async (req, res) => {
