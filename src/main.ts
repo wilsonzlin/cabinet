@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {promises as fs} from 'fs';
+import {promises as fs, realpathSync} from 'fs';
 import minimist from 'minimist';
 import {join} from 'path';
 import {listPhotos, listVideos} from './server/library';
@@ -10,9 +10,13 @@ import {buildVideoPreviews} from './tool/buildVideoPreviews';
 
 const args = minimist(process.argv.slice(2));
 
-const LIBRARY_DIR: string = args.library;
-const USERS_DIR: string | undefined = args.users;
-const PREVIEWS_DIR: string | undefined = args.previews;
+const rp = (p: string): string => realpathSync(p);
+
+const optionalMap = <T, R> (val: T | null | undefined, mapper: (val: T) => R) => val == null ? undefined : mapper(val);
+
+const LIBRARY_DIR: string = rp(args.library);
+const USERS_DIR: string | undefined = optionalMap(args.users, rp);
+const PREVIEWS_DIR: string | undefined = optionalMap(args.previews, rp);
 const VIDEO_EXTENSIONS: string[] = (args.video || 'mp4,m4v').split(',');
 const PHOTO_EXTENSIONS: string[] = (args.photo || 'png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp').split(',');
 const PORT: number = args.port || Math.floor(Math.random() * 8976 + 1024);
@@ -59,4 +63,5 @@ const SSL_DHPARAM: string | undefined = args.dh;
   });
 
   console.log(`Server started on port ${PORT}`);
-})();
+})()
+  .catch(console.error);

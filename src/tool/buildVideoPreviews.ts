@@ -32,10 +32,10 @@ const cmd = async (command: string): Promise<string> => new Promise((resolve, re
     }
   }));
 
-const job = async (command: string): Promise<void> => new Promise((resolve, reject) => {
-  const proc = spawn(command, {stdio: ['ignore', 'pipe', 'pipe']});
+const job = async (command: string, errorOnBadStatus?: boolean, ...args: (string | number)[]): Promise<void> => new Promise((resolve, reject) => {
+  const proc = spawn(command, args.map(String), {stdio: ['ignore', 'inherit', 'inherit']});
   proc.on('close', code => {
-    if (code !== 0) {
+    if (code !== 0 && errorOnBadStatus) {
       reject(new Error(`Command failed with status ${code}: ${command}`));
     } else {
       resolve();
@@ -52,7 +52,7 @@ const ensureDir = (dir: string) => new Promise((resolve, reject) =>
     }
   }));
 
-const ff = async (...args: string[]): Promise<void> => job(`ffmpeg -loglevel 0 -hide_banner -y ${args.join(' ')}`);
+const ff = async (...args: (string | number)[]): Promise<void> => job(`ffmpeg`, false, `-loglevel`, 0, `-hide_banner`, `-y`, ...args);
 
 export const buildVideoPreviews = async ({
   libraryDir,
@@ -78,32 +78,40 @@ export const buildVideoPreviews = async ({
     return promise;
   };
 
-  const filesStream = readdirp(libraryDir, {
+  const filesStream = await readdirp.promise(libraryDir, {
+    depth: Infinity,
     fileFilter: entry => fileExtensions.includes(entry.basename.slice(entry.basename.lastIndexOf('.') + 1)),
   });
 
-  for await (const file of filesStream) {
+  await Promise.all(filesStream.map(async (file) => {
     const absPath = file.fullPath;
     const relPath = file.path;
     const outDir = join(previewsDir, relPath);
 
-    console.log(`Processing ${relPath}`);
     await ensureDir(outDir);
 
     // Get duration of video in seconds.
-    const duration = Number.parseFloat(await cmd(
-      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${absPath}"`,
-    ));
+    let duration: number;
+    try {
+      duration = Number.parseFloat(await cmd(
+        `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${absPath}"`,
+      ));
+    } catch (err) {
+      console.error(`Failed to retrieve duration for "${relPath}"`);
+      console.error(err);
+      return;
+    }
 
     // Create thumbnails at percentiles.
     for (const percentile of thumbnailPercentiles) {
       const thumbPos = (duration * percentile / 100).toFixed(2);
       const thumbDest = join(outDir, `thumb${percentile}.jpg`);
       queueWaitable(() => ff(
-        `-ss "${thumbPos}"`,
-        `-i "${absPath}"`,
-        `-vframes 1`,
-        `-q:v 2 "${thumbDest}"`,
+        `-ss`, thumbPos,
+        `-i`, absPath,
+        `-vframes`, 1,
+        `-q:v`, 2,
+        thumbDest,
       ));
     }
 
@@ -111,20 +119,20 @@ export const buildVideoPreviews = async ({
     const snippetPos = Math.max(0, duration * 0.5 - (snippetDuration / 2));
     const snippetDest = join(outDir, 'snippet.mp4');
     queueWaitable(() => ff(
-      `-ss "${snippetPos}"`,
-      `-i "${absPath}"`,
-      `-filter:v scale="180:trunc(ow/a/2)*2"`,
-      `-c:v libx264`,
-      `-map_metadata -1`,
-      `-preset veryslow`,
-      `-crf 17`,
-      `-max_muxing_queue_size 1048576`,
+      `-ss`, snippetPos,
+      `-i`, absPath,
+      `-filter:v`, `scale="180:trunc(ow/a/2)*2"`,
+      `-c:v`, `libx264`,
+      `-map_metadata`, -1,
+      `-preset`, `veryslow`,
+      `-crf`, 17,
+      `-max_muxing_queue_size`, 1048576,
       `-movflags`,
       `+faststart`,
       `-an`,
-      `-t "${snippetDuration}"`,
-      `-f mp4`,
-      `"${snippetDest}"`,
+      `-t`, snippetDuration,
+      `-f`, `mp4`,
+      snippetDest,
     ));
 
     // Create montage.
@@ -132,7 +140,8 @@ export const buildVideoPreviews = async ({
     const nomontage = join(outDir, '.nomontage');
 
     if (await isFile(nomontage) || await isFile(montageDest)) {
-      continue;
+      console.info(`Montage exists or is disabled for "${relPath}"`);
+      return;
     }
 
     // We want to get a shot every 2 seconds except for first and last 2 seconds, up to 200 shots.
@@ -142,7 +151,8 @@ export const buildVideoPreviews = async ({
     if (montageGranularity <= 2) {
       // Video is too short for a montage, so don't create one.
       await emptyFile(nomontage);
-      continue;
+      console.info(`Video "${relPath}" is too short for montage`);
+      return;
     }
 
     const montageShots: string[] = [];
@@ -158,11 +168,11 @@ export const buildVideoPreviews = async ({
 
       montageShotPromises.push(
         queueWaitable(() => ff(
-          `-ss "${montageShotPos}"`,
-          `-i "${absPath}"`,
-          `-vframes 1`,
-          `-q:v 2`,
-          `"${montageShotDest}"`,
+          `-ss`, montageShotPos,
+          `-i`, absPath,
+          `-vframes`, 1,
+          `-q:v`, 2,
+          montageShotDest,
         ))
           .then(async () => {
             const stats = await nullStat(montageShotDest);
@@ -181,14 +191,11 @@ export const buildVideoPreviews = async ({
         await emptyFile(nomontage);
       } else {
         // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
-        await queueWaitable(() => job(
-          `convert "${montageShots.map(s => s.replace(/\W/g, '\\$0')).join(' ')}" +append -resize x120 "${montageDest}"`,
-        ).then(() => Promise.all(
-          montageShots.map(s => fs.unlink(s))),
-        ));
+        await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
+        await Promise.all(montageShots.map(s => fs.unlink(s)));
       }
     }));
-  }
+  }));
 
   await Promise.all(promisesToWaitOn);
 };
