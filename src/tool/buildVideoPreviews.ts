@@ -176,8 +176,9 @@ export const buildVideoPreviews = async ({
       let montageFailed = false;
       const montageShotPromises: Promise<any>[] = [];
 
-      // Ignore first and last shots.
-      for (let montageShotNo = 1; montageShotNo < montageGranularity; montageShotNo++) {
+      // Ignore first and last shots. First and last are usually not useful, and last can possibly cause
+      // boundary issues with ffmpeg.
+      for (let montageShotNo = 1; montageShotNo < montageGranularity - 1; montageShotNo++) {
         const montageShotPos = (duration * montageShotNo / montageGranularity).toFixed(2);
         // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
         const montageShotDest = join(outDir, `montageshot${montageShotNo}.jpg`);
