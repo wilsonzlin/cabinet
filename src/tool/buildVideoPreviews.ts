@@ -39,7 +39,7 @@ const job = async (command: string, errorOnBadStatus?: boolean, ...args: (string
     proc.on('error', console.error);
     proc.on('exit', (code, sig) => {
       if (code !== 0 && errorOnBadStatus) {
-        reject(new Error(`Command exited with ${code ? `status ${code}` : `signal ${sig}`}: ${command}`));
+        reject(new Error(`Command exited with ${code ? `status ${code}` : `signal ${sig}`}: ${command} ${args.join(' ')}`));
       } else {
         resolve();
       }
@@ -57,6 +57,15 @@ const ensureDir = (dir: string) => new Promise((resolve, reject) =>
 
 const ff = async (...args: (string | number)[]): Promise<void> =>
   job(`ffmpeg`, false, `-loglevel`, 0, `-hide_banner`, `-y`, ...args);
+
+const screenshot = async (src: string, pos: number, dest: string): Promise<void> =>
+  ff(
+    `-ss`, pos.toFixed(3),
+    `-i`, src,
+    `-vframes`, 1,
+    `-q:v`, 2,
+    dest,
+  );
 
 export const buildVideoPreviews = async ({
   libraryDir,
@@ -82,12 +91,12 @@ export const buildVideoPreviews = async ({
     return promise;
   };
 
-  const filesStream = await readdirp.promise(libraryDir, {
+  const files = await readdirp.promise(libraryDir, {
     depth: Infinity,
     fileFilter: entry => fileExtensions.includes(entry.basename.slice(entry.basename.lastIndexOf('.') + 1)),
   });
 
-  await Promise.all(filesStream.map(async (file) => {
+  await Promise.all(files.map(async (file) => {
     const absPath = file.fullPath;
     const relPath = file.path;
     const outDir = join(previewsDir, relPath);
@@ -115,27 +124,17 @@ export const buildVideoPreviews = async ({
 
     // Create thumbnails at percentiles.
     for (const percentile of thumbnailPercentiles) {
-      const thumbPos = (duration * percentile / 100).toFixed(2);
+      const thumbPos = duration * percentile / 100;
       const thumbDest = join(outDir, `thumb${percentile}.jpg`);
-      if (await isFile(thumbDest)) {
-        console.info(`${percentile}% thumbnail exists for "${relPath}"`);
-      } else {
-        filePromises.push(queueWaitable(() => ff(
-          `-ss`, thumbPos,
-          `-i`, absPath,
-          `-vframes`, 1,
-          `-q:v`, 2,
-          thumbDest,
-        )));
+      if (!(await isFile(thumbDest))) {
+        filePromises.push(queueWaitable(() => screenshot(absPath, thumbPos, thumbDest)));
       }
     }
 
     // Create preview snippet.
     const snippetPos = Math.max(0, duration * 0.5 - (snippetDuration / 2));
     const snippetDest = join(outDir, 'snippet.mp4');
-    if (await isFile(snippetDest)) {
-      console.info(`Snippet exists for "${relPath}"`);
-    } else {
+    if (!(await isFile(snippetDest))) {
       filePromises.push(queueWaitable(() => ff(
         `-ss`, snippetPos,
         `-i`, absPath,
@@ -158,9 +157,7 @@ export const buildVideoPreviews = async ({
     const montageDest = join(outDir, 'montage.jpg');
     const nomontage = join(outDir, '.nomontage');
 
-    if (await isFile(nomontage) || await isFile(montageDest)) {
-      console.info(`Montage exists or is disabled for "${relPath}"`);
-    } else {
+    if (!(await Promise.all([isFile(nomontage), isFile(montageDest)])).some(f => f)) {
       // We want to get a shot every 2 seconds except for first and last 2 seconds, up to 200 shots.
       // More granularity would probably not be much use and exceed JPEG dimension limits.
       const montageGranularity = Math.floor(Math.min(200, duration / 2));
@@ -169,61 +166,54 @@ export const buildVideoPreviews = async ({
         // Video is too short for a montage, so don't create one.
         await emptyFile(nomontage);
         console.info(`Video "${relPath}" is too short for montage`);
-        return;
-      }
+      } else {
+        let montageFailed = false;
+        const montageShots: string[] = [];
+        const montageShotPromises: Promise<any>[] = [];
 
-      const montageShots: string[] = [];
-      let montageFailed = false;
-      const montageShotPromises: Promise<any>[] = [];
+        // Ignore first and last shots. First and last are usually not useful, and last can possibly cause
+        // boundary issues with ffmpeg.
+        for (let montageShotNo = 1; montageShotNo < montageGranularity - 1; montageShotNo++) {
+          const montageShotPos = duration * montageShotNo / montageGranularity;
+          // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
+          const montageShotDest = join(outDir, `montageshot${montageShotNo}.jpg`);
+          montageShots.push(montageShotDest);
 
-      // Ignore first and last shots. First and last are usually not useful, and last can possibly cause
-      // boundary issues with ffmpeg.
-      for (let montageShotNo = 1; montageShotNo < montageGranularity - 1; montageShotNo++) {
-        const montageShotPos = (duration * montageShotNo / montageGranularity).toFixed(2);
-        // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
-        const montageShotDest = join(outDir, `montageshot${montageShotNo}.jpg`);
-        montageShots.push(montageShotDest);
-
-        montageShotPromises.push(queueWaitable(async () => {
-          if (montageFailed || await isFile(montageShotDest)) {
-            return;
-          }
-
-          await ff(
-            `-ss`, montageShotPos,
-            `-i`, absPath,
-            `-vframes`, 1,
-            `-q:v`, 2,
-            montageShotDest,
-          );
-
-          const stats = await nullStat(montageShotDest);
-          if (!stats || !stats.size) {
-            // Montage shot failed to be created. Don't create montage and don't try again in future.
-            // Keep empty shot file so that which shots failed are known.
-            console.error(`Failed to generate montage shot ${montageShotNo} at ${montageShotPos}s for ${relPath}`);
-            montageFailed = true;
-          }
-        }));
-      }
-
-      // Don't put this in queue, as it depends on other queued promises.
-      promisesToWaitOn[promisesToWaitOn.length - 1] =
-        filePromises[filePromises.length - 1] =
-          Promise.all(montageShotPromises).then(async () => {
-            if (montageFailed) {
-              await emptyFile(nomontage);
-            } else {
-              // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
-              await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
-              // Don't delete montage shots. They take a long time to generate and can be reused in case previous steps
-              // fail due to chance, system, misconfiguration, environment, bugs, edge cases, or inexperience.
+          montageShotPromises.push(queueWaitable(async () => {
+            if (montageFailed || await isFile(montageShotDest)) {
+              return;
             }
-          });
+
+            await screenshot(absPath, montageShotPos, montageShotDest);
+
+            const stats = await nullStat(montageShotDest);
+            if (!stats || !stats.size) {
+              // Montage shot failed to be created. Don't create montage and don't try again in future.
+              // Keep empty shot file so that which shots failed are known.
+              console.error(`Failed to generate montage shot ${montageShotNo} at ${montageShotPos}s for ${relPath}`);
+              montageFailed = true;
+            }
+          }));
+        }
+
+        // Don't put this in queue, as it depends on other queued promises.
+        promisesToWaitOn[promisesToWaitOn.length - 1] =
+          filePromises[filePromises.length - 1] =
+            Promise.all(montageShotPromises).then(async () => {
+              if (montageFailed) {
+                await emptyFile(nomontage);
+              } else {
+                // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
+                await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
+                // Don't delete montage shots. They take a long time to generate and can be reused in case previous steps
+                // fail due to chance, system, misconfiguration, environment, bugs, edge cases, or inexperience.
+              }
+            });
+        }
     }
 
-    Promise.all(filePromises)
-      .then(() => console.log(`Processed "${relPath}"`));
+    // This is purely for informational purposes.
+    Promise.all(filePromises).then(() => console.log(`Processed "${relPath}"`));
   }));
 
   await Promise.all(promisesToWaitOn);
