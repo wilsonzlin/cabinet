@@ -60,7 +60,7 @@ const ff = async (...args: (string | number)[]): Promise<void> =>
 export const buildVideoPreviews = async ({
   libraryDir,
   previewsDir,
-  concurrency = cpus().length * 2,
+  concurrency = cpus().length,
   fileExtensions,
   thumbnailPercentiles = [50],
   snippetDuration = 5,
