@@ -90,6 +90,7 @@ export const buildVideoPreviews = async ({
     const absPath = file.fullPath;
     const relPath = file.path;
     const outDir = join(previewsDir, relPath);
+    const filePromises: Promise<any>[] = [];
 
     await ensureDir(outDir);
 
@@ -116,34 +117,42 @@ export const buildVideoPreviews = async ({
     for (const percentile of thumbnailPercentiles) {
       const thumbPos = (duration * percentile / 100).toFixed(2);
       const thumbDest = join(outDir, `thumb${percentile}.jpg`);
-      queueWaitable(() => ff(
-        `-ss`, thumbPos,
-        `-i`, absPath,
-        `-vframes`, 1,
-        `-q:v`, 2,
-        thumbDest,
-      ));
+      if (await isFile(thumbDest)) {
+        console.info(`${percentile}% thumbnail exists for "${relPath}"`);
+      } else {
+        filePromises.push(queueWaitable(() => ff(
+          `-ss`, thumbPos,
+          `-i`, absPath,
+          `-vframes`, 1,
+          `-q:v`, 2,
+          thumbDest,
+        )));
+      }
     }
 
     // Create preview snippet.
     const snippetPos = Math.max(0, duration * 0.5 - (snippetDuration / 2));
     const snippetDest = join(outDir, 'snippet.mp4');
-    queueWaitable(() => ff(
-      `-ss`, snippetPos,
-      `-i`, absPath,
-      `-filter:v`, `scale=180:trunc(ow/a/2)*2`,
-      `-c:v`, `libx264`,
-      `-map_metadata`, -1,
-      `-preset`, `veryslow`,
-      `-crf`, 17,
-      `-max_muxing_queue_size`, 1048576,
-      `-movflags`,
-      `+faststart`,
-      `-an`,
-      `-t`, snippetDuration,
-      `-f`, `mp4`,
-      snippetDest,
-    ));
+    if (await isFile(snippetDest)) {
+      console.info(`Snippet exists for "${relPath}"`);
+    } else {
+      filePromises.push(queueWaitable(() => ff(
+        `-ss`, snippetPos,
+        `-i`, absPath,
+        `-filter:v`, `scale=180:trunc(ow/a/2)*2`,
+        `-c:v`, `libx264`,
+        `-map_metadata`, -1,
+        `-preset`, `veryslow`,
+        `-crf`, 17,
+        `-max_muxing_queue_size`, 1048576,
+        `-movflags`,
+        `+faststart`,
+        `-an`,
+        `-t`, snippetDuration,
+        `-f`, `mp4`,
+        snippetDest,
+      )));
+    }
 
     // Create montage.
     const montageDest = join(outDir, 'montage.jpg');
@@ -151,60 +160,67 @@ export const buildVideoPreviews = async ({
 
     if (await isFile(nomontage) || await isFile(montageDest)) {
       console.info(`Montage exists or is disabled for "${relPath}"`);
-      return;
-    }
+    } else {
+      // We want to get a shot every 2 seconds except for first and last 2 seconds, up to 200 shots.
+      // More granularity would probably not be much use and exceed JPEG dimension limits.
+      const montageGranularity = Math.floor(Math.min(200, duration / 2));
 
-    // We want to get a shot every 2 seconds except for first and last 2 seconds, up to 200 shots.
-    // More granularity would probably not be much use and exceed JPEG dimension limits.
-    const montageGranularity = Math.floor(Math.min(200, duration / 2));
-
-    if (montageGranularity <= 2) {
-      // Video is too short for a montage, so don't create one.
-      await emptyFile(nomontage);
-      console.info(`Video "${relPath}" is too short for montage`);
-      return;
-    }
-
-    const montageShots: string[] = [];
-    let montageFailed = false;
-    const montageShotPromises: Promise<any>[] = [];
-
-    // Ignore first and last shots.
-    for (let montageShotNo = 1; montageShotNo < montageGranularity; montageShotNo++) {
-      const montageShotPos = (duration * montageShotNo / montageGranularity).toFixed(2);
-      // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
-      const montageShotDest = join(outDir, `montageshot${montageShotNo}.jpg`);
-      montageShots.push(montageShotDest);
-
-      montageShotPromises.push(
-        queueWaitable(() => ff(
-          `-ss`, montageShotPos,
-          `-i`, absPath,
-          `-vframes`, 1,
-          `-q:v`, 2,
-          montageShotDest,
-        ))
-          .then(async () => {
-            const stats = await nullStat(montageShotDest);
-            if (!stats || !stats.size) {
-              // Montage shot failed to be created. Don't create montage and don't try again in future.
-              // Keep empty shot file so that no other concurrent scripts try to recreate it and which shots failed are known.
-              montageFailed = true;
-            }
-          }),
-      );
-    }
-
-    // Don't put this in queue, as it depends on other queued promises.
-    promisesToWaitOn.push(Promise.all(montageShotPromises).then(async () => {
-      if (montageFailed) {
+      if (montageGranularity <= 2) {
+        // Video is too short for a montage, so don't create one.
         await emptyFile(nomontage);
-      } else {
-        // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
-        await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
-        await Promise.all(montageShots.map(s => fs.unlink(s)));
+        console.info(`Video "${relPath}" is too short for montage`);
+        return;
       }
-    }));
+
+      const montageShots: string[] = [];
+      let montageFailed = false;
+      const montageShotPromises: Promise<any>[] = [];
+
+      // Ignore first and last shots.
+      for (let montageShotNo = 1; montageShotNo < montageGranularity; montageShotNo++) {
+        const montageShotPos = (duration * montageShotNo / montageGranularity).toFixed(2);
+        // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
+        const montageShotDest = join(outDir, `montageshot${montageShotNo}.jpg`);
+        montageShots.push(montageShotDest);
+
+        montageShotPromises.push(queueWaitable(async () => {
+          if (montageFailed || !(await isFile(montageShotDest))) {
+            return;
+          }
+
+          await ff(
+            `-ss`, montageShotPos,
+            `-i`, absPath,
+            `-vframes`, 1,
+            `-q:v`, 2,
+            montageShotDest,
+          );
+
+          const stats = await nullStat(montageShotDest);
+          if (!stats || !stats.size) {
+            // Montage shot failed to be created. Don't create montage and don't try again in future.
+            // Keep empty shot file so that which shots failed are known.
+            montageFailed = true;
+          }
+        }));
+      }
+
+      // Don't put this in queue, as it depends on other queued promises.
+      promisesToWaitOn[promisesToWaitOn.length - 1] =
+        filePromises[filePromises.length - 1] =
+          Promise.all(montageShotPromises).then(async () => {
+            if (montageFailed) {
+              await emptyFile(nomontage);
+            } else {
+              // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
+              await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
+              await Promise.all(montageShots.map(s => fs.unlink(s)));
+            }
+          });
+    }
+
+    Promise.all(filePromises)
+      .then(() => console.log(`Processed "${relPath}"`));
   }));
 
   await Promise.all(promisesToWaitOn);
