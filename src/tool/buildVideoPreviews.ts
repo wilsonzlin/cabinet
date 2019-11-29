@@ -200,6 +200,7 @@ export const buildVideoPreviews = async ({
           if (!stats || !stats.size) {
             // Montage shot failed to be created. Don't create montage and don't try again in future.
             // Keep empty shot file so that which shots failed are known.
+            console.error(`Failed to generate montage shot ${montageShotNo} at ${montageShotPos}s for ${relPath}`);
             montageFailed = true;
           }
         }));
