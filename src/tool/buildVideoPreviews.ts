@@ -1,4 +1,4 @@
-import {exec, spawn} from 'child_process';
+import {execFile, spawn} from 'child_process';
 import {cpus} from 'os';
 import readdirp from 'readdirp';
 import {join} from 'path';
@@ -21,27 +21,29 @@ const isFile = async (path: string) => (await nullStat(path))?.isFile();
 
 const emptyFile = async (path: string) => fs.writeFile(path, '');
 
-const cmd = async (command: string): Promise<string> => new Promise((resolve, reject) =>
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      reject(error);
-    } else if (stderr) {
-      reject(new Error(`stderr: ${stderr}`));
-    } else {
-      resolve(stdout);
-    }
-  }));
+const cmd = async (command: string, ...args: (string | number)[]): Promise<string> =>
+  new Promise((resolve, reject) =>
+    execFile(command, args.map(String), (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else if (stderr) {
+        reject(new Error(`stderr: ${stderr}`));
+      } else {
+        resolve(stdout);
+      }
+    }));
 
-const job = async (command: string, errorOnBadStatus?: boolean, ...args: (string | number)[]): Promise<void> => new Promise((resolve, reject) => {
-  const proc = spawn(command, args.map(String), {stdio: ['ignore', 'inherit', 'inherit']});
-  proc.on('close', code => {
-    if (code !== 0 && errorOnBadStatus) {
-      reject(new Error(`Command failed with status ${code}: ${command}`));
-    } else {
-      resolve();
-    }
+const job = async (command: string, errorOnBadStatus?: boolean, ...args: (string | number)[]): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const proc = spawn(command, args.map(String), {stdio: ['ignore', 'inherit', 'inherit']});
+    proc.on('close', code => {
+      if (code !== 0 && errorOnBadStatus) {
+        reject(new Error(`Command failed with status ${code}: ${command}`));
+      } else {
+        resolve();
+      }
+    });
   });
-});
 
 const ensureDir = (dir: string) => new Promise((resolve, reject) =>
   mkdirp(dir, err => {
@@ -52,7 +54,8 @@ const ensureDir = (dir: string) => new Promise((resolve, reject) =>
     }
   }));
 
-const ff = async (...args: (string | number)[]): Promise<void> => job(`ffmpeg`, false, `-loglevel`, 0, `-hide_banner`, `-y`, ...args);
+const ff = async (...args: (string | number)[]): Promise<void> =>
+  job(`ffmpeg`, false, `-loglevel`, 0, `-hide_banner`, `-y`, ...args);
 
 export const buildVideoPreviews = async ({
   libraryDir,
@@ -94,7 +97,14 @@ export const buildVideoPreviews = async ({
     let duration: number;
     try {
       duration = Number.parseFloat(await cmd(
-        `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${absPath}"`,
+        `ffprobe`,
+        `-v`,
+        `error`,
+        `-show_entries`,
+        `format=duration`,
+        `-of`,
+        `default=noprint_wrappers=1:nokey=1`,
+        absPath,
       ));
     } catch (err) {
       console.error(`Failed to retrieve duration for "${relPath}"`);
@@ -121,7 +131,7 @@ export const buildVideoPreviews = async ({
     queueWaitable(() => ff(
       `-ss`, snippetPos,
       `-i`, absPath,
-      `-filter:v`, `scale="180:trunc(ow/a/2)*2"`,
+      `-filter:v`, `scale=180:trunc(ow/a/2)*2`,
       `-c:v`, `libx264`,
       `-map_metadata`, -1,
       `-preset`, `veryslow`,
