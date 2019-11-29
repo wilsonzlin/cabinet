@@ -100,7 +100,6 @@ export const buildVideoPreviews = async ({
     const absPath = file.fullPath;
     const relPath = file.path;
     const outDir = join(previewsDir, relPath);
-    const filePromises: Promise<any>[] = [];
 
     await ensureDir(outDir);
 
@@ -127,7 +126,7 @@ export const buildVideoPreviews = async ({
       const thumbPos = duration * percentile / 100;
       const thumbDest = join(outDir, `thumb${percentile}.jpg`);
       if (!(await isFile(thumbDest))) {
-        filePromises.push(queueWaitable(() => screenshot(absPath, thumbPos, thumbDest)));
+        queueWaitable(() => screenshot(absPath, thumbPos, thumbDest));
       }
     }
 
@@ -135,7 +134,7 @@ export const buildVideoPreviews = async ({
     const snippetPos = Math.max(0, duration * 0.5 - (snippetDuration / 2));
     const snippetDest = join(outDir, 'snippet.mp4');
     if (!(await isFile(snippetDest))) {
-      filePromises.push(queueWaitable(() => ff(
+      queueWaitable(() => ff(
         `-ss`, snippetPos,
         `-i`, absPath,
         `-filter:v`, `scale=180:trunc(ow/a/2)*2`,
@@ -150,7 +149,7 @@ export const buildVideoPreviews = async ({
         `-t`, snippetDuration,
         `-f`, `mp4`,
         snippetDest,
-      )));
+      ));
     }
 
     // Create montage.
@@ -197,23 +196,18 @@ export const buildVideoPreviews = async ({
         }
 
         // Don't put this in queue, as it depends on other queued promises.
-        promisesToWaitOn[promisesToWaitOn.length - 1] =
-          filePromises[filePromises.length - 1] =
-            Promise.all(montageShotPromises).then(async () => {
-              if (montageFailed) {
-                await emptyFile(nomontage);
-              } else {
-                // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
-                await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
-                // Don't delete montage shots. They take a long time to generate and can be reused in case previous steps
-                // fail due to chance, system, misconfiguration, environment, bugs, edge cases, or inexperience.
-              }
-            });
-        }
+        promisesToWaitOn.push(Promise.all(montageShotPromises).then(async () => {
+          if (montageFailed) {
+            await emptyFile(nomontage);
+          } else {
+            // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
+            await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
+            // Don't delete montage shots. They take a long time to generate and can be reused in case previous steps
+            // fail due to chance, system, misconfiguration, environment, bugs, edge cases, or inexperience.
+          }
+        }));
+      }
     }
-
-    // This is purely for informational purposes.
-    Promise.all(filePromises).then(() => console.log(`Processed "${relPath}"`));
   }));
 
   await Promise.all(promisesToWaitOn);
