@@ -7,6 +7,8 @@ import {listPhotos, listVideos} from './server/library';
 import {startServer} from './server/server';
 import {getUsers, writeUser} from './server/user';
 import {buildVideoPreviews} from './tool/buildVideoPreviews';
+import {cpus} from 'os';
+import {convertVideos} from './tool/convertVideos';
 
 const args = minimist(process.argv.slice(2));
 
@@ -17,8 +19,9 @@ const optionalMap = <T, R> (val: T | null | undefined, mapper: (val: T) => R) =>
 const LIBRARY_DIR: string = rp(args.library);
 const USERS_DIR: string | undefined = optionalMap(args.users, rp);
 const PREVIEWS_DIR: string | undefined = optionalMap(args.previews, rp);
-const VIDEO_EXTENSIONS: string[] = (args.video || 'mp4,m4v').split(',');
-const PHOTO_EXTENSIONS: string[] = (args.photo || 'png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp').split(',');
+const VIDEO_EXTENSIONS: Set<string> = new Set((args.video || 'mp4,m4v').split(','));
+const PHOTO_EXTENSIONS: Set<string> = new Set((args.photo || 'png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp').split(','));
+const CONCURRENCY: number = +args.concurrency || cpus().length;
 const PORT: number = args.port || Math.floor(Math.random() * 8976 + 1024);
 const SSL_KEY: string | undefined = args.key;
 const SSL_CERT: string | undefined = args.cert;
@@ -34,10 +37,19 @@ const SSL_DHPARAM: string | undefined = args.dh;
       previewsDir: PREVIEWS_DIR,
       libraryDir: LIBRARY_DIR,
       fileExtensions: VIDEO_EXTENSIONS,
+      concurrency: CONCURRENCY,
     });
     return;
   }
 
+  if (args['convert-videos']) {
+    await convertVideos({
+      sourceDir: LIBRARY_DIR,
+      convertedDir: rp(args.converted),
+      concurrency: CONCURRENCY,
+    });
+    return;
+  }
 
   const [photosRoot, users, videos] = await Promise.all([
     listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR),

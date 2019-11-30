@@ -1,84 +1,22 @@
-import {execFile, spawn} from 'child_process';
-import {cpus} from 'os';
 import readdirp from 'readdirp';
 import {join} from 'path';
-import {promises as fs} from 'fs';
+import {emptyFile, ensureDir, getExt, isFile, nullStat} from '../util/fs';
+import {ff, screenshot} from '../util/ff';
+import {cmd, job} from '../util/exec';
 import PromiseQueue = require('promise-queue');
-import mkdirp = require('mkdirp');
-
-const nullStat = async (path: string) => {
-  try {
-    return await fs.stat(path);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      return null;
-    }
-    throw err;
-  }
-};
-
-const isFile = async (path: string) => (await nullStat(path))?.isFile();
-
-const emptyFile = async (path: string) => fs.writeFile(path, '');
-
-const cmd = async (command: string, ...args: (string | number)[]): Promise<string> =>
-  new Promise((resolve, reject) =>
-    execFile(command, args.map(String), (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-      } else if (stderr) {
-        reject(new Error(`stderr: ${stderr}`));
-      } else {
-        resolve(stdout);
-      }
-    }));
-
-const job = async (command: string, errorOnBadStatus?: boolean, ...args: (string | number)[]): Promise<void> =>
-  new Promise((resolve, reject) => {
-    const proc = spawn(command, args.map(String), {stdio: ['ignore', 'inherit', 'inherit']});
-    proc.on('error', console.error);
-    proc.on('exit', (code, sig) => {
-      if (code !== 0 && errorOnBadStatus) {
-        reject(new Error(`Command exited with ${code ? `status ${code}` : `signal ${sig}`}: ${command} ${args.join(' ')}`));
-      } else {
-        resolve();
-      }
-    });
-  });
-
-const ensureDir = (dir: string) => new Promise((resolve, reject) =>
-  mkdirp(dir, err => {
-    if (err) {
-      reject(err);
-    } else {
-      resolve();
-    }
-  }));
-
-const ff = async (...args: (string | number)[]): Promise<void> =>
-  job(`ffmpeg`, false, `-loglevel`, 0, `-hide_banner`, `-y`, ...args);
-
-const screenshot = async (src: string, pos: number, dest: string): Promise<void> =>
-  ff(
-    `-ss`, pos.toFixed(3),
-    `-i`, src,
-    `-vframes`, 1,
-    `-q:v`, 2,
-    dest,
-  );
 
 export const buildVideoPreviews = async ({
   libraryDir,
   previewsDir,
-  concurrency = cpus().length,
+  concurrency,
   fileExtensions,
   thumbnailPercentiles = [50],
   snippetDuration = 5,
 }: {
   libraryDir: string,
   previewsDir: string,
-  concurrency?: number,
-  fileExtensions: string[],
+  concurrency: number,
+  fileExtensions: Set<string>,
   thumbnailPercentiles?: number[],
   snippetDuration?: number,
 }): Promise<void> => {
@@ -93,7 +31,7 @@ export const buildVideoPreviews = async ({
 
   const files = await readdirp.promise(libraryDir, {
     depth: Infinity,
-    fileFilter: entry => fileExtensions.includes(entry.basename.slice(entry.basename.lastIndexOf('.') + 1)),
+    fileFilter: entry => fileExtensions.has(getExt(entry.basename)),
   });
 
   await Promise.all(files.map(async (file) => {

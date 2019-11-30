@@ -1,13 +1,12 @@
-import {Dirent, promises as fs} from "fs";
-import {imageSize} from "image-size";
-import mime from "mime";
-import {basename, join, relative} from "path";
-import readdirp from "readdirp";
-import {promisify} from "util";
+import {Dirent, promises as fs} from 'fs';
+import {imageSize} from 'image-size';
+import mime from 'mime';
+import {basename, join, relative} from 'path';
+import readdirp from 'readdirp';
+import {promisify} from 'util';
+import {getExt} from '../util/fs';
 
 const getImageSize = promisify(imageSize);
-const hasExtension = (file: string, extensions: string[]) => extensions.some(
-  ext => file.toLowerCase().endsWith(`.${ext}`));
 
 export interface Video {
   title: string;
@@ -17,16 +16,16 @@ export interface Video {
   type: string | null,
 }
 
-export const listVideos = async (dir: string, videoExtensions: string[]): Promise<Video[]> => {
+export const listVideos = async (dir: string, videoExtensions: Set<string>): Promise<Video[]> => {
   const entries = await readdirp.promise(dir, {
     depth: Infinity,
-    fileFilter: e => hasExtension(e.basename, videoExtensions),
-    type: "files",
+    fileFilter: e => videoExtensions.has(getExt(e.basename)),
+    type: 'files',
     alwaysStat: true,
   });
 
   return entries.map(e => ({
-    title: e.basename.slice(0, e.basename.lastIndexOf(".")),
+    title: e.basename.slice(0, e.basename.lastIndexOf('.')),
     relativePath: e.path,
     absolutePath: e.fullPath,
     // e.stats should always exist as alwaysStat is true.
@@ -83,7 +82,7 @@ const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo | 
   };
 };
 
-export const listPhotos = async (dir: string, photoExtensions: string[], rel: string): Promise<PhotoDirectory> => {
+export const listPhotos = async (dir: string, photoExtensions: Set<string>, rel: string): Promise<PhotoDirectory> => {
   const raw = await fs.readdir(dir, {withFileTypes: true});
 
   // Note that relative paths on entry objects are relative to $dir, and probably
@@ -93,12 +92,12 @@ export const listPhotos = async (dir: string, photoExtensions: string[], rel: st
 
   const [photos, subdirectories] = await Promise.all([
     Promise.all(raw
-      .filter(e => e.isFile() && hasExtension(e.name, photoExtensions))
-      .map(e => buildPhoto(dir, e, rel))
+      .filter(e => e.isFile() && photoExtensions.has(getExt(e.name)))
+      .map(e => buildPhoto(dir, e, rel)),
     ).then(photos => photos.filter(p => p) as Photo[]),
     Promise.all(raw
       .filter(e => e.isDirectory())
-      .map(e => listPhotos(join(dir, e.name), photoExtensions, rel))
+      .map(e => listPhotos(join(dir, e.name), photoExtensions, rel)),
     ).then(dirs => dirs.filter(d => d.subdirectories.length + d.photos.length)),
   ]);
 
