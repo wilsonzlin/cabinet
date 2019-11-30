@@ -246,15 +246,22 @@
     },
     next () {
       // This should end if currently the last video and start from beginning if nothing loaded.
-      this.current = $$entry[$$entry.indexOf(this._current) + 1] || null;
+      let next = this._current;
+      do {
+        next = $$entry[$$entry.indexOf(next) + 1];
+      } while (next && (next.hidden || next.dataset.disliked && prefs.hideDislikedVideos));
+      this.current = next || null;
       this.scrollToCurrent();
     },
     previous () {
       // This should end if currently the first video and start from end if nothing loaded.
-      this.current = (this._current == null
-        ? $$entry[$$entry.length - 1]
-        : $$entry[$$entry.indexOf(this._current) - 1])
-        || null;
+      let prev = this._current;
+      do {
+        prev = prev == null
+          ? $$entry[$$entry.length - 1]
+          : $$entry[$$entry.indexOf(prev) - 1];
+      } while (prev && (prev.hidden || prev.dataset.disliked && prefs.hideDislikedVideos));
+      this.current = prev || null;
       this.scrollToCurrent();
     },
     seekRelative (seconds) {
