@@ -35,27 +35,42 @@ include ../common/common.pug
           #notification-progress-container
             #notification-progress
       #player-controls
-        button#button-playback
         input#progress(type="range" value=0 min=0 step=0.1)
+        button#button-playback
         if _signedIn
           button#button-like &#x1F44D
           button#button-dislike &#x1F44E
-        select#speed
-          option 0.25
-          option 0.5
-          option 0.75
-          option(selected) 1.0
-          option 1.25
-          option 1.5
-          option 1.75
-          option 2
+        #time
+        #speed
+          label.speed-option
+            input(name='speed' type='radio' hidden value=0.25)
+            div 0.25x
+          label.speed-option
+            input(name='speed' type='radio' hidden value=0.5)
+            div 0.5x
+          label.speed-option
+            input(name='speed' type='radio' hidden value=0.75)
+            div 0.75x
+          label.speed-option
+            input(name='speed' type='radio' hidden value=1 checked)
+            div 1x
+          label.speed-option
+            input(name='speed' type='radio' hidden value=1.25)
+            div 1.25x
+          label.speed-option
+            input(name='speed' type='radio' hidden value=1.5)
+            div 1.5x
+          label.speed-option
+            input(name='speed' type='radio' hidden value=1.75)
+            div 1.75x
+          label.speed-option
+            input(name='speed' type='radio' hidden value=2)
+            div 2x
         button#button-fullscreen
 
   #pane
     #pane-toolbar
-      input#search(
-        placeholder="Search..."
-      )
+      input#search(placeholder="Search")
       button#button-settings ⚙
     dl#folders
       each folder in folders

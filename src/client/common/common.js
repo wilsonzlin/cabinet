@@ -1,11 +1,15 @@
 'use strict';
 
-const cls = ($elem, name, toggle) => {
-  // IE 11 doesn't support .toggle with $force argument.
-  if (toggle) {
-    $elem.classList.add(name);
+const cls = ($elem, name, force) => {
+  if (force === undefined) {
+    $elem.classList.toggle(name);
   } else {
-    $elem.classList.remove(name);
+    // IE 11 doesn't support .toggle with $force argument.
+    if (force) {
+      $elem.classList.add(name);
+    } else {
+      $elem.classList.remove(name);
+    }
   }
 };
 

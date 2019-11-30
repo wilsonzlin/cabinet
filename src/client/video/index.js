@@ -23,6 +23,10 @@
     }
   })();
 
+  const leftPad = (str, n, pad = '0') => {
+    return pad.repeat(n - String(str).length) + str;
+  };
+
   /**
    * States:
    *  - engaged: Video is playing and user has not recently interacted with video.
@@ -63,6 +67,7 @@
   const $search = document.querySelector('#search');
   const $speed = document.querySelector('#speed');
   const $targets = document.querySelector('#targets');
+  const $time = document.querySelector('#time');
   const $titleName = document.querySelector('#title-name');
   const $titleError = document.querySelector('#title-error');
   const $video = document.querySelector('#video');
@@ -173,10 +178,21 @@
   prefs.onChange('showVideoThumbnails', val => cls($folders, 'folders-show-thumbnails', val));
 
   // Probably don't need to sync with $video.onratechange, as only $speed should be able to set speed.
-  $speed.addEventListener('change', e => $video.playbackRate = +e.target.value);
+  $speed.addEventListener('click', e => {
+    // Firefox triggers click event on input as well.
+    if (e.target.tagName === 'DIV') {
+      cls($speed, 'expanded');
+    }
+  });
+  $speed.addEventListener('change', e => videoControl.speed = e.target.value);
 
   const videoControl = {
     _current: null,
+    // Need to store as playbackRate is reset on every new media.
+    _speed: 1,
+    set speed (val) {
+      this._speed = $video.playbackRate = val;
+    },
     scrollToCurrent () {
       const $entry = this._current;
       if ($entry) {
@@ -200,7 +216,7 @@
       if ($entry) {
         $video.src = `/stream/${$entry.dataset.id}`;
         // playbackRate resets on new media.
-        $video.playbackRate = $speed.value;
+        $video.playbackRate = this._speed;
         $titleName.textContent = $entry.textContent;
         $entry.dataset.current = true;
         uiState.loaded = true;
@@ -269,16 +285,48 @@
     },
   };
 
+  const formatTime = dur => {
+    const seconds = Math.floor(dur % 60);
+    const minutes = Math.floor((dur / 60) % 60);
+    const hours = Math.floor(dur / 3600);
+    return hours
+      ? `${hours}:${leftPad(minutes, 2)}:${leftPad(seconds, 2)}`
+      : `${minutes}:${leftPad(seconds, 2)}`;
+  };
+
+  let timeUpdater;
+  const updateTime = () => {
+    $time.textContent = [
+      formatTime($progress.value),
+      `-${formatTime($progress.max - $progress.value)}`,
+    ].join(' / ');
+  };
+
   touch.onMouse($progress, 'mouseenter', () => uiState.hoveringProgress = true);
   touch.onMouse($progress, 'mouseleave', () => uiState.hoveringProgress = false);
-  $progress.addEventListener('input', () => $video.currentTime = $progress.value);
+  $progress.addEventListener('input', () => {
+    $video.currentTime = $progress.value;
+    updateTime();
+  });
 
-  $video.addEventListener('ended', () => uiState.playing = uiState.engaged = false);
+  $video.addEventListener('ended', () => {
+    uiState.playing = uiState.engaged = false;
+    updateTime();
+    clearInterval(timeUpdater);
+  });
   $video.addEventListener('loadedmetadata', () => $progress.max = $video.duration);
-  $video.addEventListener('play', () => uiState.playing = true);
-  $video.addEventListener('pause', () => uiState.playing = uiState.engaged = false);
+  $video.addEventListener('play', () => {
+    uiState.playing = true;
+    updateTime();
+    timeUpdater = setInterval(updateTime, 1000);
+  });
+  $video.addEventListener('pause', () => {
+    uiState.playing = uiState.engaged = false;
+    updateTime();
+    clearInterval(timeUpdater);
+  });
   $video.addEventListener('timeupdate', () => $progress.value = $video.currentTime);
-  $video.addEventListener('error', e => {
+  $video.addEventListener('error', () => {
     uiState.playing = uiState.engaged = uiState.loaded = false;
     console.error($video.error);
     $titleError.textContent = $video.error && $video.error.message || 'An unknown error occurred';
