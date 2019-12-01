@@ -38,10 +38,11 @@
   const uiState = createUiState([
     'engaged',
     'fullscreen',
+    'hideList',
     'hoveringProgress',
     'loaded',
     'playing',
-    'hideList',
+    'scrubbing',
     'usingTouch',
   ]);
 
@@ -49,8 +50,9 @@
   const $buttonDislike = document.querySelector('#button-dislike');
   const $buttonFullscreen = document.querySelector('#button-fullscreen');
   const $buttonLike = document.querySelector('#button-like');
+  const $buttonListHide = document.querySelector('#button-list-hide');
+  const $buttonListShow = document.querySelector('#button-list-show');
   const $buttonNext = document.querySelector('#button-next');
-  const $buttonPlayback = document.querySelector('#button-playback');
   const $buttonPlaybackTouchOnly = document.querySelector('#button-playback-touch-only');
   const $buttonPrevious = document.querySelector('#button-previous');
   const $buttonSettings = document.querySelector('#button-settings');
@@ -121,11 +123,12 @@
     }
   });
 
+  $buttonListHide.addEventListener('click', () => uiState.hideList = true);
+  $buttonListShow.addEventListener('click', () => uiState.hideList = false);
   $buttonSettings.addEventListener('click', () => prefs.open());
 
   $buttonFullscreen.addEventListener('click', () => toggleFullscreen());
   $buttonNext.addEventListener('click', () => videoControl.next());
-  $buttonPlayback.addEventListener('click', () => videoControl.togglePlayback());
   $buttonPlaybackTouchOnly.addEventListener('touchstart', () => {
     const $b = $buttonPlaybackTouchOnly;
     videoControl.togglePlayback();
@@ -152,7 +155,10 @@
     const $preview = $entry.querySelector('.entry-preview');
     const $snippet = $entry.querySelector('.entry-snippet');
     if ($preview) {
-      $preview.addEventListener('mouseenter', () => $snippet.currentTime = $snippet.play() | 0);
+      $preview.addEventListener('mouseenter', () => {
+        $snippet.currentTime = 0;
+        $snippet.play();
+      });
       $preview.addEventListener('mouseleave', () => $snippet.pause());
     }
   }
@@ -220,6 +226,11 @@
         $titleName.textContent = $entry.textContent;
         $entry.dataset.current = true;
         uiState.loaded = true;
+        // For some videos FF doesn't seem to autoplay sometimes.
+        // It might be because video doesn't have its moov atom at the beginning,
+        // and FF doesn't want to download entire video.
+        // Video might also be not well-formed.
+        $video.play();
       } else {
         // This is necessary because removeAttribute only hides video in Firefox; audio still continues.
         $video.pause();
@@ -309,11 +320,28 @@
     ].join(' / ');
   };
 
+  let wasPlayingBeforeScrubbing;
   touch.onMouse($progress, 'mouseenter', () => uiState.hoveringProgress = true);
+  $progress.addEventListener('mousedown', () => wasPlayingBeforeScrubbing = uiState.playing, true);
   touch.onMouse($progress, 'mouseleave', () => uiState.hoveringProgress = false);
+  $progress.addEventListener('mouseup', () => wasPlayingBeforeScrubbing = undefined, true);
+  let scrubbingTimeout;
   $progress.addEventListener('input', () => {
-    $video.currentTime = $progress.value;
+    clearTimeout(scrubbingTimeout);
+    // Cache variable.
+    const shouldPlay = wasPlayingBeforeScrubbing;
+    if (shouldPlay) {
+      $video.pause();
+    }
+    uiState.scrubbing = true;
     updateTime();
+    scrubbingTimeout = setTimeout(() => {
+      $video.currentTime = $progress.value;
+      uiState.scrubbing = false;
+      if (shouldPlay) {
+        $video.play();
+      }
+    }, 240);
   });
 
   $video.addEventListener('ended', () => {
@@ -332,7 +360,11 @@
     updateTime();
     clearInterval(timeUpdater);
   });
-  $video.addEventListener('timeupdate', () => $progress.value = $video.currentTime);
+  $video.addEventListener('timeupdate', () => {
+    if (!uiState.scrubbing) {
+      $progress.value = $video.currentTime;
+    }
+  });
   $video.addEventListener('error', () => {
     uiState.playing = uiState.engaged = uiState.loaded = false;
     console.error($video.error);

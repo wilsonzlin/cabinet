@@ -59,7 +59,7 @@ body.s-engaged * {
   border-color: #444;
 }
 
-#button-settings {
+#pane-toolbar > button {
   flex: 0 0 auto;
 
   color: #444;
@@ -238,13 +238,27 @@ body:not(.s-loaded) #video {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
   padding: 1rem;
 
+  display: flex;
+  align-items: center;
+}
+
+#title-text {
   overflow: hidden;
   white-space: nowrap;
+  flex-grow: 1;
 }
 
 #title-error {
   color: orange;
   font-size: 0.875rem;
+}
+
+#title-controls {
+  flex: 0 0 auto;
+}
+
+body:not(.s-hideList) #button-list-show {
+  display: none;
 }
 
 #overlay-middle {
@@ -412,20 +426,13 @@ body:not(.s-playing) #button-playback-touch-only::before {
   font-size: 1.25rem;
 }
 
-.s-playing #button-playback::before {
-  content: "⏸";
-}
-
-body:not(.s-playing) #button-playback::before {
-  content: "▶";
-}
-
 #time, #speed {
   font-size: 0.875rem;
 }
 
 #time {
   flex-grow: 1;
+  padding: 0 1rem;
 }
 
 #speed {

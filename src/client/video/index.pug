@@ -22,8 +22,11 @@ include ../common/common.pug
     video#video(autoplay)
     #overlay
       #title
-        #title-name
-        #title-error
+        #title-text
+          #title-name
+          #title-error
+        #title-controls
+          button#button-list-show ☰
       #overlay-middle
         #targets
           .target
@@ -36,11 +39,10 @@ include ../common/common.pug
             #notification-progress
       #player-controls
         input#progress(type="range" value=0 min=0 step=0.1)
-        button#button-playback
         if _signedIn
           button#button-like &#x1F44D
           button#button-dislike &#x1F44E
-        #time
+        #time 0:00 / -0:00
         #speed
           label.speed-option
             input(name='speed' type='radio' hidden value=0.25)
@@ -71,6 +73,7 @@ include ../common/common.pug
   #pane
     #pane-toolbar
       input#search(placeholder="Search")
+      button#button-list-hide ―
       button#button-settings ⚙
     dl#folders
       each folder in folders
