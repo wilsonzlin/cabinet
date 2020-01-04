@@ -16,6 +16,7 @@ const rp = (p: string): string => realpathSync(p);
 
 const optionalMap = <T, R> (val: T | null | undefined, mapper: (val: T) => R) => val == null ? undefined : mapper(val);
 
+const VERBOSE: boolean | undefined = args['verbose'];
 const LIBRARY_DIR: string = rp(args.library);
 const USERS_DIR: string | undefined = optionalMap(args.users, rp);
 const PREVIEWS_DIR: string | undefined = optionalMap(args.previews, rp);
@@ -27,53 +28,48 @@ const SSL_KEY: string | undefined = args.key;
 const SSL_CERT: string | undefined = args.cert;
 const SSL_DHPARAM: string | undefined = args.dh;
 
-(async function () {
-  if (args['build-video-previews']) {
-    if (!PREVIEWS_DIR) {
-      throw new Error(`No preview directory provided`);
-    }
-
-    await buildVideoPreviews({
-      previewsDir: PREVIEWS_DIR,
-      libraryDir: LIBRARY_DIR,
-      fileExtensions: VIDEO_EXTENSIONS,
-      concurrency: CONCURRENCY,
-    });
-    return;
+if (args['build-video-previews']) {
+  if (!PREVIEWS_DIR) {
+    throw new Error(`No preview directory provided`);
   }
+  buildVideoPreviews({
+    previewsDir: PREVIEWS_DIR,
+    libraryDir: LIBRARY_DIR,
+    fileExtensions: VIDEO_EXTENSIONS,
+    concurrency: CONCURRENCY,
+  }).then(() => process.exit(0), console.error);
 
-  if (args['convert-videos']) {
-    await convertVideos({
-      sourceDir: LIBRARY_DIR,
-      convertedDir: rp(args.converted),
-      concurrency: CONCURRENCY,
+} else if (args['convert-videos']) {
+  // Sometimes Node.js keeps running after all video conversion jobs have completed, so force exit on Promise fulfilment.
+  convertVideos({
+    sourceDir: LIBRARY_DIR,
+    convertedDir: rp(args.converted),
+    concurrency: CONCURRENCY,
+    verbose: VERBOSE,
+  }).then(() => process.exit(0), console.error);
+
+} else {
+  (async function () {
+    const [photosRoot, users, videos] = await Promise.all([
+      listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR),
+      USERS_DIR ? getUsers(USERS_DIR) : [],
+      listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS),
+    ]);
+    return startServer({
+      SSL: !SSL_KEY || !SSL_CERT ? undefined : {
+        certificate: await fs.readFile(SSL_CERT),
+        key: await fs.readFile(SSL_KEY),
+        DHParameters: SSL_DHPARAM ? await fs.readFile(SSL_DHPARAM) : undefined,
+      },
+      clientPath: join(__dirname, 'client'),
+      photosRoot,
+      port: PORT,
+      authentication: users.length ? {
+        users,
+        writeUser: user => writeUser(USERS_DIR!, user),
+      } : undefined,
+      videos,
+      previewsDirectory: PREVIEWS_DIR,
     });
-    return;
-  }
-
-  const [photosRoot, users, videos] = await Promise.all([
-    listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR),
-    USERS_DIR ? getUsers(USERS_DIR) : [],
-    listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS),
-  ]);
-
-  await startServer({
-    SSL: !SSL_KEY || !SSL_CERT ? undefined : {
-      certificate: await fs.readFile(SSL_CERT),
-      key: await fs.readFile(SSL_KEY),
-      DHParameters: SSL_DHPARAM ? await fs.readFile(SSL_DHPARAM) : undefined,
-    },
-    clientPath: join(__dirname, 'client'),
-    photosRoot,
-    port: PORT,
-    authentication: users.length ? {
-      users,
-      writeUser: user => writeUser(USERS_DIR!, user),
-    } : undefined,
-    videos,
-    previewsDirectory: PREVIEWS_DIR,
-  });
-
-  console.log(`Server started on port ${PORT}`);
-})()
-  .catch(console.error);
+  })().then(() => console.log(`Server started on port ${PORT}`), console.error);
+}
