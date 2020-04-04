@@ -2,12 +2,12 @@
 
 import {promises as fs, realpathSync} from 'fs';
 import minimist from 'minimist';
+import {cpus} from 'os';
 import {join} from 'path';
 import {listPhotos, listVideos} from './server/library';
 import {startServer} from './server/server';
 import {getUsers, writeUser} from './server/user';
 import {buildVideoPreviews} from './tool/buildVideoPreviews';
-import {cpus} from 'os';
 import {convertVideos} from './tool/convertVideos';
 
 const args = minimist(process.argv.slice(2));
@@ -49,11 +49,11 @@ if (args['build-video-previews']) {
   }).then(() => process.exit(0), console.error);
 
 } else {
-  (async function () {
+  (async () => {
     const [photosRoot, users, videos] = await Promise.all([
       listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR),
       USERS_DIR ? getUsers(USERS_DIR) : [],
-      listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS),
+      listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS, PREVIEWS_DIR),
     ]);
     return startServer({
       SSL: !SSL_KEY || !SSL_CERT ? undefined : {
@@ -69,7 +69,6 @@ if (args['build-video-previews']) {
         writeUser: user => writeUser(USERS_DIR!, user),
       } : undefined,
       videos,
-      previewsDirectory: PREVIEWS_DIR,
     });
   })().then(() => console.log(`Server started on port ${PORT}`), console.error);
 }

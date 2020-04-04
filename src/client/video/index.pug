@@ -38,6 +38,19 @@ include ../common/common.pug
           #notification-progress-container
             #notification-progress
       #player-controls
+        #playback-montages-container
+          #playback-montages
+            each folder in folders
+              each video in folder.videos
+                if video.preview
+                  .playback-montage(data-id=video.id)
+                    .playback-montage-frames
+                      each frame in video.preview.montageFrames
+                        img.playback-montage-frame.lazy(data-time=frame.time data-src=frame.URL)
+          #playback-montage-overlay
+            .playback-montage-overlay-mask
+            #playback-montage-overlay-window
+            .playback-montage-overlay-mask
         input#progress(type="range" value=0 min=0 step=0.1)
         if _signedIn
           button#button-like &#x1F44D
@@ -92,9 +105,12 @@ include ../common/common.pug
                 data-disliked=video.disliked,
               )
                 if video.preview
-                  .entry-preview
-                    img.entry-thumbnail(src=video.preview.thumbnail)
-                    video.entry-snippet(src=video.preview.snippet muted)
+                  .entry-preview(
+                    data-width=video.preview.width,
+                    data-height=video.preview.height,
+                  )
+                    img.entry-thumbnail.lazy(data-src=video.preview.thumbnail)
+                    video.entry-snippet.lazy(data-src=video.preview.snippet muted)
                 span.entry-title= video.title
     #pane-controls
       button#button-previous(title="Previous") ⏮

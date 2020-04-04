@@ -1,8 +1,8 @@
-import readdirp from 'readdirp';
 import {join} from 'path';
-import {emptyFile, ensureDir, getExt, isFile, nullStat} from '../util/fs';
+import readdirp from 'readdirp';
+import {cmd} from '../util/exec';
 import {ff, screenshot} from '../util/ff';
-import {cmd, job} from '../util/exec';
+import {ensureDir, getExt, isFile, nullStat} from '../util/fs';
 import PromiseQueue = require('promise-queue');
 
 export const buildVideoPreviews = async ({
@@ -91,61 +91,33 @@ export const buildVideoPreviews = async ({
     }
 
     // Create montage.
-    const montageDest = join(outDir, 'montage.jpg');
-    const nomontage = join(outDir, '.nomontage');
+    // We want to get a shot every 2 seconds.
+    const montageGranularity = Math.floor(Math.min(200, duration / 2));
 
-    if (!(await Promise.all([isFile(nomontage), isFile(montageDest)])).some(f => f)) {
-      // We want to get a shot every 2 seconds except for first and last 2 seconds, up to 200 shots.
-      // More granularity would probably not be much use and exceed JPEG dimension limits.
-      const montageGranularity = Math.floor(Math.min(200, duration / 2));
+    const montageShotPromises: Promise<any>[] = [];
 
-      if (montageGranularity <= 2) {
-        // Video is too short for a montage, so don't create one.
-        await emptyFile(nomontage);
-        console.info(`Video "${relPath}" is too short for montage`);
-      } else {
-        let montageFailed = false;
-        const montageShots: string[] = [];
-        const montageShotPromises: Promise<any>[] = [];
+    for (let montageShotNo = 0; montageShotNo < montageGranularity; montageShotNo++) {
+      const montageShotPos = Math.round(duration * montageShotNo / montageGranularity);
+      // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
+      const montageShotDest = join(outDir, `montageshot${montageShotPos}.jpg`);
 
-        // Ignore first and last shots. First and last are usually not useful, and last can possibly cause
-        // boundary issues with ffmpeg.
-        for (let montageShotNo = 1; montageShotNo < montageGranularity - 1; montageShotNo++) {
-          const montageShotPos = duration * montageShotNo / montageGranularity;
-          // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
-          const montageShotDest = join(outDir, `montageshot${montageShotNo}.jpg`);
-          montageShots.push(montageShotDest);
-
-          montageShotPromises.push(queueWaitable(async () => {
-            if (montageFailed || await isFile(montageShotDest)) {
-              return;
-            }
-
-            await screenshot(absPath, montageShotPos, montageShotDest);
-
-            const stats = await nullStat(montageShotDest);
-            if (!stats || !stats.size) {
-              // Montage shot failed to be created. Don't create montage and don't try again in future.
-              // Keep empty shot file so that which shots failed are known.
-              console.error(`Failed to generate montage shot ${montageShotNo} at ${montageShotPos}s for ${relPath}`);
-              montageFailed = true;
-            }
-          }));
+      montageShotPromises.push(queueWaitable(async () => {
+        if (await isFile(montageShotDest)) {
+          return;
         }
 
-        // Don't put this in queue, as it depends on other queued promises.
-        promisesToWaitOn.push(Promise.all(montageShotPromises).then(async () => {
-          if (montageFailed) {
-            await emptyFile(nomontage);
-          } else {
-            // Make sure to await, as by this time promisesToWaitOn has already been Promise.all'd.
-            await queueWaitable(() => job(`convert`, true, ...montageShots, `+append`, `-resize`, `x120`, montageDest));
-            // Don't delete montage shots. They take a long time to generate and can be reused in case previous steps
-            // fail due to chance, system, misconfiguration, environment, bugs, edge cases, or inexperience.
-          }
-        }));
-      }
+        await screenshot(absPath, montageShotPos, montageShotDest);
+
+        const stats = await nullStat(montageShotDest);
+        if (!stats || !stats.size) {
+          // Montage shot failed to be created.
+          console.error(`Failed to generate montage shot ${montageShotNo} at ${montageShotPos}s for ${relPath}`);
+        }
+      }));
     }
+
+    // Don't put this in queue, as it depends on other queued promises.
+    promisesToWaitOn.push(Promise.all(montageShotPromises));
   }));
 
   await Promise.all(promisesToWaitOn);

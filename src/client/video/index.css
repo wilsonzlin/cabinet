@@ -359,11 +359,11 @@ body:not(.s-loaded) #button-playback-touch-only {
 }
 
 .s-playing #button-playback-touch-only::before {
-  content: "⏸";
+  content: '⏸';
 }
 
 body:not(.s-playing) #button-playback-touch-only::before {
-  content: "▶";
+  content: '▶';
 }
 
 #player-controls {
@@ -371,6 +371,80 @@ body:not(.s-playing) #button-playback-touch-only::before {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+
+  /* For #playback-montage. */
+  position: relative;
+}
+
+#playback-montages-container {
+  background-color: rgba(0, 0, 0, 0.33);
+  border-color: #444;
+  border-style: solid;
+  border-width: 1px 0;
+  bottom: 100%;
+  display: none;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+#playback-montages-container.showing {
+  display: block;
+}
+
+#playback-montages {
+  overflow: hidden;
+  width: 100%;
+}
+
+.playback-montage {
+  display: none;
+}
+
+.playback-montage.active {
+  display: block;
+}
+
+.playback-montage-frames {
+  white-space: nowrap;
+}
+
+.playback-montage-frames::after {
+  /* Add enough padding to allow scrolling past end so last frame can be centered using scrollLeft. */
+  /* This is set here instead of #playback-montages because overflowing seems to cause padding-right to be ignored in FF. */
+  content: '';
+  width: 100vw;
+}
+
+.playback-montage-frames::after, .playback-montage-frame, .playback-montage-overlay-mask {
+  height: 120px;
+}
+
+.playback-montage-frames::after, .playback-montage-frame {
+  display: inline-block;
+  vertical-align: top;
+}
+
+#playback-montage-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  display: flex;
+}
+
+.playback-montage-overlay-mask {
+  flex: 0 0 auto;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+#playback-montage-overlay-window {
+  border-color: #222;
+  border-style: solid;
+  border-width: 0 1px;
+  flex-grow: 1;
 }
 
 #progress {
@@ -457,9 +531,9 @@ body:not(.s-playing) #button-playback-touch-only::before {
 }
 
 .s-fullscreen #button-fullscreen::before {
-  content: "⇲";
+  content: '⇲';
 }
 
 body:not(.s-fullscreen) #button-fullscreen::before {
-  content: "⇱";
+  content: '⇱';
 }

@@ -64,7 +64,11 @@
   const $notification = document.querySelector('#notification');
   const $notificationText = document.querySelector('#notification-text');
   const $notificationProgress = document.querySelector('#notification-progress');
+  const $playbackMontagesContainer = document.querySelector('#playback-montages-container');
+  const $playbackMontages = document.querySelector('#playback-montages');
+  const $$playbackMontageOverlayMask = document.querySelectorAll('.playback-montage-overlay-mask');
   const $player = document.querySelector('#player');
+  const $playerControls = document.querySelector('#player-controls');
   const $progress = document.querySelector('#progress');
   const $search = document.querySelector('#search');
   const $speed = document.querySelector('#speed');
@@ -182,6 +186,17 @@
   prefs.onChange('groupVideosByFolder', val => cls($folders, 'folders-show-titles', val));
   prefs.onChange('hideDislikedVideos', val => cls($folders, 'folders-hide-disliked', val));
   prefs.onChange('showVideoThumbnails', val => cls($folders, 'folders-show-thumbnails', val));
+
+  const lazyLoadingObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        const $entry = entry.target;
+        $entry.src = $entry.dataset.src;
+        lazyLoadingObserver.unobserve($entry);
+      }
+    }
+  });
+  document.querySelectorAll('.lazy').forEach($e => lazyLoadingObserver.observe($e));
 
   // Probably don't need to sync with $video.onratechange, as only $speed should be able to set speed.
   $speed.addEventListener('click', e => {
@@ -304,9 +319,9 @@
   };
 
   const formatTime = dur => {
-    const seconds = Math.floor(dur % 60);
-    const minutes = Math.floor((dur / 60) % 60);
-    const hours = Math.floor(dur / 3600);
+    const seconds = Math.round(dur % 60);
+    const minutes = Math.round((dur / 60) % 60);
+    const hours = Math.round(dur / 3600);
     return hours
       ? `${hours}:${leftPad(minutes, 2)}:${leftPad(seconds, 2)}`
       : `${minutes}:${leftPad(seconds, 2)}`;
@@ -322,12 +337,35 @@
 
   let wasPlayingBeforeScrubbing;
   touch.onMouse($progress, 'mouseenter', () => uiState.hoveringProgress = true);
-  $progress.addEventListener('mousedown', () => wasPlayingBeforeScrubbing = uiState.playing, true);
+  $progress.addEventListener('mousedown', () => {
+    wasPlayingBeforeScrubbing = uiState.playing;
+    $playbackMontagesContainer.classList.add('showing');
+  }, true);
   touch.onMouse($progress, 'mouseleave', () => uiState.hoveringProgress = false);
-  $progress.addEventListener('mouseup', () => wasPlayingBeforeScrubbing = undefined, true);
+  $progress.addEventListener('mouseup', () => {
+    wasPlayingBeforeScrubbing = undefined;
+    $playbackMontagesContainer.classList.remove('showing');
+  }, true);
   let scrubbingTimeout;
   $progress.addEventListener('input', () => {
     clearTimeout(scrubbingTimeout);
+
+    // TODO Optimise and do nothing if unchanged
+    const $montage = [...$playbackMontages.children].filter($m => {
+      const isCurrent = $m.dataset.id === videoControl.current.dataset.id;
+      $m.classList.toggle('active', isCurrent);
+      return isCurrent;
+    })[0];
+    const $preview = videoControl.current.querySelector('.entry-preview');
+    // TODO Handle viewport resize/rotation?
+    const montagePadding = $playerControls.clientWidth / 2 - $preview.dataset.width * 120 / $preview.dataset.height / 2;
+    $playbackMontages.style.paddingLeft = `${montagePadding}px`;
+    $$playbackMontageOverlayMask.forEach($mask => $mask.style.width = `${montagePadding}px`);
+    // TODO Optimise
+    const $frame = [...$montage.querySelectorAll('.playback-montage-frame')]
+      .reverse()
+      .find($f => +$f.dataset.time <= $progress.value);
+    $playbackMontages.scrollLeft = $frame.offsetLeft - montagePadding;
     // Cache variable.
     const shouldPlay = wasPlayingBeforeScrubbing;
     if (shouldPlay) {

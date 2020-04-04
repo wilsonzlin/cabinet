@@ -3,20 +3,41 @@ import {imageSize} from 'image-size';
 import mime from 'mime';
 import {basename, join, relative} from 'path';
 import readdirp from 'readdirp';
-import {promisify} from 'util';
 import {getExt} from '../util/fs';
 
-const getImageSize = promisify(imageSize);
+const getImageSize = (absPath: string): Promise<{ height: number, width: number } | undefined> => new Promise(resolve =>
+  imageSize(absPath, (e, r) => {
+    if (e) {
+      console.error(`Failed to get dimensions of ${absPath}: ${e.message}`);
+      resolve(undefined);
+      return;
+    }
+    if (!r || r.height === undefined || r.width === undefined) {
+      console.error(`Image dimension information missing for "${absPath}"`);
+      resolve(undefined);
+      return;
+    }
+    resolve(r as any);
+  }));
 
 export interface Video {
   title: string;
   relativePath: string;
   absolutePath: string;
   size: number;
-  type: string | null,
+  type: string | null;
+  preview?: {
+    thumbnailPath: string;
+    snippetPath: string;
+    montageFrames: { time: number; path: string; }[];
+    height: number;
+    width: number;
+  };
 }
 
-export const listVideos = async (dir: string, videoExtensions: Set<string>): Promise<Video[]> => {
+const MONTAGE_FRAME_BASENAME = /^montageshot([0-9]+)\.jpg$/;
+
+export const listVideos = async (dir: string, videoExtensions: Set<string>, previewDir: string | undefined): Promise<Video[]> => {
   const entries = await readdirp.promise(dir, {
     depth: Infinity,
     fileFilter: e => videoExtensions.has(getExt(e.basename)),
@@ -24,13 +45,39 @@ export const listVideos = async (dir: string, videoExtensions: Set<string>): Pro
     alwaysStat: true,
   });
 
-  return entries.map(e => ({
-    title: e.basename.slice(0, e.basename.lastIndexOf('.')),
-    relativePath: e.path,
-    absolutePath: e.fullPath,
-    // e.stats should always exist as alwaysStat is true.
-    size: e.stats!.size,
-    type: mime.getType(e.basename),
+  return await Promise.all(entries.map(async (e) => {
+    const preview = previewDir == undefined ? undefined : await (async () => {
+      const thumbnailPath = join(previewDir, e.path, 'thumb50.jpg');
+      const snippetPath = join(previewDir, e.path, 'snippet.mp4');
+      const montageFrames = await readdirp.promise(join(previewDir, e.path), {
+        depth: 1,
+        fileFilter: e => MONTAGE_FRAME_BASENAME.test(e.basename),
+        type: 'files',
+      });
+
+      const dimensions = await getImageSize(thumbnailPath);
+
+      return dimensions && {
+        thumbnailPath,
+        snippetPath,
+        height: dimensions.height,
+        width: dimensions.width,
+        montageFrames: montageFrames.map(e => ({
+          time: Number.parseInt(MONTAGE_FRAME_BASENAME.exec(e.basename)![1], 10),
+          path: e.fullPath,
+        })).sort((a, b) => a.time - b.time),
+      };
+    })();
+
+    return {
+      title: e.basename.slice(0, e.basename.lastIndexOf('.')),
+      relativePath: e.path,
+      absolutePath: e.fullPath,
+      // e.stats should always exist as alwaysStat is true.
+      size: e.stats!.size,
+      type: mime.getType(e.basename),
+      preview,
+    };
   }));
 };
 
@@ -58,20 +105,9 @@ export interface PhotoDirectory {
 const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo | undefined> => {
   const fullPath = join(dir, e.name);
 
-  let dimensions;
-  try {
-    dimensions = await getImageSize(fullPath);
-  } catch (err) {
-    console.error(`Failed to get dimensions of ${fullPath}: ${err.message}`);
-    return;
-  }
+  const dimensions = await getImageSize(fullPath);
 
-  if (!dimensions || dimensions.height === undefined || dimensions.width === undefined) {
-    console.error(`Failed to get dimensions of ${fullPath}`);
-    return;
-  }
-
-  return {
+  return dimensions && {
     name: e.name,
     absolutePath: fullPath,
     relativePath: relative(rel, fullPath),
