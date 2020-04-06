@@ -12,11 +12,14 @@ include ../common/common.pug
       span Group videos by folder
       input(type="checkbox" name="pref-groupVideosByFolder" checked=preferences.groupVideosByFolder)
     label
-      span Hide disliked videos
-      input(type="checkbox" name="pref-hideDislikedVideos" checked=preferences.hideDislikedVideos)
-    label
       span Show video thumbnails
       input(type="checkbox" name="pref-showVideoThumbnails" checked=preferences.showVideoThumbnails)
+    label
+      span Show video snippets
+      input(type="checkbox" name="pref-showVideoSnippets" checked=preferences.showVideoSnippets)
+    label
+      span Show video montage while adjusting playback
+      input(type="checkbox" name="pref-showVideoMontage" checked=preferences.showVideoMontage)
 
   #player
     video#video(autoplay)
@@ -88,6 +91,15 @@ include ../common/common.pug
       input#search(placeholder="Search")
       button#button-list-hide ―
       button#button-settings ⚙
+    #folders-toolbar
+      select#filter
+        option(value="liked") Liked videos
+        option(value="disliked") Disliked videos
+        option(value="liked neutral" selected) Non-disliked videos
+        option(value="liked neutral disliked") All videos
+      label#autoplay
+        span Autoplay
+        input(type="checkbox")
     dl#folders
       each folder in folders
         dt.folder-name= folder.name
@@ -101,8 +113,9 @@ include ../common/common.pug
               //- touching, even when blurred afterwards.
               li.entry(
                 data-id=video.id,
-                data-liked=video.liked,
-                data-disliked=video.disliked,
+                data-liked=video.liked && "true",
+                data-disliked=video.disliked && "true",
+                data-filtered=video.disliked && "true",
               )
                 if video.preview
                   .entry-preview(

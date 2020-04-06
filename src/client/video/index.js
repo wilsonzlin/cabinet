@@ -59,6 +59,7 @@
   const $buttonStop = document.querySelector('#button-stop');
   const $cover = document.querySelector('#cover');
   const $$entry = [...document.querySelectorAll('.entry')];
+  const $filter = document.querySelector('#filter');
   const $folders = document.querySelector('#folders');
   const $$folderName = document.querySelectorAll('.folder-name');
   const $notification = document.querySelector('#notification');
@@ -147,8 +148,7 @@
   $buttonStop.addEventListener('click', () => videoControl.current = null);
 
   // TODO Should mute/pause as well?
-  const toggleCover = (shouldShow = document[hiddenPropertyName]) =>
-    $cover.style.display = shouldShow && prefs.usePrivacyCover ? 'block' : 'none';
+  const toggleCover = (shouldShow = document[hiddenPropertyName]) => $cover.style.display = shouldShow && prefs.usePrivacyCover ? 'block' : 'none';
   document.addEventListener(visibilityChangeEventName, () => toggleCover());
   window.addEventListener('focus', () => toggleCover(false));
   window.addEventListener('blur', () => toggleCover(true));
@@ -160,12 +160,27 @@
     const $snippet = $entry.querySelector('.entry-snippet');
     if ($preview) {
       $preview.addEventListener('mouseenter', () => {
-        $snippet.currentTime = 0;
-        $snippet.play();
+        if (prefs.showVideoSnippets) {
+          $snippet.currentTime = 0;
+          $snippet.play();
+        }
       });
       $preview.addEventListener('mouseleave', () => $snippet.pause());
     }
   }
+
+  $filter.addEventListener('change', () => {
+    const filter = $filter.value.split(' ');
+    for (const $entry of $$entry) {
+      const liked = $entry.dataset.liked;
+      const disliked = $entry.dataset.disliked;
+      attr($entry, 'filtered', !(
+        liked && filter.includes('liked')
+        || disliked && filter.includes('disliked')
+        || !liked && !disliked && filter.includes('neutral')
+      ));
+    }
+  });
 
   configureSearch({
     $input: $search,
@@ -184,8 +199,8 @@
     },
   });
   prefs.onChange('groupVideosByFolder', val => cls($folders, 'folders-show-titles', val));
-  prefs.onChange('hideDislikedVideos', val => cls($folders, 'folders-hide-disliked', val));
   prefs.onChange('showVideoThumbnails', val => cls($folders, 'folders-show-thumbnails', val));
+  prefs.onChange('showVideoSnippets', val => cls($folders, 'folders-show-snippets', val));
 
   const lazyLoadingObserver = new IntersectionObserver(entries => {
     for (const entry of entries) {
@@ -239,7 +254,7 @@
         // playbackRate resets on new media.
         $video.playbackRate = this._speed;
         $titleName.textContent = $entry.textContent;
-        $entry.dataset.current = true;
+        attr($entry, 'current', true);
         uiState.loaded = true;
         // For some videos FF doesn't seem to autoplay sometimes.
         // It might be because video doesn't have its moov atom at the beginning,
@@ -260,7 +275,7 @@
 
       $titleError.textContent = '';
       if (this._current) {
-        delete this._current.dataset.current;
+        attr(this._current, 'current', false);
       }
       this._current = $entry;
     },
@@ -275,7 +290,7 @@
       let next = this._current;
       do {
         next = $$entry[$$entry.indexOf(next) + 1];
-      } while (next && (next.hidden || next.dataset.disliked && prefs.hideDislikedVideos));
+      } while (next && (next.hidden || next.dataset.filtered));
       this.current = next || null;
       this.scrollToCurrent();
     },
@@ -286,7 +301,7 @@
         prev = prev == null
           ? $$entry[$$entry.length - 1]
           : $$entry[$$entry.indexOf(prev) - 1];
-      } while (prev && (prev.hidden || prev.dataset.disliked && prefs.hideDislikedVideos));
+      } while (prev && (prev.hidden || prev.dataset.filtered));
       this.current = prev || null;
       this.scrollToCurrent();
     },
@@ -339,23 +354,23 @@
   touch.onMouse($progress, 'mouseenter', () => uiState.hoveringProgress = true);
   $progress.addEventListener('mousedown', () => {
     wasPlayingBeforeScrubbing = uiState.playing;
-    $playbackMontagesContainer.classList.add('showing');
   }, true);
-  touch.onMouse($progress, 'mouseleave', () => uiState.hoveringProgress = false);
-  $progress.addEventListener('mouseup', () => {
-    wasPlayingBeforeScrubbing = undefined;
+  touch.onMouse($progress, 'mousemove', e => {
+    // Hide montage; we'll show it again at the end of this function if we find a montage and frame to show.
     $playbackMontagesContainer.classList.remove('showing');
-  }, true);
-  let scrubbingTimeout;
-  $progress.addEventListener('input', () => {
-    clearTimeout(scrubbingTimeout);
-
     // TODO Optimise and do nothing if unchanged
+    if (!prefs.showVideoMontage || !videoControl.current) {
+      return;
+    }
+    const position = e.offsetX / $progress.clientWidth;
     const $montage = [...$playbackMontages.children].filter($m => {
       const isCurrent = $m.dataset.id === videoControl.current.dataset.id;
       $m.classList.toggle('active', isCurrent);
       return isCurrent;
     })[0];
+    if (!$montage) {
+      return;
+    }
     const $preview = videoControl.current.querySelector('.entry-preview');
     // TODO Handle viewport resize/rotation?
     const montagePadding = $playerControls.clientWidth / 2 - $preview.dataset.width * 120 / $preview.dataset.height / 2;
@@ -364,8 +379,23 @@
     // TODO Optimise
     const $frame = [...$montage.querySelectorAll('.playback-montage-frame')]
       .reverse()
-      .find($f => +$f.dataset.time <= $progress.value);
-    $playbackMontages.scrollLeft = $frame.offsetLeft - montagePadding;
+      .find($f => +$f.dataset.time <= position * $video.duration);
+    if ($frame) {
+      $playbackMontagesContainer.classList.add('showing');
+      $playbackMontages.scrollLeft = $frame.offsetLeft - montagePadding;
+    }
+  });
+  touch.onMouse($progress, 'mouseleave', () => {
+    uiState.hoveringProgress = false;
+    $playbackMontagesContainer.classList.remove('showing');
+  });
+  $progress.addEventListener('mouseup', () => {
+    wasPlayingBeforeScrubbing = undefined;
+  }, true);
+  let scrubbingTimeout;
+  $progress.addEventListener('input', () => {
+    clearTimeout(scrubbingTimeout);
+
     // Cache variable.
     const shouldPlay = wasPlayingBeforeScrubbing;
     if (shouldPlay) {

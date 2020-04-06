@@ -15,7 +15,7 @@ const cls = ($elem, name, force) => {
 
 const attr = ($elem, name, toggle) => {
   if (toggle) {
-    $elem.dataset[name] = '';
+    $elem.dataset[name] = 'true';
   } else {
     delete $elem.dataset[name];
   }
@@ -312,12 +312,12 @@ const prefs = (() => {
     if (typeof name != 'string') {
       return;
     }
+    syncSetting(name);
     const handler = handlers[name];
     if (!handler) {
       return;
     }
     handler(intf[name]);
-    syncSetting(name);
   });
 
   const $options = document.querySelector('#prefs-options');

@@ -8,15 +8,17 @@ type Optional<T> = {
 export interface VideoPreferences {
   usePrivacyCover: boolean;
   groupVideosByFolder: boolean;
-  hideDislikedVideos: boolean;
   showVideoThumbnails: boolean;
+  showVideoSnippets: boolean;
+  showVideoMontage: boolean;
 }
 
 export const DefaultVideoPreferences: VideoPreferences = {
   groupVideosByFolder: true,
-  hideDislikedVideos: true,
   usePrivacyCover: false,
   showVideoThumbnails: true,
+  showVideoSnippets: true,
+  showVideoMontage: true,
 };
 
 export const hasProp = (obj: object, prop: string) =>

@@ -67,6 +67,23 @@ body.s-engaged * {
   padding-left: 1rem;
 }
 
+#folders-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0.5rem 1rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+#autoplay {
+  display: flex;
+  align-items: center;
+}
+
+#autoplay input {
+  margin-left: 0.5rem;
+}
+
 #folders {
   overflow-x: hidden;
   overflow-y: auto;
@@ -110,7 +127,7 @@ body.s-engaged * {
   opacity: 0.5;
 }
 
-.folders-hide-disliked .entry[data-disliked] {
+.entry[data-filtered] {
   display: none;
 }
 
@@ -142,7 +159,7 @@ body.s-engaged * {
   transition: opacity 0.4s;
 }
 
-.entry-preview:hover .entry-thumbnail {
+#folders.folders-show-snippets .entry-preview:hover .entry-thumbnail {
   opacity: 0;
 }
 
