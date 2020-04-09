@@ -46,12 +46,10 @@ export const buildVideoPreviews = async ({
     try {
       duration = Number.parseFloat(await cmd(
         `ffprobe`,
-        `-v`,
-        `error`,
-        `-show_entries`,
-        `format=duration`,
-        `-of`,
-        `default=noprint_wrappers=1:nokey=1`,
+        `-v`, `error`,
+        `-show_entries`, `format=duration`,
+        `-of`, `default=noprint_wrappers=1:nokey=1`,
+        `-ignore_chapters`, 1,
         absPath,
       ));
     } catch (err) {
