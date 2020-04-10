@@ -16,7 +16,6 @@ const rp = (p: string): string => realpathSync(p);
 
 const optionalMap = <T, R> (val: T | null | undefined, mapper: (val: T) => R) => val == null ? undefined : mapper(val);
 
-const VERBOSE: boolean | undefined = args['verbose'];
 const LIBRARY_DIR: string = rp(args.library);
 const USERS_DIR: string | undefined = optionalMap(args.users, rp);
 const PREVIEWS_DIR: string | undefined = optionalMap(args.previews, rp);
@@ -45,7 +44,6 @@ if (args['build-video-previews']) {
     sourceDir: LIBRARY_DIR,
     convertedDir: rp(args.converted),
     concurrency: CONCURRENCY,
-    verbose: VERBOSE,
   }).then(() => process.exit(0), console.error);
 
 } else {

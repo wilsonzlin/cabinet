@@ -1,5 +1,7 @@
 import {promises as fs} from 'fs';
+import ora from 'ora';
 import {dirname, join} from 'path';
+import ProgressBar from 'progress';
 import readdirp from 'readdirp';
 import {cmd} from '../util/exec';
 import {ff} from '../util/ff';
@@ -32,7 +34,7 @@ const getStreamCodec = async (file: string, stream: 'v:0' | 'a:0'): Promise<stri
 const getVideoCodec = async (file: string) => getStreamCodec(file, 'v:0');
 const getAudioCodec = async (file: string) => getStreamCodec(file, 'a:0');
 
-const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string, verbose?: boolean) => {
+const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
   const absPath = file.fullPath;
   const relPath = file.path;
   // Get absolute path to converted output file with extension replaced with 'mp4'.
@@ -48,45 +50,18 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string, verb
     return;
   }
 
-  const videoCodec = await getVideoCodec(absPath);
-  const audioCodec = await getAudioCodec(absPath);
-
-  let videoArgs;
-  let audioArgs;
-
-  if (SUPPORTED_VIDEO_CODECS.has(videoCodec)) {
-    if (verbose) {
-      console.debug(`${relPath} is already using supported video codec`);
-    }
-    videoArgs = [
-      `-vcodec`, `copy`,
-    ];
-  } else {
-    if (verbose) {
-      console.debug(`${relPath} video needs to be converted to H.264`);
-    }
-    videoArgs = [
-      `-c:v`, `libx264`,
-      `-preset`, `veryfast`,
-      `-crf`, 17,
-    ];
-  }
-
-  if (SUPPORTED_AUDIO_CODECS.has(audioCodec)) {
-    if (verbose) {
-      console.debug(`${relPath} is already using supported audio codec`);
-    }
-    audioArgs = [
-      `-acodec`, `copy`,
-    ];
-  } else {
-    if (verbose) {
-      console.debug(`${relPath} audio needs to be converted to AAC`);
-    }
-    audioArgs = [
-      `-acodec`, `aac`,
-    ];
-  }
+  const videoArgs = SUPPORTED_VIDEO_CODECS.has(await getVideoCodec(absPath)) ? [
+    `-vcodec`, `copy`,
+  ] : [
+    `-c:v`, `libx264`,
+    `-preset`, `veryfast`,
+    `-crf`, 17,
+  ];
+  const audioArgs = SUPPORTED_AUDIO_CODECS.has(await getAudioCodec(absPath)) ? [
+    `-acodec`, `copy`,
+  ] : [
+    `-acodec`, `aac`,
+  ];
 
   await ff(
     `-i`, absPath,
@@ -107,29 +82,38 @@ export const convertVideos = async ({
   sourceDir,
   convertedDir,
   concurrency,
-  verbose,
 }: {
   sourceDir: string,
   convertedDir: string,
   concurrency: number,
-  verbose?: boolean,
 }): Promise<void> => {
   const queue = new PromiseQueue(concurrency, Infinity);
+
+  const spinner = ora('Finding files to convert').start();
 
   const files = await readdirp.promise(sourceDir, {
     depth: Infinity,
     fileFilter: entry => CONVERTABLE_VIDEO_EXTENSIONS.has(getExt(entry.basename)),
   });
 
+  spinner.stop();
+  console.log(`Found ${files.length} files`);
+
+  const progress = new ProgressBar('[:bar] :status', {
+    total: files.length,
+    complete: '=',
+    width: 15,
+  });
+
   await Promise.all(
     files.map(file =>
-      queue.add(() =>
-        convertVideo(file, convertedDir, verbose)
-          .then(
-            () => console.info(`Converted "${file.path}"`),
-            err => console.error(`Failed to converted "${file.path}": ${err.message}`),
-          ),
-      ),
-    ),
+      queue.add(() => {
+        progress.render({
+          status: `Converting ${file.path}...`,
+        });
+        return convertVideo(file, convertedDir)
+          .catch(err => progress.interrupt(`Failed to converted "${file.path}": ${err.message}`))
+          .then(() => progress.tick());
+      })),
   );
 };
