@@ -37,7 +37,7 @@ body.s-engaged * {
 
 #pane-toolbar {
   flex: 0 0 auto;
-  margin: 1rem;
+  margin: 1rem 0.5rem;
 
   display: flex;
   align-items: center;
@@ -218,13 +218,17 @@ body.s-engaged * {
   object-fit: contain;
 }
 
-body:not(.s-loaded) #video {
-  /* Need to hide as some browsers simply show the last frame when stopped. */
+body:not(.s-loaded) #video,
+body:not(.s-loaded) #overlay {
+  /* Need to hide #video as some browsers simply show the last frame when stopped. */
   display: none;
 }
 
 #overlay {
   text-shadow: 0 0 0.5rem black;
+
+  background: rgba(0, 0, 0, 0.5);
+  transition: 0.3s linear;
 
   position: absolute;
   left: 0;
@@ -239,20 +243,16 @@ body:not(.s-loaded) #video {
   flex-direction: column;
 }
 
-#title, #player-controls {
-  transition: 0.3s linear;
-  flex: 0 0 auto;
-  opacity: 1;
-}
-
-.s-engaged #title,
-.s-engaged #player-controls {
+.s-engaged #overlay {
   opacity: 0;
   pointer-events: none;
 }
 
+#title, #player-controls {
+  flex: 0 0 auto;
+}
+
 #title {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
   padding: 1rem;
 
   display: flex;
@@ -281,7 +281,7 @@ body:not(.s-hideList) #button-list-show {
 #overlay-middle {
   flex-grow: 1;
 
-  /* For #notification and #touch-only-controls. */
+  /* For #notification and #button-playback. */
   position: relative;
 }
 
@@ -344,47 +344,39 @@ body:not(.s-hideList) #button-list-show {
   animation-name: notification-timeout;
 }
 
-#touch-only-controls {
+#button-playback {
   position: absolute;
   top: 0;
-  right: 0;
   bottom: 0;
-  left: 0;
+  margin: auto;
+  left: 2rem;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.75);
+  transition: 0.4s;
 
-  /* Don't make pointer events impossible in invisible container. */
-  pointer-events: none;
-}
+  width: 5rem;
+  height: 5rem;
+  border-radius: 100%;
 
-#touch-only-controls > * {
-  pointer-events: auto;
-}
-
-.s-engaged #button-playback-touch-only,
-body:not(.s-usingTouch) #button-playback-touch-only,
-body:not(.s-loaded) #button-playback-touch-only {
-  display: none;
-}
-
-#button-playback-touch-only {
-  text-shadow: inherit;
+  font-size: 2rem;
+  line-height: 5rem;
   cursor: pointer;
-  font-size: 4rem;
 }
 
-.s-playing #button-playback-touch-only::before {
+#button-playback:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.s-playing #button-playback::before {
   content: '⏸';
 }
 
-body:not(.s-playing) #button-playback-touch-only::before {
+body:not(.s-playing) #button-playback::before {
   content: '▶';
 }
 
 #player-controls {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 100%);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

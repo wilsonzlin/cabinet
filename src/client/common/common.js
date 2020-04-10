@@ -122,7 +122,7 @@ const touch = (() => {
   // This is necessary as mousemove events are also emitted while touching,
   // so we need to ensure that this was caused by a mouse and not touch input.
   // If it's been long enough since we've last seen a touch event (or one
-  // has never occured), we assume that the input is (or has changed to) a mouse.
+  // has never occurred), we assume that the input is (or has changed to) a mouse.
   // https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Supporting_both_TouchEvent_and_MouseEvent
   const mouseEventIsActuallyTouch = () => Date.now() - lastTouchEventTime <= 500;
 
@@ -228,47 +228,6 @@ const targets = (() => {
   };
 })();
 
-const ripples = (() => {
-  const $rippleElements = [];
-
-  const ripples = (...ripples) => {
-    let next$RippleIdx = 0;
-    for (const [$container, [x, y]] of ripples) {
-      $container.classList.add('ripple-target');
-
-      const $ripple = $rippleElements[next$RippleIdx] =
-        $rippleElements[next$RippleIdx] || document.createElement('div');
-
-      $ripple.classList.remove('ripple');
-      Object.assign($ripple.style, {
-        left: `${x}px`,
-        top: `${y}px`,
-      });
-      $container.appendChild($ripple);
-      // Reflow the element so the animation plays again.
-      // In Edge if $ripple doesn't move the animation won't repeat otherwise.
-      reflow($ripple);
-      $ripple.classList.add('ripple');
-      reflow($ripple);
-
-      next$RippleIdx++;
-    }
-    for (const $r of $rippleElements.splice(next$RippleIdx)) {
-      $r.remove();
-    }
-  };
-
-  return {
-    none () {
-      ripples();
-    },
-    one ($container, coordinates) {
-      ripples([$container, coordinates]);
-    },
-    many: ripples,
-  };
-})();
-
 const prefs = (() => {
   const component = location.pathname.split('/').filter(p => p)[0];
 
@@ -335,12 +294,6 @@ const prefs = (() => {
         $ctl[prop] = val;
         syncSetting(prop);
       },
-    });
-  }
-
-  for (const $lbl of $options.querySelectorAll('label')) {
-    $lbl.addEventListener('click', e => {
-      ripples.one($lbl, touch.getRelativeEventCoordinates(e, $lbl));
     });
   }
 

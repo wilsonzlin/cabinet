@@ -53,7 +53,7 @@
   const $buttonListHide = document.querySelector('#button-list-hide');
   const $buttonListShow = document.querySelector('#button-list-show');
   const $buttonNext = document.querySelector('#button-next');
-  const $buttonPlaybackTouchOnly = document.querySelector('#button-playback-touch-only');
+  const $buttonPlayback = document.querySelector('#button-playback');
   const $buttonPrevious = document.querySelector('#button-previous');
   const $buttonSettings = document.querySelector('#button-settings');
   const $buttonStop = document.querySelector('#button-stop');
@@ -134,16 +134,7 @@
 
   $buttonFullscreen.addEventListener('click', () => toggleFullscreen());
   $buttonNext.addEventListener('click', () => videoControl.next());
-  $buttonPlaybackTouchOnly.addEventListener('touchstart', () => {
-    const $b = $buttonPlaybackTouchOnly;
-    videoControl.togglePlayback();
-    // Show ripple through centre of button regardless of where tapped.
-    ripples.one($targets, touch.getRelativeCoordinates(
-      position.left($b) + position.width($b) / 2,
-      position.top($b) + position.height($b) / 2,
-      position.all($targets),
-    ));
-  });
+  $buttonPlayback.addEventListener('mousedown', () => videoControl.togglePlayback());
   $buttonPrevious.addEventListener('click', () => videoControl.previous());
   $buttonStop.addEventListener('click', () => videoControl.current = null);
 
@@ -453,11 +444,9 @@
         toggleFullscreen();
         // Undo single click effects.
         videoControl.togglePlayback();
-        ripples.none();
         playerLastPressTime = undefined;
       } else {
         videoControl.togglePlayback();
-        ripples.one($targets, touch.getRelativeEventCoordinates(e, $targets));
         playerLastPressTime = Date.now();
       }
     }
@@ -470,7 +459,6 @@
         // Chained fast-forward with 2+ clicks/taps
         uiState.engaged = false;
         videoControl.seekRelative(10 * targets.getDirection(e));
-        ripples.one(e.target, touch.getRelativeTouchCoordiates(touch.lastTouches()[0], e.target));
       } else {
         // If no more taps happen with the next CHAINED_PRESSES_WAIT_MS,
         // toggle engagement.
@@ -483,7 +471,7 @@
   // Only engage after idle with mouse input.
   // Note that Edge does not support touch events:
   // https://github.com/MicrosoftEdge/WebAppsDocs/issues/39
-  const IDLE_MS_BEFORE_ENGAGED = 1500;
+  const IDLE_MS_BEFORE_ENGAGED = 750;
   let engagedSetTimeout;
   touch.onChange(usingTouch => uiState.usingTouch = usingTouch);
   // Don't set engaged state until touch has ended.
