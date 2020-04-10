@@ -1,19 +1,20 @@
 import {Dirent, promises as fs} from 'fs';
 import {imageSize} from 'image-size';
 import mime from 'mime';
+import {Ora} from 'ora';
 import {basename, join, relative} from 'path';
 import readdirp from 'readdirp';
 import {getExt} from '../util/fs';
 
-const getImageSize = (absPath: string): Promise<{ height: number, width: number } | undefined> => new Promise(resolve =>
+const getImageSize = (absPath: string, spinner: Ora): Promise<{ height: number, width: number } | undefined> => new Promise(resolve =>
   imageSize(absPath, (e, r) => {
     if (e) {
-      console.error(`Failed to get dimensions of ${absPath}: ${e.message}`);
+      spinner.warn(`Failed to get dimensions of ${absPath}: ${e.message}`).start();
       resolve(undefined);
       return;
     }
     if (!r || r.height === undefined || r.width === undefined) {
-      console.error(`Image dimension information missing for "${absPath}"`);
+      spinner.warn(`Image dimension information missing for "${absPath}"`).start();
       resolve(undefined);
       return;
     }
@@ -37,7 +38,7 @@ export interface Video {
 
 const MONTAGE_FRAME_BASENAME = /^montageshot([0-9]+)\.jpg$/;
 
-export const listVideos = async (dir: string, videoExtensions: Set<string>, previewDir: string | undefined): Promise<Video[]> => {
+export const listVideos = async (dir: string, videoExtensions: Set<string>, previewDir: string | undefined, spinner: Ora): Promise<Video[]> => {
   const entries = await readdirp.promise(dir, {
     depth: Infinity,
     fileFilter: e => videoExtensions.has(getExt(e.basename)),
@@ -55,7 +56,7 @@ export const listVideos = async (dir: string, videoExtensions: Set<string>, prev
         type: 'files',
       });
 
-      const dimensions = await getImageSize(thumbnailPath);
+      const dimensions = await getImageSize(thumbnailPath, spinner);
 
       return dimensions && {
         thumbnailPath,
@@ -102,10 +103,10 @@ export interface PhotoDirectory {
   isDirectory: true;
 }
 
-const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo | undefined> => {
+const buildPhoto = async (dir: string, e: Dirent, rel: string, spinner: Ora): Promise<Photo | undefined> => {
   const fullPath = join(dir, e.name);
 
-  const dimensions = await getImageSize(fullPath);
+  const dimensions = await getImageSize(fullPath, spinner);
 
   return dimensions && {
     name: e.name,
@@ -118,7 +119,7 @@ const buildPhoto = async (dir: string, e: Dirent, rel: string): Promise<Photo | 
   };
 };
 
-export const listPhotos = async (dir: string, photoExtensions: Set<string>, rel: string): Promise<PhotoDirectory> => {
+export const listPhotos = async (dir: string, photoExtensions: Set<string>, rel: string, spinner: Ora): Promise<PhotoDirectory> => {
   const raw = await fs.readdir(dir, {withFileTypes: true});
 
   // Note that relative paths on entry objects are relative to $dir, and probably
@@ -129,11 +130,11 @@ export const listPhotos = async (dir: string, photoExtensions: Set<string>, rel:
   const [photos, subdirectories] = await Promise.all([
     Promise.all(raw
       .filter(e => e.isFile() && photoExtensions.has(getExt(e.name)))
-      .map(e => buildPhoto(dir, e, rel)),
+      .map(e => buildPhoto(dir, e, rel, spinner)),
     ).then(photos => photos.filter(p => p) as Photo[]),
     Promise.all(raw
       .filter(e => e.isDirectory())
-      .map(e => listPhotos(join(dir, e.name), photoExtensions, rel)),
+      .map(e => listPhotos(join(dir, e.name), photoExtensions, rel, spinner)),
     ).then(dirs => dirs.filter(d => d.subdirectories.length + d.photos.length)),
   ]);
 

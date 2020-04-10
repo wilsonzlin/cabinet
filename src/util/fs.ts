@@ -14,8 +14,6 @@ export const nullStat = async (path: string) => {
 
 export const isFile = async (path: string): Promise<boolean> => !!((await nullStat(path))?.isFile());
 
-export const emptyFile = async (path: string) => fs.writeFile(path, '');
-
 export const ensureDir = (dir: string) => new Promise((resolve, reject) =>
   mkdirp(dir, err => {
     if (err) {

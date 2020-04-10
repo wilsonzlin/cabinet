@@ -69,7 +69,7 @@ export const buildVideoPreviews = async ({
         absPath,
       ));
     } catch (err) {
-      spinner.fail(`Failed to retrieve duration for ${relPath}: ${err.message}`);
+      spinner.fail(`Failed to retrieve duration for ${relPath}: ${err.message}`).start();
       return filePromises;
     }
 

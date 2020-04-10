@@ -2,6 +2,7 @@
 
 import {promises as fs, realpathSync} from 'fs';
 import minimist from 'minimist';
+import ora from 'ora';
 import {cpus} from 'os';
 import {join} from 'path';
 import {listPhotos, listVideos} from './server/library';
@@ -48,12 +49,13 @@ if (args['build-video-previews']) {
 
 } else {
   (async () => {
+    const spinner = ora('Finding videos and photos').start();
     const [photosRoot, users, videos] = await Promise.all([
-      listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR),
+      listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR, spinner),
       USERS_DIR ? getUsers(USERS_DIR) : [],
-      listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS, PREVIEWS_DIR),
+      listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS, PREVIEWS_DIR, spinner),
     ]);
-    return startServer({
+    await startServer({
       SSL: !SSL_KEY || !SSL_CERT ? undefined : {
         certificate: await fs.readFile(SSL_CERT),
         key: await fs.readFile(SSL_KEY),
@@ -68,5 +70,6 @@ if (args['build-video-previews']) {
       } : undefined,
       videos,
     });
-  })().then(() => console.log(`Server started on port ${PORT}`), console.error);
+    spinner.succeed(`Server started on port ${PORT}`).stop();
+  })().catch(console.error);
 }
