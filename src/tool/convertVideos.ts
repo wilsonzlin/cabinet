@@ -1,9 +1,9 @@
-import readdirp from 'readdirp';
-import {dirname, join} from 'path';
-import {ensureDir, getExt, isFile, withoutExt} from '../util/fs';
-import {ff} from '../util/ff';
 import {promises as fs} from 'fs';
+import {dirname, join} from 'path';
+import readdirp from 'readdirp';
 import {cmd} from '../util/exec';
+import {ff} from '../util/ff';
+import {ensureDir, getExt, isFile, withoutExt} from '../util/fs';
 import PromiseQueue = require('promise-queue');
 
 const CONVERTABLE_VIDEO_EXTENSIONS = new Set([
@@ -14,16 +14,23 @@ const SUPPORTED_VIDEO_CODECS = new Set([
   'h264',
 ]);
 
-const getCodec = async (file: string): Promise<string> => {
+const SUPPORTED_AUDIO_CODECS = new Set([
+  'aac',
+]);
+
+const getStreamCodec = async (file: string, stream: 'v:0' | 'a:0'): Promise<string> => {
   return (await cmd(
     `ffprobe`,
     `-v`, `error`,
-    `-select_streams`, `v:0`,
+    `-select_streams`, stream,
     `-show_entries`, `stream=codec_name`,
     `-of`, `default=noprint_wrappers=1:nokey=1`,
     file,
   )).trim();
 };
+
+const getVideoCodec = async (file: string) => getStreamCodec(file, 'v:0');
+const getAudioCodec = async (file: string) => getStreamCodec(file, 'a:0');
 
 const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string, verbose?: boolean) => {
   const absPath = file.fullPath;
@@ -41,38 +48,57 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string, verb
     return;
   }
 
-  const codec = await getCodec(absPath);
+  const videoCodec = await getVideoCodec(absPath);
+  const audioCodec = await getAudioCodec(absPath);
 
-  if (SUPPORTED_VIDEO_CODECS.has(codec)) {
+  let videoArgs;
+  let audioArgs;
+
+  if (SUPPORTED_VIDEO_CODECS.has(videoCodec)) {
     if (verbose) {
-      console.log(`${relPath} is already using supported video codec`);
+      console.debug(`${relPath} is already using supported video codec`);
     }
-    await ff(
-      `-i`, absPath,
-      `-codec`, `copy`,
-      `-map_metadata`, -1,
-      `-movflags`,
-      `+faststart`,
-      `-f`, `mp4`,
-      destPathIncomplete,
-    );
+    videoArgs = [
+      `-vcodec`, `copy`,
+    ];
   } else {
     if (verbose) {
-      console.log(`${relPath} needs to be converted to H.264`);
+      console.debug(`${relPath} video needs to be converted to H.264`);
     }
-    await ff(
-      `-i`, absPath,
+    videoArgs = [
       `-c:v`, `libx264`,
-      `-map_metadata`, -1,
       `-preset`, `veryfast`,
       `-crf`, 17,
-      `-max_muxing_queue_size`, 1048576,
-      `-movflags`,
-      `+faststart`,
-      `-f`, `mp4`,
-      destPathIncomplete,
-    );
+    ];
   }
+
+  if (SUPPORTED_AUDIO_CODECS.has(audioCodec)) {
+    if (verbose) {
+      console.debug(`${relPath} is already using supported audio codec`);
+    }
+    audioArgs = [
+      `-acodec`, `copy`,
+    ];
+  } else {
+    if (verbose) {
+      console.debug(`${relPath} audio needs to be converted to AAC`);
+    }
+    audioArgs = [
+      `-acodec`, `aac`,
+    ];
+  }
+
+  await ff(
+    `-i`, absPath,
+    `-map_metadata`, -1,
+    `-max_muxing_queue_size`, 1048576,
+    ...audioArgs,
+    ...videoArgs,
+    `-movflags`,
+    `+faststart`,
+    `-f`, `mp4`,
+    destPathIncomplete,
+  );
 
   await fs.rename(destPathIncomplete, destPath);
 };
