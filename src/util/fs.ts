@@ -12,7 +12,7 @@ export const nullStat = async (path: string) => {
   }
 };
 
-export const isFile = async (path: string) => (await nullStat(path))?.isFile();
+export const isFile = async (path: string): Promise<boolean> => !!((await nullStat(path))?.isFile());
 
 export const emptyFile = async (path: string) => fs.writeFile(path, '');
 

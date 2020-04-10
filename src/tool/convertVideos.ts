@@ -97,7 +97,6 @@ export const convertVideos = async ({
   });
 
   spinner.stop();
-  console.log(`Found ${files.length} files`);
 
   const progress = new ProgressBar('[:bar] :status', {
     total: files.length,
@@ -109,10 +108,10 @@ export const convertVideos = async ({
     files.map(file =>
       queue.add(() => {
         progress.render({
-          status: `Converting ${file.path}...`,
+          status: `Converting ${file.path}`,
         });
         return convertVideo(file, convertedDir)
-          .catch(err => progress.interrupt(`Failed to converted "${file.path}": ${err.message}`))
+          .catch(err => progress.interrupt(`Failed to converted ${file.path}: ${err.message}`))
           .then(() => progress.tick());
       })),
   );
