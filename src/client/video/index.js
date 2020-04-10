@@ -475,7 +475,7 @@
   let engagedSetTimeout;
   touch.onChange(usingTouch => uiState.usingTouch = usingTouch);
   // Don't set engaged state until touch has ended.
-  touch.onMouse(document, 'mousemove', () => {
+  touch.onMouse($player, 'mousemove', () => {
     clearTimeout(engagedSetTimeout);
     uiState.usingTouch = false;
     uiState.engaged = false;

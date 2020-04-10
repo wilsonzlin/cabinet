@@ -16,10 +16,6 @@
   top: 1rem;
 }
 
-body.s-engaged * {
-  cursor: none !important;
-}
-
 #pane {
   flex: 0 0 auto;
   width: 25rem;
@@ -209,6 +205,10 @@ body.s-engaged * {
   height: 100%;
 }
 
+.s-engaged #player {
+  cursor: none !important;
+}
+
 #video {
   display: block;
   width: 100%;
@@ -227,7 +227,7 @@ body:not(.s-loaded) #overlay {
 #overlay {
   text-shadow: 0 0 0.5rem black;
 
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.25);
   transition: 0.3s linear;
 
   position: absolute;
