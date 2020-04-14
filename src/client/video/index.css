@@ -349,7 +349,7 @@ body:not(.s-hideList) #button-list-show {
   top: 0;
   bottom: 0;
   margin: auto;
-  left: 2rem;
+  left: 1rem;
 
   background: rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.75);
@@ -459,7 +459,7 @@ body:not(.s-playing) #button-playback::before {
 #progress {
   cursor: pointer;
   padding: 0.5rem 0;
-  margin: 0 0.75rem;
+  margin: 0 1rem;
   width: calc(100% - 1.5rem);
 }
 
