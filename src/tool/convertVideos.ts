@@ -51,16 +51,16 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
   }
 
   const videoArgs = SUPPORTED_VIDEO_CODECS.has(await getVideoCodec(absPath)) ? [
-    `-vcodec`, `copy`,
+    `-c:v`, `copy`,
   ] : [
     `-c:v`, `libx264`,
     `-preset`, `veryfast`,
     `-crf`, 17,
   ];
   const audioArgs = SUPPORTED_AUDIO_CODECS.has(await getAudioCodec(absPath)) ? [
-    `-acodec`, `copy`,
+    `-c:a`, `copy`,
   ] : [
-    `-acodec`, `aac`,
+    `-c:a`, `aac`,
   ];
 
   await ff(
@@ -98,21 +98,36 @@ export const convertVideos = async ({
 
   spinner.stop();
 
+  const activeFiles = new Array<string>();
   const progress = new ProgressBar('[:bar] :status', {
     total: files.length,
     complete: '=',
     width: 15,
   });
+  const updateProgress = (file: string, type: 'started' | 'completed') => {
+    switch (type) {
+    case 'started':
+      activeFiles.push(file);
+      break;
+    case 'completed':
+      progress.tick();
+      activeFiles.splice(activeFiles.indexOf(file), 1);
+      break;
+    }
+    const first = activeFiles[0];
+    const n = activeFiles.length;
+    progress.render({
+      status: `Converting ${first}${n == 1 ? '' : ` and ${n - 1} other file${n == 2 ? '' : 's'}`}`,
+    });
+  };
 
   await Promise.all(
     files.map(file =>
       queue.add(() => {
-        progress.render({
-          status: `Converting ${file.path}`,
-        });
+        updateProgress(file.path, 'started');
         return convertVideo(file, convertedDir)
           .catch(err => progress.interrupt(`Failed to converted ${file.path}: ${err.message}`))
-          .then(() => progress.tick());
+          .then(() => updateProgress(file.path, 'completed'));
       })),
   );
 };

@@ -150,7 +150,7 @@ export const startServer = ({
   const authenticateWithSession = (id: string) => sessions.get(id);
 
   // Login API.
-  const getLoginRedirect = (req: Request) => req.query.from && req.query.from[0] === '/' ? req.query.from : '/';
+  const getLoginRedirect = (req: Request): string => typeof req.query.from == 'string' && req.query.from[0] === '/' ? req.query.from : '/';
   unauthenticated.get('/login', (req, res) => {
     if (authentication) {
       return sendPage(req, res, LoginPage, {});
@@ -253,7 +253,7 @@ export const startServer = ({
         snippet: string;
         height: number;
         width: number;
-        montageFrames: {time: number, URL: string}[];
+        montageFrames: { time: number, URL: string }[];
       };
     }[]>());
 
