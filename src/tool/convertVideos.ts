@@ -126,7 +126,7 @@ export const convertVideos = async ({
       queue.add(() => {
         updateProgress(file.path, 'started');
         return convertVideo(file, convertedDir)
-          .catch(err => progress.interrupt(`Failed to converted ${file.path}: ${err.message}`))
+          .catch(err => progress.interrupt(`Failed to convert ${file.path}: ${err.message}`))
           .then(() => updateProgress(file.path, 'completed'));
       })),
   );

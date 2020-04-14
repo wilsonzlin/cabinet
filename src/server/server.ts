@@ -87,7 +87,7 @@ const streamVideo = (req: Request, res: Response, path: string, fileSize: number
   });
 
   const stream = createReadStream(path, {start, end, autoClose: true});
-  stream.on('error', err => err.status(500).end(`Internal streaming error: ${err}`));
+  stream.on('error', err => res.status(500).end(`Internal streaming error: ${err}`));
   stream.pipe(res);
   req.on('close', () => stream.destroy());
 };
