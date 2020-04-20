@@ -3,8 +3,7 @@ import ora from 'ora';
 import {dirname, join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {cmd} from '../util/exec';
-import {ff} from '../util/ff';
+import {getStreamCodec, video} from '../util/ff';
 import {ensureDir, getExt, isFile, withoutExt} from '../util/fs';
 import PromiseQueue = require('promise-queue');
 
@@ -19,17 +18,6 @@ const SUPPORTED_VIDEO_CODECS = new Set([
 const SUPPORTED_AUDIO_CODECS = new Set([
   'aac',
 ]);
-
-const getStreamCodec = async (file: string, stream: 'v:0' | 'a:0'): Promise<string> => {
-  return (await cmd(
-    `ffprobe`,
-    `-v`, `error`,
-    `-select_streams`, stream,
-    `-show_entries`, `stream=codec_name`,
-    `-of`, `default=noprint_wrappers=1:nokey=1`,
-    file,
-  )).trim();
-};
 
 const getVideoCodec = async (file: string) => getStreamCodec(file, 'v:0');
 const getAudioCodec = async (file: string) => getStreamCodec(file, 'a:0');
@@ -50,30 +38,25 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
     return;
   }
 
-  const videoArgs = SUPPORTED_VIDEO_CODECS.has(await getVideoCodec(absPath)) ? [
-    `-c:v`, `copy`,
-  ] : [
-    `-c:v`, `libx264`,
-    `-preset`, `veryfast`,
-    `-crf`, 17,
-  ];
-  const audioArgs = SUPPORTED_AUDIO_CODECS.has(await getAudioCodec(absPath)) ? [
-    `-c:a`, `copy`,
-  ] : [
-    `-c:a`, `aac`,
-  ];
-
-  await ff(
-    `-i`, absPath,
-    `-map_metadata`, -1,
-    `-max_muxing_queue_size`, 1048576,
-    ...audioArgs,
-    ...videoArgs,
-    `-movflags`,
-    `+faststart`,
-    `-f`, `mp4`,
-    destPathIncomplete,
-  );
+  await video({
+    input: {
+      file: absPath,
+    },
+    metadata: false,
+    video: SUPPORTED_VIDEO_CODECS.has(await getVideoCodec(absPath)) || {
+      codec: 'libx264',
+      preset: 'veryfast',
+      crf: 17,
+      faststart: true,
+    },
+    audio: SUPPORTED_AUDIO_CODECS.has(await getAudioCodec(absPath)) || {
+      codec: 'aac',
+    },
+    output: {
+      format: 'mp4',
+      file: destPathIncomplete,
+    },
+  });
 
   await fs.rename(destPathIncomplete, destPath);
 };

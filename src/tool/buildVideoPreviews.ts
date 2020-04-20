@@ -2,27 +2,30 @@ import ora from 'ora';
 import {join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {cmd} from '../util/exec';
-import {ff, screenshot} from '../util/ff';
+import {getDuration, screenshot, video} from '../util/ff';
 import {ensureDir, getExt, isFile} from '../util/fs';
 import PromiseQueue = require('promise-queue');
 
-const generateSnippet = (src: string, out: string, startTime: number, duration: number): Promise<void> => ff(
-  `-ss`, startTime,
-  `-i`, src,
-  `-filter:v`, `scale=180:trunc(ow/a/2)*2`,
-  `-c:v`, `libx264`,
-  `-map_metadata`, -1,
-  `-preset`, `veryslow`,
-  `-crf`, 17,
-  `-max_muxing_queue_size`, 1048576,
-  `-movflags`,
-  `+faststart`,
-  `-an`,
-  `-t`, duration,
-  `-f`, `mp4`,
-  out,
-);
+const generateSnippet = (src: string, out: string, startTime: number, duration: number): Promise<void> => video({
+  input: {
+    file: src,
+    start: startTime,
+  },
+  metadata: false,
+  video: {
+    codec: 'libx264',
+    faststart: true,
+    crf: 17,
+    preset: 'veryslow',
+    resize: {width: 180},
+  },
+  audio: false,
+  output: {
+    file: out,
+    format: 'mp4',
+    duration: duration,
+  },
+});
 
 type PromiseGeneratorWithStatus = [string, () => Promise<any>];
 
@@ -60,14 +63,7 @@ export const buildVideoPreviews = async ({
     // Get duration of video in seconds.
     let duration: number;
     try {
-      duration = Number.parseFloat(await cmd(
-        `ffprobe`,
-        `-v`, `error`,
-        `-show_entries`, `format=duration`,
-        `-of`, `default=noprint_wrappers=1:nokey=1`,
-        `-ignore_chapters`, 1,
-        absPath,
-      ));
+      duration = await getDuration(absPath);
     } catch (err) {
       spinner.fail(`Failed to retrieve duration for ${relPath}: ${err.message}`).start();
       return filePromises;
