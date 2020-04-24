@@ -1,10 +1,5 @@
 import {cmd, job} from './exec';
-
-const ifDefined = <T> (val: T | undefined, fn: (val: T) => void) => {
-  if (val !== undefined) {
-    fn(val);
-  }
-};
+import {ifDefined} from './lang';
 
 export const ffprobe = async (...args: (string | number)[]): Promise<string> =>
   (await cmd(`ffprobe`, `-v`, `error`, `-of`, `default=noprint_wrappers=1:nokey=1`, ...args)).trim();
@@ -24,18 +19,19 @@ export const getDuration = async (file: string): Promise<number> =>
   ));
 
 export const ffmpeg = async (...args: (string | number)[]): Promise<void> =>
-  job(`ffmpeg`, false, `-loglevel`, 0, `-hide_banner`, `-y`, ...args);
+  job(`ffmpeg`, false, `-loglevel`, `fatal`, `-hide_banner`, `-y`, ...args);
 
-export const screenshot = async (src: string, pos: number, dest: string): Promise<void> =>
+export const screenshot = async (src: string, pos: number, dest: string, scaleWidth: number): Promise<void> =>
   ffmpeg(
     `-ss`, pos.toFixed(3),
     `-i`, src,
-    `-vframes`, 1,
+    `-filter:v`, `scale=${scaleWidth}:-1`,
+    `-frames:v`, 1,
     `-q:v`, 2,
     dest,
   );
 
-export const video = async ({
+export const ffVideo = async ({
   input,
   metadata,
   video,
@@ -48,18 +44,23 @@ export const video = async ({
     duration?: number;
   };
   metadata: boolean;
-  video: boolean | {
+  video: boolean | ({
+    fps?: number,
+    resize?: { width: number };
+  } & ({
     codec: 'libx264';
     preset: 'ultrafast' | 'superfast' | 'veryfast' | 'faster' | 'fast' | 'medium' | 'slow' | 'slower' | 'veryslow';
     crf: number;
     faststart: boolean;
-    resize?: { width: number };
-  };
+  } | {
+    codec: 'gif',
+    loop: boolean | number;
+  }));
   audio: boolean | {
     codec: 'aac',
   };
   output: {
-    format?: 'mp4';
+    format?: string;
     file: string;
     start?: number;
     duration?: number;
@@ -79,12 +80,29 @@ export const video = async ({
   if (typeof video == 'boolean') {
     video ? args.push(`-c:v`, `copy`) : args.push(`-vn`);
   } else {
-    ifDefined(video.resize, ({width}) => args.push(`-filter:v`, `scale=${width}:trunc(ow/a/2)*2`));
+    const filters = new Array<string>();
+    ifDefined(video.fps, (fps) => filters.push(`fps=${fps}`));
+    ifDefined(video.resize, ({width}) => filters.push(`scale=${width}:-2`));
+    if (filters.length) {
+      args.push(`-filter:v`, filters.join(','));
+    }
+
     args.push(`-c:v`, video.codec);
-    args.push(`-preset`, video.preset);
-    args.push(`-crf`, video.crf);
-    video.faststart && args.push(`-movflags`, `faststart`);
-    args.push(`-max_muxing_queue_size`, 1048576);
+    switch (video.codec) {
+    case 'libx264':
+      args.push(`-preset`, video.preset);
+      args.push(`-crf`, video.crf);
+      video.faststart && args.push(`-movflags`, `faststart`);
+      args.push(`-max_muxing_queue_size`, 1048576);
+      break;
+    case 'gif':
+      if (typeof video.loop == 'boolean') {
+        args.push(`-loop`, video.loop ? 0 : -1);
+      } else {
+        args.push(`-loop`, video.loop);
+      }
+      break;
+    }
   }
 
   // Audio.

@@ -46,7 +46,8 @@
     "promise-queue": "^2.2.5",
     "pug": "^2.0.4",
     "readdirp": "^3.4.0",
-    "useragent": "^2.3.0"
+    "useragent": "^2.3.0",
+    "winattr": "^3.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",

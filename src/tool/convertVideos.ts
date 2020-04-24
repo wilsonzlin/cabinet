@@ -3,18 +3,22 @@ import ora from 'ora';
 import {dirname, join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {getStreamCodec, video} from '../util/ff';
-import {ensureDir, getExt, isFile, withoutExt} from '../util/fs';
+import {getStreamCodec, ffVideo} from '../util/ff';
+import {ensureDir, getExt, isFile, isHiddenFile, withoutExt} from '../util/fs';
+import {asyncFilterList} from '../util/lang';
 import PromiseQueue = require('promise-queue');
 
+// TODO Configurable.
 const CONVERTABLE_VIDEO_EXTENSIONS = new Set([
   'wmv', 'mkv', 'avi', 'rm', 'rmvb', 'flv', '3gp',
 ]);
 
+// TODO Configurable.
 const SUPPORTED_VIDEO_CODECS = new Set([
   'h264',
 ]);
 
+// TODO Configurable.
 const SUPPORTED_AUDIO_CODECS = new Set([
   'aac',
 ]);
@@ -38,7 +42,7 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
     return;
   }
 
-  await video({
+  await ffVideo({
     input: {
       file: absPath,
     },
@@ -64,10 +68,12 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
 export const convertVideos = async ({
   sourceDir,
   convertedDir,
+  includeHiddenFiles,
   concurrency,
 }: {
   sourceDir: string,
   convertedDir: string,
+  includeHiddenFiles: boolean,
   concurrency: number,
 }): Promise<void> => {
   const queue = new PromiseQueue(concurrency, Infinity);
@@ -77,7 +83,7 @@ export const convertVideos = async ({
   const files = await readdirp.promise(sourceDir, {
     depth: Infinity,
     fileFilter: entry => CONVERTABLE_VIDEO_EXTENSIONS.has(getExt(entry.basename)),
-  });
+  }).then(entries => asyncFilterList(entries, (async (e) => includeHiddenFiles || !(await isHiddenFile(e.fullPath)))));
 
   spinner.stop();
 
@@ -97,20 +103,19 @@ export const convertVideos = async ({
       activeFiles.splice(activeFiles.indexOf(file), 1);
       break;
     }
-    const first = activeFiles[0];
-    const n = activeFiles.length;
+    const {0: first, length: n} = activeFiles;
     progress.render({
       status: `Converting ${first}${n == 1 ? '' : ` and ${n - 1} other file${n == 2 ? '' : 's'}`}`,
     });
   };
 
-  await Promise.all(
-    files.map(file =>
-      queue.add(() => {
-        updateProgress(file.path, 'started');
-        return convertVideo(file, convertedDir)
-          .catch(err => progress.interrupt(`Failed to convert ${file.path}: ${err.message}`))
-          .then(() => updateProgress(file.path, 'completed'));
-      })),
-  );
+  await Promise.all(files.map(file => queue.add(async () => {
+    updateProgress(file.path, 'started');
+    try {
+      await convertVideo(file, convertedDir);
+    } catch (err) {
+      progress.interrupt(`Failed to convert ${file.path}: ${err.message}`);
+    }
+    updateProgress(file.path, 'completed');
+  })));
 };

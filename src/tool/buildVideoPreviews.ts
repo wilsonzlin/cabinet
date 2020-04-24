@@ -2,11 +2,14 @@ import ora from 'ora';
 import {join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {getDuration, screenshot, video} from '../util/ff';
-import {ensureDir, getExt, isFile} from '../util/fs';
+import {getDuration, screenshot, ffVideo} from '../util/ff';
+import {ensureDir, getExt, isFile, isHiddenFile} from '../util/fs';
+import {isDefined} from '../util/lang';
 import PromiseQueue = require('promise-queue');
 
-const generateSnippet = (src: string, out: string, startTime: number, duration: number): Promise<void> => video({
+const PREVIEW_SCALED_WIDTH = 180;
+
+const generateSnippet = (src: string, out: string, startTime: number, duration: number): Promise<void> => ffVideo({
   input: {
     file: src,
     start: startTime,
@@ -17,7 +20,7 @@ const generateSnippet = (src: string, out: string, startTime: number, duration: 
     faststart: true,
     crf: 17,
     preset: 'veryslow',
-    resize: {width: 180},
+    resize: {width: PREVIEW_SCALED_WIDTH},
   },
   audio: false,
   output: {
@@ -34,12 +37,14 @@ export const buildVideoPreviews = async ({
   previewsDir,
   concurrency,
   fileExtensions,
+  includeHiddenFiles,
   snippetDuration = 5,
 }: {
   libraryDir: string,
   previewsDir: string,
   concurrency: number,
   fileExtensions: Set<string>,
+  includeHiddenFiles: boolean,
   snippetDuration?: number,
 }): Promise<void> => {
   const spinner = ora('Finding videos').start();
@@ -49,12 +54,16 @@ export const buildVideoPreviews = async ({
     fileFilter: entry => fileExtensions.has(getExt(entry.basename)),
   });
 
-  const promises = (await Promise.all(files.map(async (file) => {
+  const promises: PromiseGeneratorWithStatus[] = (await Promise.all(files.map(async (file) => {
     const filePromises: PromiseGeneratorWithStatus[] = [];
 
     const absPath = file.fullPath;
     const relPath = file.path;
     const outDir = join(previewsDir, relPath);
+
+    if (!includeHiddenFiles && await isHiddenFile(absPath)) {
+      return;
+    }
 
     spinner.text = `Preparing ${relPath}`;
 
@@ -66,13 +75,13 @@ export const buildVideoPreviews = async ({
       duration = await getDuration(absPath);
     } catch (err) {
       spinner.fail(`Failed to retrieve duration for ${relPath}: ${err.message}`).start();
-      return filePromises;
+      return;
     }
 
     // Create thumbnails at percentiles.
     const thumbDest = join(outDir, `thumb50.jpg`);
     if (!(await isFile(thumbDest))) {
-      filePromises.push([`Generating thumbnail for ${relPath}`, () => screenshot(absPath, duration * 0.5, thumbDest)]);
+      filePromises.push([`Generating thumbnail for ${relPath}`, () => screenshot(absPath, duration * 0.5, thumbDest, PREVIEW_SCALED_WIDTH)]);
     }
 
     // Create preview snippet.
@@ -101,11 +110,11 @@ export const buildVideoPreviews = async ({
       if (exists) {
         continue;
       }
-      filePromises.push([`Generating montage for ${relPath}`, () => screenshot(absPath, time, file)]);
+      filePromises.push([`Generating montage for ${relPath}`, () => screenshot(absPath, time, file, PREVIEW_SCALED_WIDTH)]);
     }
 
     return filePromises;
-  }))).flat();
+  }))).flat().filter(isDefined);
 
   spinner.stop();
 

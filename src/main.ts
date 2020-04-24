@@ -10,18 +10,19 @@ import {startServer} from './server/server';
 import {getUsers, writeUser} from './server/user';
 import {buildVideoPreviews} from './tool/buildVideoPreviews';
 import {convertVideos} from './tool/convertVideos';
+import {optionalMap} from './util/lang';
 
 const args = minimist(process.argv.slice(2));
 
 const rp = (p: string): string => realpathSync(p);
 
-const optionalMap = <T, R> (val: T | null | undefined, mapper: (val: T) => R) => val == null ? undefined : mapper(val);
-
 const LIBRARY_DIR: string = rp(args.library);
 const USERS_DIR: string | undefined = optionalMap(args.users, rp);
 const PREVIEWS_DIR: string | undefined = optionalMap(args.previews, rp);
+const SCRATCH_DIR: string | undefined = optionalMap(args.scratch, rp);
 const VIDEO_EXTENSIONS: Set<string> = new Set((args.video || 'mp4,m4v').split(','));
 const PHOTO_EXTENSIONS: Set<string> = new Set((args.photo || 'png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp').split(','));
+const INCLUDE_HIDDEN_FILES: boolean = args.hidden ?? false;
 const CONCURRENCY: number = +args.concurrency || cpus().length;
 const PORT: number = args.port || Math.floor(Math.random() * 8976 + 1024);
 const SSL_KEY: string | undefined = args.key;
@@ -36,6 +37,7 @@ if (args['build-video-previews']) {
     previewsDir: PREVIEWS_DIR,
     libraryDir: LIBRARY_DIR,
     fileExtensions: VIDEO_EXTENSIONS,
+    includeHiddenFiles: INCLUDE_HIDDEN_FILES,
     concurrency: CONCURRENCY,
   }).then(() => process.exit(0), console.error);
 
@@ -44,6 +46,7 @@ if (args['build-video-previews']) {
   convertVideos({
     sourceDir: LIBRARY_DIR,
     convertedDir: rp(args.converted),
+    includeHiddenFiles: INCLUDE_HIDDEN_FILES,
     concurrency: CONCURRENCY,
   }).then(() => process.exit(0), console.error);
 
@@ -51,9 +54,9 @@ if (args['build-video-previews']) {
   (async () => {
     const spinner = ora('Finding videos and photos').start();
     const [photosRoot, users, videos] = await Promise.all([
-      listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR, spinner),
+      listPhotos(LIBRARY_DIR, PHOTO_EXTENSIONS, LIBRARY_DIR, INCLUDE_HIDDEN_FILES, spinner),
       USERS_DIR ? getUsers(USERS_DIR) : [],
-      listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS, PREVIEWS_DIR, spinner),
+      listVideos(LIBRARY_DIR, VIDEO_EXTENSIONS, INCLUDE_HIDDEN_FILES, PREVIEWS_DIR, spinner),
     ]);
     await startServer({
       SSL: !SSL_KEY || !SSL_CERT ? undefined : {
@@ -69,6 +72,7 @@ if (args['build-video-previews']) {
         writeUser: user => writeUser(USERS_DIR!, user),
       } : undefined,
       videos,
+      scratch: SCRATCH_DIR,
     });
     spinner.succeed(`Server started on port ${PORT}`).stop();
   })().catch(console.error);

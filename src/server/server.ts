@@ -10,6 +10,9 @@ import {SimpleSupportStatement} from 'mdn-browser-compat-data/types';
 import {dirname, join} from 'path';
 import pug, {compileTemplate, LocalsObject} from 'pug';
 import useragent from 'useragent';
+import {ffVideo} from '../util/ff';
+import {nullStat} from '../util/fs';
+import {assertExists, isString} from '../util/lang';
 import {Photo, PhotoDirectory, Video} from './library';
 import {DefaultVideoPreferences, hasProp, User} from './user';
 
@@ -102,6 +105,7 @@ export const startServer = ({
 
   videos,
   photosRoot,
+  scratch,
 }: {
   clientPath: string;
 
@@ -119,6 +123,7 @@ export const startServer = ({
 
   videos: Video[];
   photosRoot: PhotoDirectory;
+  scratch?: string;
 }) => new Promise(onServerListening => {
   const unauthenticated = express();
   unauthenticated.use(cookieParser());
@@ -229,6 +234,7 @@ export const startServer = ({
       folders.get(folderName)!.push({
         id: i,
         title: v.title,
+        duration: v.duration,
         liked: !!(authentication && req.user.likedVideos.has(v.relativePath)),
         disliked: !!(authentication && req.user.dislikedVideos.has(v.relativePath)),
         preview: v.preview && {
@@ -246,6 +252,7 @@ export const startServer = ({
     }, new Map<string, {
       id: number;
       title: string;
+      duration: number;
       liked: boolean;
       disliked: boolean;
       preview?: {
@@ -336,7 +343,7 @@ export const startServer = ({
     });
   }
 
-  // Stream video.
+  // Video previews.
   authenticated.get('/video/:videoId/thumbnail', (req, res) => {
     const video: Video = videos[req.params.videoId];
     if (!video) {
@@ -394,6 +401,79 @@ export const startServer = ({
     return streamVideo(req, res, snippetPath, size, 'video/mp4');
   });
 
+  // Video capture.
+  if (scratch) {
+    authenticated.get('/video/:videoId/capture/:type', async (req, res) => {
+      const {videoId, type} = req.params;
+
+      const video: Video = videos[videoId];
+      if (!video) {
+        return res.status(404).end();
+      }
+
+      const [start, end] = ['start', 'end'].map(n => req.query[n]).map(n => isString(n) ? Number.parseFloat(n) : null);
+      if (start == null || !Number.isFinite(start) || start < 0 || end == null || !Number.isFinite(end) || end > video.duration) {
+        return res.status(400).end(`Bad range`);
+      }
+
+      const duration = end - start + 1;
+      if (duration >= 60) {
+        return res.status(400).end(`Too long`);
+      }
+
+      const mime = {
+        'gif': 'image/gif',
+        'low': 'video/mp4',
+        'medium': 'video/mp4',
+        'high': 'video/mp4',
+        'original': 'video/mp4',
+      }[type];
+      if (!mime) {
+        return res.status(400).end(`Invalid type`);
+      }
+
+      const audio = type != 'gif' && req.query.silent !== '1';
+
+      const outputFile = join(scratch, `${videoId}.${start}-${end}.${type}${audio ? `` : `.silent`}`);
+      let outputFileStats = await nullStat(outputFile);
+      if (!outputFileStats) {
+        await ffVideo({
+          input: {
+            file: video.absolutePath,
+            start,
+            duration,
+          },
+          metadata: false,
+          video: type == 'gif' ? {
+            codec: 'gif',
+            loop: true,
+            // TODO min(X, video.fps).
+            fps: 10,
+            // TODO min(800, video.width).
+            resize: {width: 800},
+          } : {
+            codec: 'libx264',
+            preset: 'veryfast',
+            crf: 17,
+            // TODO min(X, video.fps).
+            fps: type == 'low' ? 10 : type == 'medium' ? 30 : type == 'high' ? 60 : undefined,
+            // TODO min(X, video.width).
+            resize: type == 'low' ? {width: 800} : type == 'medium' ? {width: 1280} : type == 'high' ? {width: 1920} : undefined,
+            faststart: true,
+          },
+          audio: type != 'gif' && audio,
+          output: {
+            format: type == 'gif' ? 'gif' : 'mp4',
+            file: outputFile,
+          },
+        });
+        outputFileStats = assertExists(await nullStat(outputFile));
+      }
+      return streamVideo(req, res, outputFile, outputFileStats.size, mime);
+    });
+  }
+
+  // Video stream.
   authenticated.get('/stream/:videoId', (req, res) => {
     const video = videos[req.params.videoId];
     if (!video) {
