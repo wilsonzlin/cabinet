@@ -60,7 +60,7 @@ const shouldUseCompatAssets = (ua: string | undefined): boolean => {
         && (!stmt.version_removed || stmt.version_removed !== true && version < getMajorFromSemVer(stmt.version_removed))));
 };
 
-const streamVideo = (req: Request, res: Response, path: string, fileSize: number, type: string): void => {
+const streamVideo = (req: Request, res: Response, path: string, name: string, fileSize: number, type: string): void => {
   let start: number;
   let end: number;
 
@@ -83,9 +83,10 @@ const streamVideo = (req: Request, res: Response, path: string, fileSize: number
   }
 
   res.status(206).set({
-    'Content-Range': `bytes ${start}-${end}/${fileSize}`,
     'Accept-Ranges': 'bytes',
+    'Content-Disposition': `inline; filename="${name.replace(/"/g, '_')}"`,
     'Content-Length': streamLength,
+    'Content-Range': `bytes ${start}-${end}/${fileSize}`,
     'Content-Type': type,
   });
 
@@ -398,7 +399,7 @@ export const startServer = ({
       throw err;
     }
 
-    return streamVideo(req, res, snippetPath, size, 'video/mp4');
+    return streamVideo(req, res, snippetPath, `${video.title} (snippet)`, size, 'video/mp4');
   });
 
   // Video capture.
@@ -447,18 +448,14 @@ export const startServer = ({
           video: type == 'gif' ? {
             codec: 'gif',
             loop: true,
-            // TODO min(X, video.fps).
-            fps: 10,
-            // TODO min(800, video.width).
-            resize: {width: 800},
+            fps: Math.min(10, video.fps),
+            resize: {width: Math.min(800, video.width)},
           } : {
             codec: 'libx264',
             preset: 'veryfast',
             crf: 17,
-            // TODO min(X, video.fps).
-            fps: type == 'low' ? 10 : type == 'medium' ? 30 : type == 'high' ? 60 : undefined,
-            // TODO min(X, video.width).
-            resize: type == 'low' ? {width: 800} : type == 'medium' ? {width: 1280} : type == 'high' ? {width: 1920} : undefined,
+            fps: Math.min(type == 'low' ? 10 : type == 'medium' ? 30 : type == 'high' ? 60 : Infinity, video.fps),
+            resize: {width: Math.min(type == 'low' ? 800 : type == 'medium' ? 1280 : type == 'high' ? 1920 : Infinity, video.width)},
             faststart: true,
           },
           audio: type != 'gif' && audio,
@@ -469,7 +466,7 @@ export const startServer = ({
         });
         outputFileStats = assertExists(await nullStat(outputFile));
       }
-      return streamVideo(req, res, outputFile, outputFileStats.size, mime);
+      return streamVideo(req, res, outputFile, `${video.title} (capture ${duration}s, ${type}${audio ? '' : ', silent'})`, outputFileStats.size, mime);
     });
   }
 
@@ -485,7 +482,7 @@ export const startServer = ({
       return res.status(500).end(`File is empty`);
     }
 
-    return streamVideo(req, res, absolutePath, size, type);
+    return streamVideo(req, res, absolutePath, video.title, size, type);
   });
 
   // Start server

@@ -2,7 +2,7 @@ import ora from 'ora';
 import {join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {getDuration, screenshot, ffVideo} from '../util/ff';
+import {ffProbeVideo, ffVideo, screenshot} from '../util/ff';
 import {ensureDir, getExt, isFile, isHiddenFile} from '../util/fs';
 import {isDefined} from '../util/lang';
 import PromiseQueue = require('promise-queue');
@@ -72,7 +72,7 @@ export const buildVideoPreviews = async ({
     // Get duration of video in seconds.
     let duration: number;
     try {
-      duration = await getDuration(absPath);
+      duration = (await ffProbeVideo(absPath)).duration;
     } catch (err) {
       spinner.fail(`Failed to retrieve duration for ${relPath}: ${err.message}`).start();
       return;

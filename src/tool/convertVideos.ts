@@ -3,7 +3,7 @@ import ora from 'ora';
 import {dirname, join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {getStreamCodec, ffVideo} from '../util/ff';
+import {ffProbeVideo, ffVideo} from '../util/ff';
 import {ensureDir, getExt, isFile, isHiddenFile, withoutExt} from '../util/fs';
 import {asyncFilterList} from '../util/lang';
 import PromiseQueue = require('promise-queue');
@@ -23,9 +23,6 @@ const SUPPORTED_AUDIO_CODECS = new Set([
   'aac',
 ]);
 
-const getVideoCodec = async (file: string) => getStreamCodec(file, 'v:0');
-const getAudioCodec = async (file: string) => getStreamCodec(file, 'a:0');
-
 const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
   const absPath = file.fullPath;
   const relPath = file.path;
@@ -42,18 +39,20 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
     return;
   }
 
+  const properties = await ffProbeVideo(absPath);
+
   await ffVideo({
     input: {
       file: absPath,
     },
     metadata: false,
-    video: SUPPORTED_VIDEO_CODECS.has(await getVideoCodec(absPath)) || {
+    video: SUPPORTED_VIDEO_CODECS.has(properties.videoCodec) || {
       codec: 'libx264',
       preset: 'veryfast',
       crf: 17,
       faststart: true,
     },
-    audio: SUPPORTED_AUDIO_CODECS.has(await getAudioCodec(absPath)) || {
+    audio: SUPPORTED_AUDIO_CODECS.has(properties.audioCodec) || {
       codec: 'aac',
     },
     output: {

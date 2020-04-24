@@ -4,7 +4,7 @@ import mime from 'mime';
 import {Ora} from 'ora';
 import {basename, join, relative} from 'path';
 import readdirp from 'readdirp';
-import {getDuration} from '../util/ff';
+import {ffProbeVideo} from '../util/ff';
 import {getExt, isHiddenFile} from '../util/fs';
 import {assertExists, asyncFilterList, exists, isDefined, optionalMap} from '../util/lang';
 
@@ -29,6 +29,9 @@ export interface Video {
   relativePath: string;
   absolutePath: string;
   duration: number;
+  fps: number;
+  height: number;
+  width: number;
   size: number;
   type: string | null;
   preview?: {
@@ -72,14 +75,17 @@ export const listVideos = async (dir: string, videoExtensions: Set<string>, incl
   }).then(entries => asyncFilterList(entries, async (e) => includeHiddenFiles || !(await isHiddenFile(e.fullPath))));
 
   return (await Promise.all(entries.map(async (e) =>
-    optionalMap(await getDuration(e.fullPath).catch(err => {
-      spinner.fail(`Failed to retrieve duration for ${e.path}: ${err.message}`).start();
+    optionalMap(await ffProbeVideo(e.fullPath).catch(err => {
+      spinner.fail(`Failed to retrieve video properties for ${e.path}: ${err.message}`).start();
       return undefined;
-    }), async (duration) => ({
+    }), async (properties) => ({
       title: e.basename.slice(0, e.basename.lastIndexOf('.')),
       relativePath: e.path,
       absolutePath: e.fullPath,
-      duration,
+      duration: properties.duration,
+      fps: properties.fps,
+      height: properties.height,
+      width: properties.width,
       // e.stats should always exist as alwaysStat is true.
       size: e.stats!.size,
       type: mime.getType(e.basename),

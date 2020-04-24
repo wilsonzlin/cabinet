@@ -1,22 +1,50 @@
 import {cmd, job} from './exec';
 import {ifDefined} from './lang';
 
-export const ffprobe = async (...args: (string | number)[]): Promise<string> =>
-  (await cmd(`ffprobe`, `-v`, `error`, `-of`, `default=noprint_wrappers=1:nokey=1`, ...args)).trim();
+export type MediaFileProperties = {
+  height: number;
+  width: number;
+  fps: number;
+  duration: number;
+  audioCodec: string;
+  videoCodec: string;
+};
 
-export const getStreamCodec = (file: string, stream: 'v:0' | 'a:0'): Promise<string> =>
-  ffprobe(
-    `-select_streams`, stream,
-    `-show_entries`, `stream=codec_name`,
-    file,
-  );
-
-export const getDuration = async (file: string): Promise<number> =>
-  Number.parseFloat(await ffprobe(
-    `-show_entries`, `format=duration`,
+export const ffProbeVideo = async (file: string): Promise<MediaFileProperties> => {
+  const raw = (await cmd(
+    `ffprobe`,
+    `-v`, `error`,
+    `-show_entries`, `stream=codec_type,codec_name,width,height,r_frame_rate:format=duration`,
     `-ignore_chapters`, 1,
     file,
-  ));
+  )).trim();
+
+  const properties: MediaFileProperties = {} as any;
+  for (const [_, sectionName, sectionData] of raw.matchAll(/\[([A-Z]+)]([^\[]*)\[\/\1]/g)) {
+    const values: { [key: string]: string } = Object.fromEntries(sectionData.trim().split(/[\r\n]+/).map(kv => kv.split('=', 2)));
+    switch (sectionName) {
+    case 'STREAM':
+      properties.videoCodec = values.codec_name;
+      switch (values.codec_type) {
+      case 'video':
+        properties.height = Number.parseInt(values.height, 10);
+        properties.width = Number.parseInt(values.width, 10);
+        properties.fps = values.r_frame_rate
+          .split('/')
+          .map(p => Number.parseInt(p, 10))
+          .reduce((numerator, denominator) => numerator / denominator);
+        break;
+      case 'audio':
+        break;
+      }
+      break;
+    case 'FORMAT':
+      properties.duration = Number.parseFloat(values.duration);
+      break;
+    }
+  }
+  return properties;
+};
 
 export const ffmpeg = async (...args: (string | number)[]): Promise<void> =>
   job(`ffmpeg`, false, `-loglevel`, `fatal`, `-hide_banner`, `-y`, ...args);
