@@ -1,3 +1,4 @@
+import {AsyncArray} from 'extlib/dist/asyncarray/AsyncArray';
 import {promises as fs} from 'fs';
 import ora from 'ora';
 import {dirname, join} from 'path';
@@ -5,7 +6,6 @@ import ProgressBar from 'progress';
 import readdirp from 'readdirp';
 import {ffProbeVideo, ffVideo} from '../util/ff';
 import {ensureDir, getExt, isFile, isHiddenFile, withoutExt} from '../util/fs';
-import {asyncFilterList} from '../util/lang';
 import PromiseQueue = require('promise-queue');
 
 // TODO Configurable.
@@ -79,10 +79,10 @@ export const convertVideos = async ({
 
   const spinner = ora('Finding files to convert').start();
 
-  const files = await readdirp.promise(sourceDir, {
+  const files = await AsyncArray.from(await readdirp.promise(sourceDir, {
     depth: Infinity,
     fileFilter: entry => CONVERTABLE_VIDEO_EXTENSIONS.has(getExt(entry.basename)),
-  }).then(entries => asyncFilterList(entries, (async (e) => includeHiddenFiles || !(await isHiddenFile(e.fullPath)))));
+  })).filter(async (e) => includeHiddenFiles || !(await isHiddenFile(e.fullPath))).toArray();
 
   spinner.stop();
 

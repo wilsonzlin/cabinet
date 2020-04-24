@@ -1,3 +1,4 @@
+import {AsyncArray} from 'extlib/dist/asyncarray/AsyncArray';
 import {Dirent, promises as fs} from 'fs';
 import {imageSize} from 'image-size';
 import mime from 'mime';
@@ -6,7 +7,7 @@ import {basename, join, relative} from 'path';
 import readdirp from 'readdirp';
 import {ffProbeVideo} from '../util/ff';
 import {getExt, isHiddenFile} from '../util/fs';
-import {assertExists, asyncFilterList, exists, isDefined, optionalMap} from '../util/lang';
+import {assertExists, exists, isDefined, optionalMap} from '../util/lang';
 
 const getImageSize = (absPath: string, spinner: Ora): Promise<{ height: number, width: number } | undefined> => new Promise(resolve =>
   imageSize(absPath, (e, r) => {
@@ -67,12 +68,12 @@ const getVideoPreview = async (previewDir: string, relPath: string, spinner: Ora
 };
 
 export const listVideos = async (dir: string, videoExtensions: Set<string>, includeHiddenFiles: boolean, previewDir: string | undefined, spinner: Ora): Promise<Video[]> => {
-  const entries = await readdirp.promise(dir, {
+  const entries = await AsyncArray.from(await readdirp.promise(dir, {
     depth: Infinity,
     fileFilter: e => videoExtensions.has(getExt(e.basename)),
     type: 'files',
     alwaysStat: true,
-  }).then(entries => asyncFilterList(entries, async (e) => includeHiddenFiles || !(await isHiddenFile(e.fullPath))));
+  })).filter(async (e) => includeHiddenFiles || !(await isHiddenFile(e.fullPath))).toArray();
 
   return (await Promise.all(entries.map(async (e) =>
     optionalMap(await ffProbeVideo(e.fullPath).catch(err => {
@@ -139,15 +140,17 @@ export const listPhotos = async (dir: string, photoExtensions: Set<string>, rel:
   const entries: { [name: string]: Photo | PhotoDirectory } = {};
 
   const [photos, subdirectories] = await Promise.all([
-    asyncFilterList(raw, async (e) =>
-      e.isFile()
-      && photoExtensions.has(getExt(e.name))
-      && (includeHiddenFiles || !(await isHiddenFile(join(dir, e.name)))))
-      .then(entries => Promise.all(entries.map(e => buildPhoto(dir, e, rel, spinner))))
-      .then(photos => photos.filter(exists)),
-    asyncFilterList(raw, async (e) => e.isDirectory() && (includeHiddenFiles || !(await isHiddenFile(join(dir, e.name)))))
-      .then(entries => Promise.all(entries.map(e => listPhotos(join(dir, e.name), photoExtensions, rel, includeHiddenFiles, spinner))))
-      .then(dirs => dirs.filter(d => d.subdirectories.length + d.photos.length > 0)),
+    AsyncArray.from(raw)
+      .filter(async (e) => e.isFile() && photoExtensions.has(getExt(e.name)) && (includeHiddenFiles || !(await isHiddenFile(join(dir, e.name)))))
+      .map(e => buildPhoto(dir, e, rel, spinner))
+      .filterType(exists)
+      .toArray(),
+
+    AsyncArray.from(raw)
+      .filter(async (e) => e.isDirectory() && (includeHiddenFiles || !(await isHiddenFile(join(dir, e.name)))))
+      .map(e => listPhotos(join(dir, e.name), photoExtensions, rel, includeHiddenFiles, spinner))
+      .filter(d => d.subdirectories.length + d.photos.length > 0)
+      .toArray(),
   ]);
 
   for (const entry of [...photos, ...subdirectories]) {

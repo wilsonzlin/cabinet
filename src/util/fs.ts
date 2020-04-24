@@ -1,7 +1,6 @@
 import {promises as fs} from 'fs';
 import mkdirp from 'mkdirp';
 import {basename} from 'path';
-import {asyncFilterList} from './lang';
 
 const winattr = require('winattr');
 

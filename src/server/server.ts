@@ -84,7 +84,7 @@ const streamVideo = (req: Request, res: Response, path: string, name: string, fi
 
   res.status(206).set({
     'Accept-Ranges': 'bytes',
-    'Content-Disposition': `inline; filename="${name.replace(/"/g, '_')}"`,
+    'Content-Disposition': `inline; filename="${name.replace(/[^a-zA-Z0-9-_'., ]/g, '_')}"`,
     'Content-Length': streamLength,
     'Content-Range': `bytes ${start}-${end}/${fileSize}`,
     'Content-Type': type,
