@@ -65,8 +65,6 @@ export const buildVideoPreviews = async ({
       return;
     }
 
-    spinner.text = `Preparing ${relPath}`;
-
     await ensureDir(outDir);
 
     // Get duration of video in seconds.
@@ -113,6 +111,9 @@ export const buildVideoPreviews = async ({
       filePromises.push([`Generating montage for ${relPath}`, () => screenshot(absPath, time, file, PREVIEW_SCALED_WIDTH)]);
     }
 
+    // Update text last as otherwise text immediately goes to last file as it updates before all the asynchronous work.
+    spinner.text = `Probed ${relPath}`;
+
     return filePromises;
   }))).flat().filter(isDefined);
 
@@ -126,11 +127,17 @@ export const buildVideoPreviews = async ({
     width: 15,
   });
 
-  await Promise.all(promises.map(([status, promiseProducer]) =>
-    queue.add(() => {
-      progress.render({status});
-      return promiseProducer();
-    })
-      .catch(err => progress.interrupt(err.message))
-      .then(() => progress.tick())));
+  await Promise.all(promises.map(async ([status, promiseProducer]) => {
+    try {
+      await queue.add(() => {
+        progress.render({status});
+        return promiseProducer();
+      });
+    } catch (err) {
+      progress.interrupt(err.message);
+    }
+    progress.tick();
+  }));
+
+  progress.terminate();
 };

@@ -117,4 +117,6 @@ export const convertVideos = async ({
     }
     updateProgress(file.path, 'completed');
   })));
+
+  progress.terminate();
 };

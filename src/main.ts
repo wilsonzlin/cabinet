@@ -18,6 +18,7 @@ const rp = (p: string): string => realpathSync(p);
 
 const LIBRARY_DIR: string = rp(args.library);
 const USERS_DIR: string | undefined = optionalMap(args.users, rp);
+const SOURCE_DIR: string | undefined = optionalMap(args.source, rp);
 const PREVIEWS_DIR: string | undefined = optionalMap(args.previews, rp);
 const SCRATCH_DIR: string | undefined = optionalMap(args.scratch, rp);
 const VIDEO_EXTENSIONS: Set<string> = new Set((args.video || 'mp4,m4v').split(','));
@@ -42,9 +43,11 @@ if (args['build-video-previews']) {
   }).then(() => process.exit(0), console.error);
 
 } else if (args['convert-videos']) {
-  // Sometimes Node.js keeps running after all video conversion jobs have completed, so force exit on Promise fulfilment.
+  if (!SOURCE_DIR) {
+    throw new Error(`No source directory provided`);
+  }
   convertVideos({
-    sourceDir: LIBRARY_DIR,
+    sourceDir: SOURCE_DIR,
     convertedDir: rp(args.converted),
     includeHiddenFiles: INCLUDE_HIDDEN_FILES,
     concurrency: CONCURRENCY,
