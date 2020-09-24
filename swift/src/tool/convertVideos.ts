@@ -6,7 +6,7 @@ import ora from 'ora';
 import {dirname, join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {ffProbeVideo, ffVideo} from '../util/ff';
+import {ff} from '../util/ff';
 import {ensureDir, isHiddenFile} from '../util/fs';
 import PromiseQueue = require('promise-queue');
 
@@ -41,9 +41,9 @@ const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
     return;
   }
 
-  const properties = await ffProbeVideo(absPath);
+  const properties = await ff.probe(absPath);
 
-  await ffVideo({
+  await ff.convert({
     input: {
       file: absPath,
     },

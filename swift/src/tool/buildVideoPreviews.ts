@@ -5,13 +5,13 @@ import ora from 'ora';
 import {join} from 'path';
 import ProgressBar from 'progress';
 import readdirp from 'readdirp';
-import {ffProbeVideo, ffVideo, screenshot} from '../util/ff';
+import {ff} from '../util/ff';
 import {ensureDir, isHiddenFile} from '../util/fs';
 import PromiseQueue = require('promise-queue');
 
 const PREVIEW_SCALED_WIDTH = 180;
 
-const generateSnippet = (src: string, out: string, startTime: number, duration: number): Promise<void> => ffVideo({
+const generateSnippet = (src: string, out: string, startTime: number, duration: number): Promise<void> => ff.convert({
   input: {
     file: src,
     start: startTime,
@@ -72,7 +72,7 @@ export const buildVideoPreviews = async ({
     // Get duration of video in seconds.
     let duration: number;
     try {
-      duration = (await ffProbeVideo(absPath)).duration;
+      duration = (await ff.probe(absPath)).duration;
     } catch (err) {
       spinner.fail(`Failed to retrieve duration for ${relPath}: ${err.message}`).start();
       return;
@@ -81,7 +81,7 @@ export const buildVideoPreviews = async ({
     // Create thumbnails at percentiles.
     const thumbDest = join(outDir, `thumb50.jpg`);
     if (!(await isFile(thumbDest))) {
-      filePromises.push([`Generating thumbnail for ${relPath}`, () => screenshot(absPath, duration * 0.5, thumbDest, PREVIEW_SCALED_WIDTH)]);
+      filePromises.push([`Generating thumbnail for ${relPath}`, () => ff.screenshot(absPath, duration * 0.5, thumbDest, PREVIEW_SCALED_WIDTH)]);
     }
 
     // Create preview snippet.
@@ -110,7 +110,7 @@ export const buildVideoPreviews = async ({
       if (exists) {
         continue;
       }
-      filePromises.push([`Generating montage for ${relPath}`, () => screenshot(absPath, time, file, PREVIEW_SCALED_WIDTH)]);
+      filePromises.push([`Generating montage for ${relPath}`, () => ff.screenshot(absPath, time, file, PREVIEW_SCALED_WIDTH)]);
     }
 
     // Update text last as otherwise text immediately goes to last file as it updates before all the asynchronous work.

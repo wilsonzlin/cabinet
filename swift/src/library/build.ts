@@ -1,3 +1,4 @@
+import {MediaFileProperties} from '@wzlin/ff';
 import {AsyncArray} from 'extlib/js/asyncarray/AsyncArray';
 import {getExt} from 'extlib/js/fs/name/name';
 import {nullStat} from 'extlib/js/fs/stats/getStats';
@@ -9,7 +10,7 @@ import mime from 'mime';
 import {Ora} from 'ora';
 import {basename, join, relative} from 'path';
 import readdirp from 'readdirp';
-import {ffProbeVideo, MediaFileProperties} from '../util/ff';
+import {ff} from '../util/ff';
 import {isHiddenFile} from '../util/fs';
 import {Directory, DirEntry, DirEntryType, Library, Photo, Video} from './model';
 
@@ -40,7 +41,7 @@ const getImageSize = (absPath: string, spinner: Ora): Promise<{ height: number, 
 
 const getVideoProperties = async (absPath: string, spinner: Ora): Promise<MediaFileProperties | undefined> => {
   try {
-    return await ffProbeVideo(absPath);
+    return await ff.probe(absPath);
   } catch (err) {
     spinner.fail(`Failed to retrieve video properties for ${absPath}: ${err.message}`).start();
     return undefined;

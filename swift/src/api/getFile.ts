@@ -7,7 +7,7 @@ import {dirname, join} from 'path';
 import {DirEntryType, Video} from '../library/model';
 import {Context} from '../server/context';
 import {NOT_FOUND, SendFile, Status, StreamFile} from '../server/response';
-import {ffVideo} from '../util/ff';
+import {ff} from '../util/ff';
 import {ensureDir} from '../util/fs';
 
 const streamVideoCapture = async ({
@@ -56,7 +56,7 @@ const streamVideoCapture = async ({
   await ensureDir(dirname(outputFile));
   let outputFileStats = await nullStat(outputFile);
   if (!outputFileStats) {
-    await ffVideo({
+    await ff.convert({
       input: {
         file: video.absolutePath,
         start,
