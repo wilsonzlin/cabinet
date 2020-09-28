@@ -80,7 +80,7 @@ const streamFile = (req: Request, res: Response, path: string, name: string, fil
 
   const streamLength = (end - start) + 1;
   if (start < 0 || start > end || end < 1 || end >= fileSize || streamLength < 1) {
-    return res.status(404).end(`Invalid range: ${start}-${end}`);
+    return res.status(416).end(`Invalid range: ${start}-${end}`);
   }
 
   res.status(206).set({
