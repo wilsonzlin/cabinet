@@ -41,6 +41,7 @@ export default ({
         setShowCard(false);
       }, 1500);
     };
+    listener();
     for (const e of EVENTS) {
       document.addEventListener(e, listener, true);
     }
