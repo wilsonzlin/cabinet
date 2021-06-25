@@ -1,0 +1,36 @@
+.path {
+  display: flex;
+  align-items: stretch;
+}
+
+.path-components > *, .path-search-container {
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.path-components > :hover {
+  background: rgba(242, 242, 242, 0.33);
+}
+
+.path-search-container {
+  border-color: #eaeaea;
+  margin-left: 8px;
+  width: 250px;
+  display: flex;
+}
+
+.path-search-container::before {
+  content: "🔎︎";
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.path-search {
+  flex-grow: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+}

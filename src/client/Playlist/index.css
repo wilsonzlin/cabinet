@@ -1,0 +1,68 @@
+.playlist {
+  --tw-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(30px) saturate(125%);
+  border-radius: 10px;
+  position: absolute;
+  top: 30px;
+  right: 35px;
+  bottom: 55px;
+  width: 300px;
+
+  transition: 0.4s;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.playlist-closed {
+  box-shadow: none;
+  right: -300px;
+  pointer-events: none;
+}
+
+.playlist-dark {
+  background-color: rgba(12, 12, 12, 0.6);
+  color: #f2f2f2;
+}
+
+.playlist-menu {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.playlist-picker {
+  flex-grow: 1;
+
+  display: block;
+  border: 0;
+  text-align: left;
+  font-size: 13px;
+  color: #777;
+  border-radius: 4px;
+  padding: 7px;
+  background: rgba(240, 240, 240, 0.3);
+  backdrop-filter: blur(30px) saturate(125%);
+}
+
+.playlist-close {
+  margin-left: 10px;
+  background: transparent;
+  border: 0;
+  color: gray;
+}
+
+.playlist-items {
+  flex-grow: 1;
+}
+
+.playlist-controls {
+  display: flex;
+}
+
+.playlist-controls > * {
+  padding: 10px;
+  flex: 1 0 0;
+}

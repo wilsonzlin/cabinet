@@ -1,0 +1,9 @@
+.playlist-toggle {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+}
+
+.playlist-toggle-dark {
+  color: #aaa;
+}

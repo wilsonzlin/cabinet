@@ -1,0 +1,122 @@
+.playback {
+  --tw-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(30px) saturate(125%);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  position: absolute;
+  height: 100px;
+  left: 40px;
+  right: 380px;
+  bottom: 30px;
+  border-radius: 10px;
+
+  padding: 12px;
+
+  display: flex;
+  align-items: center;
+  transition: 0.4s;
+}
+
+.playback-dark {
+  background-color: rgba(12, 12, 12, 0.6);
+  color: #f2f2f2;
+}
+.playback-extended {
+  right: 40px;
+}
+
+.playback button {
+  background: transparent;
+  transition: 0.3s;
+}
+
+.playback button:hover {
+  background: rgba(240, 240, 240, 0.5);
+}
+
+.playback-thumbnail {
+  border: 1px solid #ddd;
+  height: 100%;
+  margin-right: 16px;
+  width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.playback-details {
+  width: 160px;
+}
+
+.playback-details > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playback-path {
+  direction: rtl;
+  text-align: left;
+  color: #888;
+  font-size: 11px;
+}
+
+.playback-title {
+  font-weight: bold;
+}
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+}
+
+.playback-controls > * {
+  border-radius: 100%;
+  border: 1px solid #eaeaea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playback-rewind, .playback-forward {
+  width: 36px;
+  height: 36px;
+  margin: 0 20px;
+}
+
+.playback-play {
+  width: 58px;
+  height: 58px;
+}
+
+.playback-progress {
+  flex-grow: 1;
+}
+
+.playback-progress-top, .playback-progress-bottom {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.playback-slider {
+  cursor: pointer;
+  width: 100%;
+}
+
+.playback-end-table {
+  height: 100%;
+  margin-left: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.playback-end-table button {
+  border-radius: 100%;
+  border: 0;
+  padding: 8px;
+}
