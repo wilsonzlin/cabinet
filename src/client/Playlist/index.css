@@ -55,6 +55,28 @@
 
 .playlist-items {
   flex-grow: 1;
+  overflow: auto;
+}
+
+.playlist-item {
+  display: block;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+.playlist-item:hover {
+  background-color: rgba(230, 230, 230, 0.2);
+}
+
+.playlist-item-current {
+  font-size: 12px;
+  color: #ccc;
+}
+
+.playlist-item-title {
+  font-size: 14px;
 }
 
 .playlist-controls {

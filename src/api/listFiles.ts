@@ -50,6 +50,8 @@ export type ListedVideo = {
   track?: number;
 };
 
+export type ListedMedia = ListedAudio | ListedVideo;
+
 export const listFilesApi = async (
   ctx: ApiCtx,
   {

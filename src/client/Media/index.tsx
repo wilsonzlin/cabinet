@@ -5,12 +5,14 @@ import "./index.css";
 export default ({
   mediaRef,
   file,
+  onClose,
   onEnded,
   onPlaybackChange,
   onTimeUpdate,
 }: {
   mediaRef: { element: HTMLMediaElement | undefined };
   file: ListedAudio | ListedVideo;
+  onClose: () => void;
   onEnded: () => void;
   onPlaybackChange: (playing: boolean) => void;
   onTimeUpdate: (currentTime: number) => void;
@@ -27,6 +29,9 @@ export default ({
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onTimeUpdate={(event) => onTimeUpdate(event.currentTarget.currentTime)}
       />
+      <button className="media-close" onClick={onClose}>
+        ←
+      </button>
     </div>
   );
 };

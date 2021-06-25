@@ -4,6 +4,7 @@ import { JsonApiOutput } from "../../api/_common";
 import {
   ListedAudio,
   ListedFolder,
+  ListedMedia,
   ListedPhoto,
   ListedVideo,
   listFilesApi,
@@ -14,12 +15,14 @@ export default ({
   extended,
   path,
   onClickFolder,
-  onClickFile,
+  onClickMediaFile,
+  onClickPhotoFile,
 }: {
   extended: boolean;
   path: string[];
   onClickFolder: (name: string) => void;
-  onClickFile: (file: ListedAudio | ListedPhoto | ListedVideo) => void;
+  onClickMediaFile: (relatedFiles: ListedMedia[], file: ListedMedia) => void;
+  onClickPhotoFile: (file: ListedPhoto) => void;
 }) => {
   const [entries, setEntries] = useState<
     JsonApiOutput<typeof listFilesApi> | undefined
@@ -62,7 +65,16 @@ export default ({
             <button
               key={f.path}
               className="explorer-file"
-              onClick={() => onClickFile(f)}
+              onClick={() => {
+                if (f.type == "photo") {
+                  onClickPhotoFile(f);
+                } else {
+                  onClickMediaFile(
+                    files.filter((o): o is ListedMedia => o.type == f.type),
+                    f
+                  );
+                }
+              }}
             >
               <div className="explorer-file-thumbnail" />
               <div className="explorer-file-name">{f.name}</div>

@@ -6,6 +6,19 @@
   right: 0;
 }
 
+.media-audio .media-close {
+  display: none;
+}
+
+.media-video .media-close {
+  color: #ddd;
+  font-size: 14px;
+  left: 12px;
+  padding: 6px 8px;
+  position: absolute;
+  top: 12px;
+}
+
 .media-audio > video {
   height: 0;
   width: 0;

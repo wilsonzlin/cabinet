@@ -1,6 +1,6 @@
 import { Duration } from "luxon";
 import React, { useRef, useState } from "react";
-import { ListedAudio, ListedPhoto, ListedVideo } from "../../api/listFiles";
+import { ListedMedia, ListedPhoto } from "../../api/listFiles";
 import Explorer from "../Explorer";
 import Image from "../Image";
 import Media from "../Media";
@@ -11,15 +11,14 @@ import Playlist from "../Playlist";
 import PlaylistToggle from "../PlaylistToggle";
 import "./index.css";
 
-type ListedMedia = ListedAudio | ListedVideo;
-
 export default ({}: {}) => {
   const mediaRef = useRef<{ element: HTMLMediaElement | undefined }>({
     element: undefined,
   });
-  const [currentFile, setCurrentFile] = useState<
-    ListedMedia | ListedPhoto | undefined
-  >(undefined);
+  const [mediaPlaylist, setMediaPlaylist] = useState<ListedMedia[]>([]);
+  const [mediaPlaylistPosition, setMediaPlaylistPosition] =
+    useState<number>(-1);
+  const [photo, setPhoto] = useState<ListedPhoto | undefined>(undefined);
   const [path, setPath] = useState<Array<string>>([]);
   const [playlistClosed, setPlaylistClosed] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -27,8 +26,9 @@ export default ({}: {}) => {
     Duration | undefined
   >(undefined);
 
-  const isPlayingVideo = currentFile?.type == "video";
-  const isPlayingMedia = currentFile?.type == "audio" || isPlayingVideo;
+  const media: ListedMedia | undefined = mediaPlaylist[mediaPlaylistPosition];
+  const isPlayingVideo = media?.type == "video";
+  const isPlayingMedia = media?.type == "audio" || isPlayingVideo;
 
   return (
     <div className="app">
@@ -39,61 +39,65 @@ export default ({}: {}) => {
         extended={playlistClosed}
         path={path}
         onClickFolder={(f) => setPath((p) => p.concat(f))}
-        onClickFile={(v) => setCurrentFile(v)}
+        onClickMediaFile={(files, file) => {
+          setMediaPlaylist(files);
+          setMediaPlaylistPosition(files.indexOf(file));
+        }}
+        onClickPhotoFile={(f) => setPhoto(f)}
       />
       {isPlayingMedia && (
         <Media
           mediaRef={mediaRef.current}
-          file={currentFile as ListedMedia}
-          /* TODO */
-          onEnded={() => void 0}
+          file={media}
+          onClose={() => setMediaPlaylistPosition(-1)}
+          onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
           onPlaybackChange={(playing) => setPlaying(playing)}
           onTimeUpdate={(currentTime) =>
             setCurrentPlaybackTime(Duration.fromMillis(currentTime * 1000))
           }
         />
       )}
-      {currentFile?.type == "photo" && (
+      {photo && (
         <Image
-          file={currentFile}
+          file={photo}
           path={path}
-          onClose={() => setCurrentFile(undefined)}
+          onClose={() => setPhoto(undefined)}
           onNavigate={(path) => {
             setPath(path);
-            setCurrentFile(undefined);
+            setPhoto(undefined);
           }}
-        />
-      )}
-      {playlistClosed && (
-        <PlaylistToggle
-          dark={isPlayingVideo}
-          onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         />
       )}
       <Playlist
         closed={playlistClosed}
-        dark={isPlayingVideo}
+        dark={!!photo || isPlayingVideo}
+        files={mediaPlaylist}
+        position={mediaPlaylistPosition}
+        onChangePosition={setMediaPlaylistPosition}
         onRequestClose={() => setPlaylistClosed(true)}
-        onStop={() => setCurrentFile(undefined)}
       />
       {isPlayingMedia && (
         <Playback
           mediaRef={mediaRef.current}
-          dark={isPlayingVideo}
+          dark={!!photo || isPlayingVideo}
           extended={playlistClosed}
-          hideAutomatically={isPlayingVideo}
+          hideAutomatically={!!photo || isPlayingVideo}
           playing={playing}
           progress={
             !currentPlaybackTime
               ? undefined
               : {
                   current: currentPlaybackTime,
-                  total: Duration.fromMillis(
-                    (currentFile as ListedMedia).duration * 1000
-                  ),
+                  total: Duration.fromMillis(media.duration * 1000),
                 }
           }
-          file={currentFile as ListedMedia}
+          file={media}
+        />
+      )}
+      {playlistClosed && (
+        <PlaylistToggle
+          dark={!!photo || isPlayingVideo}
+          onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         />
       )}
     </div>

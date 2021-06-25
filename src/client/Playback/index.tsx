@@ -97,7 +97,9 @@ export default ({
         </div>
       </div>
       <div className="playback-main">
-        <div className="playback-thumbnail">🎵</div>
+        <div className="playback-thumbnail">
+          {file.type == "audio" ? "🎵" : "📼"}
+        </div>
         <div className="playback-details">
           <div className="playback-path" title={file.path}>
             {file.path}
