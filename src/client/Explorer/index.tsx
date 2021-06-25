@@ -2,6 +2,7 @@ import classNames from "extlib/js/classNames";
 import React, { useEffect, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";
 import {
+  ListedAudio,
   ListedFolder,
   ListedPhoto,
   ListedVideo,
@@ -18,7 +19,7 @@ export default ({
   extended: boolean;
   path: string[];
   onClickFolder: (name: string) => void;
-  onClickFile: (file: ListedPhoto | ListedVideo) => void;
+  onClickFile: (file: ListedAudio | ListedPhoto | ListedVideo) => void;
 }) => {
   const [entries, setEntries] = useState<
     JsonApiOutput<typeof listFilesApi> | undefined
@@ -39,7 +40,7 @@ export default ({
 
   const files =
     entries?.results.filter(
-      (r): r is ListedPhoto | ListedVideo => r.type != "dir"
+      (r): r is ListedAudio | ListedPhoto | ListedVideo => r.type != "dir"
     ) ?? [];
 
   return (
@@ -64,7 +65,7 @@ export default ({
               onClick={() => onClickFile(f)}
             >
               <div className="explorer-file-thumbnail" />
-              <div className="explorer-file-name">{f.title}</div>
+              <div className="explorer-file-name">{f.name}</div>
             </button>
           ))}
         </div>

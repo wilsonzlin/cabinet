@@ -10,12 +10,14 @@ import Playlist from "../Playlist";
 import PlaylistToggle from "../PlaylistToggle";
 import "./index.css";
 
+type ListedMedia = ListedAudio | ListedVideo;
+
 export default ({}: {}) => {
   const mediaRef = useRef<{ element: HTMLMediaElement | undefined }>({
     element: undefined,
   });
   const [currentFile, setCurrentFile] = useState<
-    ListedAudio | ListedPhoto | ListedVideo | undefined
+    ListedMedia | ListedPhoto | undefined
   >(undefined);
   const [path, setPath] = useState<Array<string>>([]);
   const [playlistClosed, setPlaylistClosed] = useState(false);
@@ -25,6 +27,7 @@ export default ({}: {}) => {
   >(undefined);
 
   const isPlayingVideo = currentFile?.type == "video";
+  const isPlayingMedia = currentFile?.type == "audio" || isPlayingVideo;
 
   return (
     <div className="app">
@@ -37,10 +40,10 @@ export default ({}: {}) => {
         onClickFolder={(f) => setPath((p) => p.concat(f))}
         onClickFile={(v) => setCurrentFile(v)}
       />
-      {isPlayingVideo && (
+      {isPlayingMedia && (
         <Media
           mediaRef={mediaRef.current}
-          source={`/getFile?${JSON.stringify({ path: currentFile!.path })}`}
+          file={currentFile as ListedMedia}
           /* TODO */
           onEnded={() => void 0}
           onPlaybackChange={(playing) => setPlaying(playing)}
@@ -61,29 +64,26 @@ export default ({}: {}) => {
         onRequestClose={() => setPlaylistClosed(true)}
         onStop={() => setCurrentFile(undefined)}
       />
-      {currentFile &&
-        (currentFile.type == "video" || currentFile.type == "audio") && (
-          <Playback
-            mediaRef={mediaRef.current}
-            dark={isPlayingVideo}
-            extended={playlistClosed}
-            hideAutomatically={isPlayingVideo}
-            playing={playing}
-            progress={
-              !currentPlaybackTime
-                ? undefined
-                : {
-                    current: currentPlaybackTime,
-                    total: Duration.fromMillis(currentFile.duration * 1000),
-                  }
-            }
-            file={{
-              author: currentFile.author,
-              path: currentFile.path,
-              title: currentFile.title,
-            }}
-          />
-        )}
+      {isPlayingMedia && (
+        <Playback
+          mediaRef={mediaRef.current}
+          dark={isPlayingVideo}
+          extended={playlistClosed}
+          hideAutomatically={isPlayingVideo}
+          playing={playing}
+          progress={
+            !currentPlaybackTime
+              ? undefined
+              : {
+                  current: currentPlaybackTime,
+                  total: Duration.fromMillis(
+                    (currentFile as ListedMedia).duration * 1000
+                  ),
+                }
+          }
+          file={currentFile as ListedMedia}
+        />
+      )}
     </div>
   );
 };

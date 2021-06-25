@@ -1,3 +1,4 @@
+import maybeParseInt from "extlib/js/maybeParseInt";
 import { MediaFileProperties } from "@wzlin/ff";
 import assertExists from "extlib/js/assertExists";
 import mapExists from "extlib/js/mapExists";
@@ -12,6 +13,7 @@ import readdirp from "readdirp";
 import { ff } from "../util/ff";
 import { isHiddenFile } from "../util/fs";
 import {
+  Audio,
   Directory,
   DirEntry,
   DirEntryType,
@@ -61,7 +63,7 @@ const getImageSize = (
     })
   );
 
-const getVideoProperties = async (
+const getMediaProperties = async (
   absPath: string,
   spinner: Ora
 ): Promise<MediaFileProperties | undefined> => {
@@ -70,7 +72,7 @@ const getVideoProperties = async (
   } catch (err) {
     spinner
       .fail(
-        `Failed to retrieve video properties for ${absPath}: ${err.message}`
+        `Failed to retrieve media properties for ${absPath}: ${err.message}`
       )
       .start();
     return undefined;
@@ -82,6 +84,7 @@ const MONTAGE_FRAME_BASENAME = /^montageshot([0-9]+)\.jpg$/;
 export const createLibrary = async ({
   rootDir,
   includeHiddenFiles,
+  audioExtensions,
   videoExtensions,
   photoExtensions,
   previewsDir,
@@ -89,6 +92,7 @@ export const createLibrary = async ({
 }: {
   rootDir: string;
   includeHiddenFiles: boolean;
+  audioExtensions: Set<string>;
   videoExtensions: Set<string>;
   photoExtensions: Set<string>;
   previewsDir?: string;
@@ -131,6 +135,34 @@ export const createLibrary = async ({
     );
   };
 
+  const buildAudio = async (
+    dir: string,
+    file: string
+  ): Promise<Audio | undefined> => {
+    const absPath = join(dir, file);
+    const relPath = relative(rootDir, absPath);
+    const stats = await fs.stat(absPath);
+
+    return mapExists(
+      await getMediaProperties(absPath, spinner),
+      async (properties) =>
+        mapExists(getMimeType(absPath, spinner), async (mimeType) => ({
+          type: DirEntryType.AUDIO as const,
+          name: file,
+          relativePath: relPath,
+          absolutePath: absPath,
+          size: stats.size,
+          mime: mimeType,
+          duration: properties.duration,
+          artist: properties.metadata.artist,
+          album: properties.metadata.album,
+          genre: properties.metadata.genre,
+          title: properties.metadata.title,
+          track: maybeParseInt(properties.metadata.track ?? ""),
+        }))
+    );
+  };
+
   const buildVideo = async (
     dir: string,
     file: string
@@ -140,19 +172,24 @@ export const createLibrary = async ({
     const stats = await fs.stat(absPath);
 
     return mapExists(
-      await getVideoProperties(absPath, spinner),
+      await getMediaProperties(absPath, spinner),
       async (properties) =>
         mapExists(getMimeType(absPath, spinner), async (mimeType) => ({
           type: DirEntryType.VIDEO as const,
           name: file,
           relativePath: relPath,
           absolutePath: absPath,
+          size: stats.size,
+          mime: mimeType,
           duration: properties.duration,
+          artist: properties.metadata.artist,
+          album: properties.metadata.album,
+          genre: properties.metadata.genre,
+          title: properties.metadata.title,
+          track: maybeParseInt(properties.metadata.track ?? ""),
           fps: assertExists(properties.video?.fps),
           height: assertExists(properties.video?.height),
           width: assertExists(properties.video?.width),
-          size: stats.size,
-          mime: mimeType,
           preview: await getVideoPreview(relPath),
         }))
     );
@@ -199,6 +236,8 @@ export const createLibrary = async ({
             entry = await buildPhoto(dir, name);
           } else if (ext && videoExtensions.has(ext)) {
             entry = await buildVideo(dir, name);
+          } else if (ext && audioExtensions.has(ext)) {
+            entry = await buildAudio(dir, name);
           }
         } else if (dirent.isDirectory()) {
           entry = await listDir(absPath);

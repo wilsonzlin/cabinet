@@ -148,6 +148,9 @@ export const getFileApi = async (
 ) => {
   const file = ctx.library.getFile(path);
   switch (file?.type) {
+    case DirEntryType.AUDIO:
+      return new StreamFile(file.absolutePath, file.size, file.mime, file.name);
+
     case DirEntryType.PHOTO:
       return new SendFile(file.absolutePath);
 

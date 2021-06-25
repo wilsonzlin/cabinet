@@ -1,6 +1,8 @@
 import classNames from "extlib/js/classNames";
+import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { useEffect, useRef, useState } from "react";
+import { ListedAudio, ListedVideo } from "../../api/listFiles";
 import "./index.css";
 
 export default ({
@@ -17,12 +19,7 @@ export default ({
   extended: boolean;
   hideAutomatically: boolean;
   playing: boolean;
-  file: {
-    path: string;
-    title: string;
-    album?: string;
-    author?: string;
-  };
+  file: ListedAudio | ListedVideo;
   progress?: {
     current: Duration;
     total: Duration;
@@ -33,6 +30,10 @@ export default ({
   const hideTimeout = useRef<any | undefined>(undefined);
 
   useEffect(() => {
+    setHidden(false);
+    if (!hideAutomatically) {
+      return;
+    }
     const EVENTS = ["click", "mousemove"];
     const listener = () => {
       setHidden(false);
@@ -51,7 +52,7 @@ export default ({
       }
       clearTimeout(hideTimeout.current);
     };
-  }, []);
+  }, [hideAutomatically]);
 
   return (
     <div
@@ -59,7 +60,7 @@ export default ({
         "playback",
         dark && "playback-dark",
         extended && "playback-extended",
-        hideAutomatically && hidden && "playback-hidden"
+        hidden && "playback-hidden"
       )}
     >
       <div
@@ -71,8 +72,24 @@ export default ({
         <div className="playback-card-details">
           <div className="playback-card-path">{file.path}</div>
           <div className="playback-card-title">{file.title}</div>
-          <div className="playback-card-author">{file.author}</div>
-          <div className="playback-card-album">{file.album}</div>
+          {mapDefined(file.author, (author) => (
+            <div className="playback-card-iconed">
+              <span>👤</span>
+              <span>{author}</span>
+            </div>
+          ))}
+          {mapDefined(file.album, (album) => (
+            <div className="playback-card-iconed">
+              <span>💿</span>
+              <span>{album}</span>
+            </div>
+          ))}
+          {mapDefined(file.genre, (genre) => (
+            <div className="playback-card-iconed">
+              <span>𝄞</span>
+              <span>{genre}</span>
+            </div>
+          ))}
         </div>
         <div className="playback-card-rating">
           <button>👍</button>

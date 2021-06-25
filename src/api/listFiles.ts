@@ -13,21 +13,23 @@ export type ListedFolder = {
 export type ListedAudio = {
   type: "audio";
   path: string;
-  title: string;
-  author?: string;
+  name: string;
   size: number;
   format: string;
-  metadata: { [name: string]: any };
   duration: number;
+  title: string;
+  author?: string;
+  album?: string;
+  genre?: string;
+  track?: number;
 };
 
 export type ListedPhoto = {
   type: "photo";
   path: string;
-  title: string;
+  name: string;
   size: number;
   format: string;
-  metadata: { [name: string]: any };
   width: number;
   height: number;
 };
@@ -35,14 +37,17 @@ export type ListedPhoto = {
 export type ListedVideo = {
   type: "video";
   path: string;
-  title: string;
-  author?: string;
+  name: string;
   size: number;
   format: string;
-  metadata: { [name: string]: any };
   width: number;
   height: number;
   duration: number;
+  title: string;
+  author?: string;
+  album?: string;
+  genre?: string;
+  track?: number;
 };
 
 export const listFilesApi = async (
@@ -88,14 +93,28 @@ export const listFilesApi = async (
             itemCount: Object.keys(e.entries).length,
           };
 
+        case DirEntryType.AUDIO:
+          return {
+            type: "audio",
+            path: e.relativePath,
+            name: e.name,
+            size: e.size,
+            format: e.mime,
+            duration: e.duration,
+            author: e.artist,
+            title: e.title ?? e.name,
+            album: e.album,
+            genre: e.genre,
+            track: e.track,
+          };
+
         case DirEntryType.PHOTO:
           return {
             type: "photo",
             path: e.relativePath,
-            title: e.name,
+            name: e.name,
             size: e.size,
             format: e.mime,
-            metadata: {},
             width: e.width,
             height: e.height,
           };
@@ -104,13 +123,17 @@ export const listFilesApi = async (
           return {
             type: "video",
             path: e.relativePath,
-            title: e.name,
+            name: e.name,
             size: e.size,
             format: e.mime,
-            metadata: {},
             width: e.width,
             height: e.height,
             duration: e.duration,
+            author: e.artist,
+            title: e.title ?? e.name,
+            album: e.album,
+            genre: e.genre,
+            track: e.track,
           };
 
         default:

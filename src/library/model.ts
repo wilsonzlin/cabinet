@@ -4,6 +4,7 @@ import { sep } from "path";
 
 export const enum DirEntryType {
   DIRECTORY = "DIRECTORY",
+  AUDIO = "AUDIO",
   PHOTO = "PHOTO",
   VIDEO = "VIDEO",
 }
@@ -28,9 +29,28 @@ type FileBase = DirEntryBase & {
   mime: string;
 };
 
-export type Video = FileBase & {
-  type: DirEntryType.VIDEO;
+// Many videos also use the same standard audio metadata tags.
+type MediaBase = FileBase & {
   duration: number;
+  artist?: string;
+  album?: string;
+  genre?: string;
+  title?: string;
+  track?: number;
+};
+
+export type Audio = MediaBase & {
+  type: DirEntryType.AUDIO;
+};
+
+export type Photo = FileBase & {
+  type: DirEntryType.PHOTO;
+  height: number;
+  width: number;
+};
+
+export type Video = MediaBase & {
+  type: DirEntryType.VIDEO;
   fps: number;
   height: number;
   width: number;
@@ -46,13 +66,7 @@ export type Video = FileBase & {
   };
 };
 
-export type Photo = FileBase & {
-  type: DirEntryType.PHOTO;
-  height: number;
-  width: number;
-};
-
-export type File = Video | Photo;
+export type File = Audio | Photo | Video;
 export type DirEntry = Directory | File;
 
 export class Library {

@@ -1,27 +1,28 @@
+import classNames from "extlib/js/classNames";
 import React from "react";
+import { ListedAudio, ListedVideo } from "../../api/listFiles";
 import "./index.css";
 
 export default ({
   mediaRef,
-  source,
+  file,
   onEnded,
   onPlaybackChange,
   onTimeUpdate,
 }: {
   mediaRef: { element: HTMLMediaElement | undefined };
-  source: string;
+  file: ListedAudio | ListedVideo;
   onEnded: () => void;
   onPlaybackChange: (playing: boolean) => void;
   onTimeUpdate: (currentTime: number) => void;
 }) => {
   return (
-    <div className="media">
+    <div className={classNames("media", `media-${file.type}`)}>
       <video
         ref={($media) => (mediaRef.element = $media ?? undefined)}
         autoPlay={true}
         controls={false}
-        className="media-video"
-        src={source}
+        src={`/getFile?${JSON.stringify({ path: file.path })}`}
         onEnded={onEnded}
         onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}

@@ -1,4 +1,4 @@
-.media {
+.media-video {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -6,7 +6,12 @@
   right: 0;
 }
 
-.media-video {
+.media-audio > video {
+  height: 0;
+  width: 0;
+}
+
+.media-video > video {
   background: black;
   height: 100%;
   width: 100%;

@@ -56,6 +56,7 @@
 }
 
 .playback-card-details {
+  line-height: 1.5;
   font-size: 14px;
   padding: 12px;
 }
@@ -69,12 +70,18 @@
   font-weight: bold;
 }
 
-.playback-card-author:not(:empty)::before {
-  content: '👤';
+.playback-card-iconed > * {
+  display: inline-block;
+  vertical-align: top;
 }
 
-.playback-card-album:not(:empty)::before {
-  content: '💿';
+.playback-card-iconed > :first-child {
+  text-align: center;
+  width: 24px;
+}
+
+.playback-card-iconed > :last-child {
+  width: calc(100% - 24px);
 }
 
 .playback-card-rating {

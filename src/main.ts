@@ -21,6 +21,9 @@ const LIBRARY_DIR: string | undefined = mapExists(
 const SOURCE_DIR: string | undefined = mapExists(args.source, rp);
 const PREVIEWS_DIR: string | undefined = mapExists(args.previews, rp);
 const SCRATCH_DIR: string | undefined = mapExists(args.scratch, rp);
+const AUDIO_EXTENSIONS: Set<string> = new Set(
+  (args.audio || "mp3,ogg,wav").split(",")
+);
 const VIDEO_EXTENSIONS: Set<string> = new Set(
   (args.video || "mp4,m4v,webm").split(",")
 );
@@ -69,6 +72,7 @@ if (args["build-video-previews"]) {
         spinner,
         includeHiddenFiles: INCLUDE_HIDDEN_FILES,
         previewsDir: PREVIEWS_DIR,
+        audioExtensions: AUDIO_EXTENSIONS,
         videoExtensions: VIDEO_EXTENSIONS,
         photoExtensions: PHOTO_EXTENSIONS,
         rootDir: LIBRARY_DIR,
