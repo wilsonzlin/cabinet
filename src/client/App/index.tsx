@@ -1,5 +1,5 @@
 import { Duration } from "luxon";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
 import Explorer from "../Explorer";
 import Image from "../Image";
@@ -12,6 +12,8 @@ import PlaylistToggle from "../PlaylistToggle";
 import "./index.css";
 
 export default ({}: {}) => {
+  const appRef = useRef<HTMLDivElement | null>(null);
+
   const mediaRef = useRef<{ element: HTMLMediaElement | undefined }>({
     element: undefined,
   });
@@ -29,9 +31,12 @@ export default ({}: {}) => {
   const media: ListedMedia | undefined = mediaPlaylist[mediaPlaylistPosition];
   const isPlayingVideo = media?.type == "video";
   const isPlayingMedia = media?.type == "audio" || isPlayingVideo;
+  useEffect(() => {
+    appRef.current?.classList.toggle("app-dark", !!photo || isPlayingVideo);
+  }, [photo, isPlayingVideo]);
 
   return (
-    <div className="app">
+    <div className="app" ref={appRef}>
       <Menu
         Path={() => <Path components={path} onNavigate={(p) => setPath(p)} />}
       />
@@ -79,7 +84,6 @@ export default ({}: {}) => {
       {isPlayingMedia && (
         <Playback
           mediaRef={mediaRef.current}
-          dark={!!photo || isPlayingVideo}
           extended={playlistClosed}
           hideAutomatically={!!photo || isPlayingVideo}
           playing={playing}

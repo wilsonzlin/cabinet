@@ -7,7 +7,6 @@ import "./index.css";
 
 export default ({
   mediaRef: { element },
-  dark,
   extended,
   hideAutomatically,
   playing,
@@ -15,7 +14,6 @@ export default ({
   progress,
 }: {
   mediaRef: { element: HTMLMediaElement | undefined };
-  dark: boolean;
   extended: boolean;
   hideAutomatically: boolean;
   playing: boolean;
@@ -58,13 +56,13 @@ export default ({
     <div
       className={classNames(
         "playback",
-        dark && "playback-dark",
         extended && "playback-extended",
         hidden && "playback-hidden"
       )}
     >
       <div
         className={classNames(
+          "acrylic",
           "playback-card",
           showCard && "playback-card-open"
         )}
@@ -96,7 +94,7 @@ export default ({
           <button>👎</button>
         </div>
       </div>
-      <div className="playback-main">
+      <div className="acrylic playback-main">
         <div className="playback-thumbnail">
           {file.type == "audio" ? "🎵" : "📼"}
         </div>

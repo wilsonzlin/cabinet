@@ -6,17 +6,6 @@
   transition: 0.4s;
 }
 
-.playback-main, .playback-card {
-  background-color: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(30px) saturate(125%);
-  box-shadow: 0 0 #0000, 0 0 #0000, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.playback-dark .playback-main, .playback-dark .playback-card {
-  background-color: rgba(12, 12, 12, 0.6);
-  color: #f2f2f2;
-}
-
 .playback-extended {
   right: 40px;
 }
@@ -44,7 +33,8 @@
 
   margin-bottom: -15px;
   opacity: 0;
-  pointer-events: none;
+  /* Use height: 0 instead of pointer-events: none as otherwise containing .playlist will still have large invisible mouse target. */
+  height: 0;
 
   transition: 0.25s;
 }
@@ -52,7 +42,7 @@
 .playback-card-open {
   margin-bottom: 5px;
   opacity: 1;
-  pointer-events: auto;
+  height: auto;
 }
 
 .playback-card-details {

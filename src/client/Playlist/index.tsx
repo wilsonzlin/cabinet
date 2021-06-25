@@ -7,24 +7,18 @@ export default ({
   onChangePosition,
   onRequestClose,
   closed,
-  dark,
   files,
   position,
 }: {
   onChangePosition: (pos: number) => void;
   onRequestClose: () => void;
   closed: boolean;
-  dark: boolean;
   files: ListedMedia[];
   position: number;
 }) => {
   return (
     <div
-      className={classNames(
-        "playlist",
-        closed && "playlist-closed",
-        dark && "playlist-dark"
-      )}
+      className={classNames("acrylic", "playlist", closed && "playlist-closed")}
     >
       <div className="playlist-menu">
         <button className="playlist-picker">Now playing</button>
