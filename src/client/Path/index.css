@@ -6,7 +6,6 @@
 .path-components > *, .path-search-container {
   border: 1px solid transparent;
   border-radius: 3px;
-  background: transparent;
   padding: 6px 8px;
   font-size: 14px;
 }

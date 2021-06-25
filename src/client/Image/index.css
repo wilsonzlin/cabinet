@@ -1,0 +1,31 @@
+.image {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.image > img {
+  background: black;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.image-path {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+
+  backdrop-filter: blur(30px) saturate(125%);
+  background-color: rgba(12, 12, 12, 0.6);
+  border-radius: 3px;
+  box-shadow: 0 0 #0000, 0 0 #0000, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  color: #f2f2f2;
+  font-size: 14px;
+}
+
+.image-path > * {
+  padding: 6px 8px;
+}

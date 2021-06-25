@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import React from "react";
 import "./index.css";
 
 export default ({
@@ -13,9 +13,9 @@ export default ({
       <div className="path-components">
         <button onClick={() => onNavigate(components.slice(0, -1))}>↑</button>
         {components.map((c, i, a) => (
-          <Fragment key={i}>
-            <button onClick={() => onNavigate(a.slice(0, i + 1))}>{c}</button>
-          </Fragment>
+          <button key={i} onClick={() => onNavigate(a.slice(0, i + 1))}>
+            {c}
+          </button>
         ))}
       </div>
       <div className="path-search-container">

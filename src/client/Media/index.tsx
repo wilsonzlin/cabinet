@@ -1,4 +1,3 @@
-import classNames from "extlib/js/classNames";
 import React from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
 import "./index.css";
@@ -17,7 +16,7 @@ export default ({
   onTimeUpdate: (currentTime: number) => void;
 }) => {
   return (
-    <div className={classNames("media", `media-${file.type}`)}>
+    <div className={`media-${file.type}`}>
       <video
         ref={($media) => (mediaRef.element = $media ?? undefined)}
         autoPlay={true}

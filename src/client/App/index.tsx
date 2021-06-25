@@ -2,6 +2,7 @@ import { Duration } from "luxon";
 import React, { useRef, useState } from "react";
 import { ListedAudio, ListedPhoto, ListedVideo } from "../../api/listFiles";
 import Explorer from "../Explorer";
+import Image from "../Image";
 import Media from "../Media";
 import Menu from "../Menu";
 import Path from "../Path";
@@ -50,6 +51,17 @@ export default ({}: {}) => {
           onTimeUpdate={(currentTime) =>
             setCurrentPlaybackTime(Duration.fromMillis(currentTime * 1000))
           }
+        />
+      )}
+      {currentFile?.type == "photo" && (
+        <Image
+          file={currentFile}
+          path={path}
+          onClose={() => setCurrentFile(undefined)}
+          onNavigate={(path) => {
+            setPath(path);
+            setCurrentFile(undefined);
+          }}
         />
       )}
       {playlistClosed && (
