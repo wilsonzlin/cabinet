@@ -24,14 +24,23 @@ export default ({}: {}) => {
     Duration | undefined
   >(undefined);
 
-  const dark = currentFile?.type == "video";
+  const isPlayingVideo = currentFile?.type == "video";
 
   return (
     <div className="app">
-      {currentFile?.type == "video" && (
+      <Menu
+        Path={() => <Path components={path} onNavigate={(p) => setPath(p)} />}
+      />
+      <Explorer
+        extended={playlistClosed}
+        path={path}
+        onClickFolder={(f) => setPath((p) => p.concat(f))}
+        onClickFile={(v) => setCurrentFile(v)}
+      />
+      {isPlayingVideo && (
         <Media
           mediaRef={mediaRef.current}
-          source={`/getFile?${JSON.stringify({ path: currentFile.path })}`}
+          source={`/getFile?${JSON.stringify({ path: currentFile!.path })}`}
           /* TODO */
           onEnded={() => void 0}
           onPlaybackChange={(playing) => setPlaying(playing)}
@@ -40,30 +49,15 @@ export default ({}: {}) => {
           }
         />
       )}
-      {currentFile == undefined && (
-        <>
-          <Menu
-            Path={() => (
-              <Path components={path} onNavigate={(p) => setPath(p)} />
-            )}
-          />
-          <Explorer
-            extended={playlistClosed}
-            path={path}
-            onClickFolder={(f) => setPath((p) => p.concat(f))}
-            onClickFile={(v) => setCurrentFile(v)}
-          />
-        </>
-      )}
       {playlistClosed && (
         <PlaylistToggle
-          dark={dark}
+          dark={isPlayingVideo}
           onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         />
       )}
       <Playlist
         closed={playlistClosed}
-        dark={dark}
+        dark={isPlayingVideo}
         onRequestClose={() => setPlaylistClosed(true)}
         onStop={() => setCurrentFile(undefined)}
       />
@@ -71,8 +65,9 @@ export default ({}: {}) => {
         (currentFile.type == "video" || currentFile.type == "audio") && (
           <Playback
             mediaRef={mediaRef.current}
-            dark={dark}
+            dark={isPlayingVideo}
             extended={playlistClosed}
+            hideAutomatically={isPlayingVideo}
             playing={playing}
             progress={
               !currentPlaybackTime
