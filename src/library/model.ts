@@ -56,14 +56,12 @@ export type Video = MediaBase & {
   height: number;
   width: number;
   preview?: {
-    thumbnailPath: string;
+    thumbnailPath?: string;
     snippet?: {
       path: string;
       size: number;
     };
     montageFrames: { [time: number]: string };
-    height: number;
-    width: number;
   };
 };
 

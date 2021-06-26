@@ -159,27 +159,24 @@ export const createLibrary = async ({
         basename: f,
       }));
 
-    return mapExists(
-      await getImageSize(thumbnailPath, spinner),
-      (dimensions) => ({
-        thumbnailPath,
-        snippet: mapExists(snippetStats, ({ size }) => ({
-          path: snippetPath,
-          size,
-        })),
-        height: dimensions.height,
-        width: dimensions.width,
-        montageFrames: Object.fromEntries(
-          montageFrames.map((e) => [
-            Number.parseInt(
-              assertExists(MONTAGE_FRAME_BASENAME.exec(e.basename))[1],
-              10
-            ),
-            e.fullPath,
-          ])
-        ),
-      })
-    );
+    return {
+      thumbnailPath: (await maybeFileStats(thumbnailPath))
+        ? thumbnailPath
+        : undefined,
+      snippet: mapExists(snippetStats, ({ size }) => ({
+        path: snippetPath,
+        size,
+      })),
+      montageFrames: Object.fromEntries(
+        montageFrames.map((e) => [
+          Number.parseInt(
+            assertExists(MONTAGE_FRAME_BASENAME.exec(e.basename))[1],
+            10
+          ),
+          e.fullPath,
+        ])
+      ),
+    };
   };
 
   const buildAudio = async (
