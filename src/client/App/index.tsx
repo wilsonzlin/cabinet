@@ -1,3 +1,4 @@
+import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
@@ -89,14 +90,10 @@ export default ({}: {}) => {
           extended={playlistClosed}
           hideAutomatically={!!photo || isPlayingVideo}
           playing={playing}
-          progress={
-            !currentPlaybackTime
-              ? undefined
-              : {
-                  current: currentPlaybackTime,
-                  total: Duration.fromMillis(media.duration * 1000),
-                }
-          }
+          progress={mapDefined(currentPlaybackTime, (current) => ({
+            current,
+            total: Duration.fromMillis(media.duration * 1000),
+          }))}
           file={media}
         />
       )}
