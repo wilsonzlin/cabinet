@@ -75,7 +75,6 @@ export default ({}: {}) => {
       )}
       <Playlist
         closed={playlistClosed}
-        dark={!!photo || isPlayingVideo}
         files={mediaPlaylist}
         position={mediaPlaylistPosition}
         onChangePosition={setMediaPlaylistPosition}

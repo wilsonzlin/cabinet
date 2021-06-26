@@ -1,14 +1,13 @@
-import mapDefined from "extlib/js/mapDefined";
-import AsyncArray from "extlib/js/AsyncArray";
 import isFile from "extlib/js/isFile";
+import mapDefined from "extlib/js/mapDefined";
 import pathExtension from "extlib/js/pathExtension";
 import pathWithoutExtension from "extlib/js/pathWithoutExtension";
+import recursiveReaddir from "extlib/js/recursiveReaddir";
 import { promises as fs } from "fs";
 import { mkdir } from "fs/promises";
 import ora from "ora";
 import { dirname, join } from "path";
 import ProgressBar from "progress";
-import readdirp from "readdirp";
 import { ff } from "../util/ff";
 import { isHiddenFile } from "../util/fs";
 import PromiseQueue = require("promise-queue");
@@ -30,7 +29,13 @@ const SUPPORTED_VIDEO_CODECS = new Set(["h264"]);
 // TODO Configurable.
 const SUPPORTED_AUDIO_CODECS = new Set(["aac"]);
 
-const convertVideo = async (file: readdirp.EntryInfo, convertedDir: string) => {
+const convertVideo = async (
+  file: {
+    fullPath: string;
+    path: string;
+  },
+  convertedDir: string
+) => {
   const absPath = file.fullPath;
   const relPath = file.path;
   // Get absolute path to converted output file with extension replaced with 'mp4'.
@@ -86,19 +91,24 @@ export const convertVideos = async ({
 
   const spinner = ora("Finding files to convert").start();
 
-  const files = await AsyncArray.from(
-    await readdirp.promise(sourceDir, {
-      depth: Infinity,
-      fileFilter: (entry) =>
-        mapDefined(pathExtension(entry.basename), (ext) =>
-          CONVERTABLE_VIDEO_EXTENSIONS.has(ext)
-        ) ?? false,
-    })
-  )
-    .filter(
-      async (e) => includeHiddenFiles || !(await isHiddenFile(e.fullPath))
-    )
-    .toArray();
+  const files = [];
+  for await (const relPath of recursiveReaddir(sourceDir)) {
+    if (
+      !mapDefined(pathExtension(relPath), (ext) =>
+        CONVERTABLE_VIDEO_EXTENSIONS.has(ext)
+      )
+    ) {
+      continue;
+    }
+    const fullPath = join(sourceDir, relPath);
+    if (!includeHiddenFiles && (await isHiddenFile(fullPath))) {
+      continue;
+    }
+    files.push({
+      fullPath: fullPath,
+      path: relPath,
+    });
+  }
 
   spinner.stop();
 

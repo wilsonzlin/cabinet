@@ -5,11 +5,11 @@ import mapExists from "extlib/js/mapExists";
 import maybeFileStats from "extlib/js/maybeFileStats";
 import pathExtension from "extlib/js/pathExtension";
 import { promises as fs } from "fs";
+import { readdir } from "fs/promises";
 import { imageSize } from "image-size";
 import mime from "mime";
 import { Ora } from "ora";
 import { basename, join, relative } from "path";
-import readdirp from "readdirp";
 import { ff } from "../util/ff";
 import { isHiddenFile } from "../util/fs";
 import {
@@ -106,11 +106,15 @@ export const createLibrary = async ({
     const thumbnailPath = join(previewsDir, relPath, "thumb50.jpg");
     const snippetPath = join(previewsDir, relPath, "snippet.mp4");
     const snippetStats = await maybeFileStats(snippetPath);
-    const montageFrames = await readdirp.promise(join(previewsDir, relPath), {
-      depth: 1,
-      fileFilter: (e) => MONTAGE_FRAME_BASENAME.test(e.basename),
-      type: "files",
-    });
+    const montageFrames = await readdir(join(previewsDir, relPath)).then(
+      (files) =>
+        files
+          .filter((f) => MONTAGE_FRAME_BASENAME.test(f))
+          .map((f) => ({
+            fullPath: join(previewsDir, relPath, f),
+            basename: f,
+          }))
+    );
 
     return mapExists(
       await getImageSize(thumbnailPath, spinner),

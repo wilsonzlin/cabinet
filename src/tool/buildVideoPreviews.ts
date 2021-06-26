@@ -1,12 +1,11 @@
-import mapDefined from "extlib/js/mapDefined";
-import defined from "extlib/js/defined";
 import isFile from "extlib/js/isFile";
+import mapDefined from "extlib/js/mapDefined";
 import pathExtension from "extlib/js/pathExtension";
+import recursiveReaddir from "extlib/js/recursiveReaddir";
 import { mkdir } from "fs/promises";
 import ora from "ora";
 import { join } from "path";
 import ProgressBar from "progress";
-import readdirp from "readdirp";
 import { ff } from "../util/ff";
 import { isHiddenFile } from "../util/fs";
 import PromiseQueue = require("promise-queue");
@@ -58,116 +57,96 @@ export const buildVideoPreviews = async ({
   snippetDuration?: number;
 }): Promise<void> => {
   const spinner = ora("Finding videos").start();
+  const promises: PromiseGeneratorWithStatus[] = [];
+  for await (const relPath of await recursiveReaddir(libraryDir)) {
+    if (!mapDefined(pathExtension(relPath), (ext) => fileExtensions.has(ext))) {
+      continue;
+    }
 
-  const files = await readdirp.promise(libraryDir, {
-    depth: Infinity,
-    fileFilter: (entry) =>
-      mapDefined(pathExtension(entry.basename), (ext) =>
-        fileExtensions.has(ext)
-      ) ?? false,
-  });
+    const absPath = join(libraryDir, relPath);
+    const outDir = join(previewsDir, relPath);
 
-  const promises: PromiseGeneratorWithStatus[] = (
-    await Promise.all(
-      files.map(async (file) => {
-        const filePromises: PromiseGeneratorWithStatus[] = [];
+    if (!includeHiddenFiles && (await isHiddenFile(absPath))) {
+      return;
+    }
 
-        const absPath = file.fullPath;
-        const relPath = file.path;
-        const outDir = join(previewsDir, relPath);
+    await mkdir(outDir, { recursive: true });
 
-        if (!includeHiddenFiles && (await isHiddenFile(absPath))) {
-          return;
-        }
+    // Get duration of video in seconds.
+    let duration: number;
+    try {
+      duration = (await ff.probe(absPath)).duration;
+    } catch (err) {
+      spinner
+        .fail(`Failed to retrieve duration for ${relPath}: ${err.message}`)
+        .start();
+      return;
+    }
 
-        await mkdir(outDir, { recursive: true });
+    // Create thumbnails at percentiles.
+    const thumbDest = join(outDir, `thumb50.jpg`);
+    if (!(await isFile(thumbDest))) {
+      promises.push([
+        `Generating thumbnail for ${relPath}`,
+        () =>
+          ff.extractFrame({
+            input: absPath,
+            output: thumbDest,
+            timestamp: duration * 0.5,
+            scaleWidth: PREVIEW_SCALED_WIDTH,
+          }),
+      ]);
+    }
 
-        // Get duration of video in seconds.
-        let duration: number;
-        try {
-          duration = (await ff.probe(absPath)).duration;
-        } catch (err) {
-          spinner
-            .fail(`Failed to retrieve duration for ${relPath}: ${err.message}`)
-            .start();
-          return;
-        }
+    // Create preview snippet.
+    const snippetPos = Math.max(0, duration * 0.5 - snippetDuration / 2);
+    const snippetDest = join(outDir, "snippet.mp4");
+    if (!(await isFile(snippetDest))) {
+      promises.push([
+        `Generating snippet for ${relPath}`,
+        () =>
+          generateSnippet(absPath, snippetDest, snippetPos, snippetDuration),
+      ]);
+    }
 
-        // Create thumbnails at percentiles.
-        const thumbDest = join(outDir, `thumb50.jpg`);
-        if (!(await isFile(thumbDest))) {
-          filePromises.push([
-            `Generating thumbnail for ${relPath}`,
-            () =>
-              ff.extractFrame({
-                input: absPath,
-                output: thumbDest,
-                timestamp: duration * 0.5,
-                scaleWidth: PREVIEW_SCALED_WIDTH,
-              }),
-          ]);
-        }
+    // Create montage.
+    // We want to get a shot every 2 seconds.
+    const montageShotCount = Math.floor(Math.min(200, duration / 2));
 
-        // Create preview snippet.
-        const snippetPos = Math.max(0, duration * 0.5 - snippetDuration / 2);
-        const snippetDest = join(outDir, "snippet.mp4");
-        if (!(await isFile(snippetDest))) {
-          filePromises.push([
-            `Generating snippet for ${relPath}`,
-            () =>
-              generateSnippet(
-                absPath,
-                snippetDest,
-                snippetPos,
-                snippetDuration
-              ),
-          ]);
-        }
+    const montageShots = await Promise.all(
+      Array(montageShotCount)
+        .fill(void 0)
+        .map(async (_, no) => {
+          const pos = Math.round((duration * no) / montageShotCount);
+          // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
+          const dest = join(outDir, `montageshot${pos}.jpg`);
+          return {
+            time: pos,
+            file: dest,
+            exists: await isFile(dest),
+          };
+        })
+    );
 
-        // Create montage.
-        // We want to get a shot every 2 seconds.
-        const montageShotCount = Math.floor(Math.min(200, duration / 2));
+    for (const { time, file, exists } of montageShots) {
+      if (exists) {
+        continue;
+      }
+      promises.push([
+        `Generating montage for ${relPath}`,
+        () =>
+          ff.extractFrame({
+            input: absPath,
+            timestamp: time,
+            output: file,
+            scaleWidth: PREVIEW_SCALED_WIDTH,
+          }),
+      ]);
+    }
 
-        const montageShots = await Promise.all(
-          Array(montageShotCount)
-            .fill(void 0)
-            .map(async (_, no) => {
-              const pos = Math.round((duration * no) / montageShotCount);
-              // Avoid using subdirectories that might cause race conditions when creating and deleting concurrently.
-              const dest = join(outDir, `montageshot${pos}.jpg`);
-              return {
-                time: pos,
-                file: dest,
-                exists: await isFile(dest),
-              };
-            })
-        );
-
-        for (const { time, file, exists } of montageShots) {
-          if (exists) {
-            continue;
-          }
-          filePromises.push([
-            `Generating montage for ${relPath}`,
-            () =>
-              ff.extractFrame({
-                input: absPath,
-                timestamp: time,
-                output: file,
-                scaleWidth: PREVIEW_SCALED_WIDTH,
-              }),
-          ]);
-        }
-
-        // Update text last as otherwise text immediately goes to last file as it updates before all the asynchronous work.
-        spinner.text = `Probed ${relPath}`;
-
-        return filePromises;
-      })
-    )
-  )
-    .flat()
-    .filter(defined);
+    // Update text last as otherwise text immediately goes to last file as it updates before all the asynchronous work.
+    spinner.text = `Probed ${relPath}`;
+  }
 
   spinner.stop();
 
