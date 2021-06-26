@@ -25,12 +25,6 @@ export default ({
         closed && "playlist-closed"
       )}
     >
-      <div className="playlist-menu">
-        <button className="playlist-picker">Now playing</button>
-        <button className="playlist-close" onClick={onRequestClose}>
-          ━
-        </button>
-      </div>
       <div className="playlist-items">
         {files.map((f, i) => (
           <button
@@ -44,6 +38,12 @@ export default ({
             <div className="playlist-item-title">{f.title}</div>
           </button>
         ))}
+      </div>
+      <div className="playlist-menu">
+        <button className="playlist-picker">Now playing</button>
+        <button className="playlist-close" onClick={onRequestClose}>
+          ━
+        </button>
       </div>
       <div className="playlist-controls">
         <button onClick={() => onChangePosition(position - 1)}>⏮</button>
