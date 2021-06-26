@@ -1,6 +1,6 @@
 import classNames from "extlib/js/classNames";
 import { Duration } from "luxon";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";
 import {
   ListedFolder,
@@ -10,6 +10,56 @@ import {
 } from "../../api/listFiles";
 import { apiGetPath } from "../_common/api";
 import "./index.css";
+
+const File = ({
+  file,
+  onClick,
+}: {
+  file: ListedMedia | ListedPhoto;
+  onClick: () => void;
+}) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  return (
+    <button
+      className="explorer-file"
+      onClick={onClick}
+      onMouseEnter={() => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+          videoRef.current.play();
+        }
+      }}
+      onMouseLeave={() => {
+        videoRef.current?.pause();
+      }}
+      style={{
+        backgroundImage: `url(${apiGetPath("getFile", {
+          path: file.path,
+          thumbnail: true,
+        })})`,
+      }}
+    >
+      {file.type == "video" && (
+        <video
+          ref={videoRef}
+          className="explorer-file-video-snippet"
+          autoPlay={true}
+          controls={false}
+          src={apiGetPath("getFile", {
+            path: file.path,
+            snippet: true,
+          })}
+        />
+      )}
+      {(file.type == "video" || file.type == "audio") && (
+        <div className="acrylic acrylic-grey explorer-file-duration">
+          {Duration.fromMillis(file.duration * 1000).toFormat("m:ss")}
+        </div>
+      )}
+      <div className="acrylic acrylic-grey explorer-file-name">{file.name}</div>
+    </button>
+  );
+};
 
 export default ({
   extended,
@@ -62,9 +112,9 @@ export default ({
         </div>
         <div className="explorer-files">
           {files.map((f) => (
-            <button
+            <File
               key={f.path}
-              className="explorer-file"
+              file={f}
               onClick={() => {
                 if (f.type == "photo") {
                   onClickPhotoFile(f);
@@ -75,22 +125,7 @@ export default ({
                   );
                 }
               }}
-              style={{
-                backgroundImage: `url(${apiGetPath("getFile", {
-                  path: f.path,
-                  thumbnail: true,
-                })})`,
-              }}
-            >
-              {(f.type == "video" || f.type == "audio") && (
-                <div className="acrylic acrylic-grey explorer-file-duration">
-                  {Duration.fromMillis(f.duration * 1000).toFormat("m:ss")}
-                </div>
-              )}
-              <div className="acrylic acrylic-grey explorer-file-name">
-                {f.name}
-              </div>
-            </button>
+            />
           ))}
         </div>
       </div>

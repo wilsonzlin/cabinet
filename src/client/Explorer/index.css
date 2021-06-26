@@ -55,6 +55,19 @@
   word-wrap: break-word;
 }
 
+.explorer-file-video-snippet {
+  opacity: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  background: black;
+  transition: 0.3s;
+}
+
+.explorer-file-video-snippet:hover {
+  opacity: 1;
+}
+
 .explorer-file-duration, .explorer-file-name {
   border-radius: 3px;
   padding: 3px;
