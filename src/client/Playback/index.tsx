@@ -64,6 +64,7 @@ export default ({
       <div
         className={classNames(
           "acrylic",
+          "floating",
           "playback-card",
           showCard && "playback-card-open"
         )}
@@ -95,7 +96,7 @@ export default ({
           <button>👎</button>
         </div>
       </div>
-      <div className="acrylic playback-main">
+      <div className="acrylic floating playback-main">
         <div className="playback-thumbnail">
           {file.type == "audio" ? "🎵" : "📼"}
         </div>

@@ -74,12 +74,6 @@ export class Library {
 
   getDirectory(path: string[]): Directory | null {
     let cur: Directory = this.root;
-    // Filter empty components so that:
-    // - a path with multiple contiguous directory separators works
-    // - a path with leading separators works
-    // - a path with trailing separators works
-    // - an empty path works
-    // Also filter redundant '.' components.
     for (const component of path) {
       const entry = cur.entries[component];
       if (entry?.type != DirEntryType.DIRECTORY) {

@@ -1,15 +1,17 @@
-import maybeParseInt from "extlib/js/maybeParseInt";
 import { MediaFileProperties } from "@wzlin/ff";
 import assertExists from "extlib/js/assertExists";
 import mapExists from "extlib/js/mapExists";
 import maybeFileStats from "extlib/js/maybeFileStats";
+import maybeParseInt from "extlib/js/maybeParseInt";
 import pathExtension from "extlib/js/pathExtension";
 import { promises as fs } from "fs";
 import { readdir } from "fs/promises";
 import { imageSize } from "image-size";
 import mime from "mime";
 import { Ora } from "ora";
+import * as os from "os";
 import { basename, join, relative } from "path";
+import PromiseQueue from "promise-queue";
 import { ff } from "../util/ff";
 import { isHiddenFile } from "../util/fs";
 import {
@@ -221,6 +223,9 @@ export const createLibrary = async ({
     );
   };
 
+  // Use a queue to avoid spawning too many processes at once,
+  // which could lead to freezes and out-of-open-files errors.
+  const queue = new PromiseQueue(os.cpus().length, Infinity);
   const listDir = async (dir: string): Promise<Directory> => {
     const entries: { [name: string]: DirEntry } = Object.create(null);
 
@@ -236,12 +241,14 @@ export const createLibrary = async ({
         let entry: DirEntry | undefined = undefined;
         if (dirent.isFile()) {
           const ext = pathExtension(name);
-          if (ext && photoExtensions.has(ext)) {
-            entry = await buildPhoto(dir, name);
-          } else if (ext && videoExtensions.has(ext)) {
-            entry = await buildVideo(dir, name);
-          } else if (ext && audioExtensions.has(ext)) {
-            entry = await buildAudio(dir, name);
+          if (ext) {
+            if (photoExtensions.has(ext)) {
+              entry = await queue.add(() => buildPhoto(dir, name));
+            } else if (videoExtensions.has(ext)) {
+              entry = await queue.add(() => buildVideo(dir, name));
+            } else if (audioExtensions.has(ext)) {
+              entry = await queue.add(() => buildAudio(dir, name));
+            }
           }
         } else if (dirent.isDirectory()) {
           entry = await listDir(absPath);

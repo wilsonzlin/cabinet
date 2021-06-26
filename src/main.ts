@@ -53,11 +53,11 @@ cli
         library: await createLibrary({
           audioExtensions: audio,
           includeHiddenFiles: hidden,
-          photoExtensions: video,
+          photoExtensions: photo,
           previewsDir: mapDefined(state, rp),
           rootDir: rp(library),
           spinner,
-          videoExtensions: photo,
+          videoExtensions: video,
         }),
         port,
         scratch: mapDefined(scratch, rp),

@@ -1,6 +1,7 @@
 import React from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
 import "./index.css";
+import { apiGetPath } from "../_common/api";
 
 export default ({
   mediaRef,
@@ -23,7 +24,7 @@ export default ({
         ref={($media) => (mediaRef.element = $media ?? undefined)}
         autoPlay={true}
         controls={false}
-        src={`/getFile?${JSON.stringify({ path: file.path })}`}
+        src={apiGetPath("getFile", { path: file.path })}
         onEnded={onEnded}
         onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}

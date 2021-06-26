@@ -17,7 +17,7 @@ export default ({
     <div className="image">
       <img src={`/getFile?${JSON.stringify({ path: file.path })}`} />
 
-      <div className="acrylic image-path">
+      <div className="acrylic floating image-path">
         <button onClick={onClose}>←</button>
         {path.map((c, i, a) => (
           <button key={i} onClick={() => onNavigate(a.slice(0, i + 1))}>

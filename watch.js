@@ -12,8 +12,12 @@ chokidar.watch(join(__dirname, "src")).on("all", (event, path) => {
   } catch (e) {
     return console.error(e);
   }
-  proc = spawn(join(__dirname, "dist", "main.js"), ["--port", "3003"], {
-    cwd: join(__dirname, ".dev-data"),
-    stdio: ["ignore", "inherit", "inherit"],
-  });
+  proc = spawn(
+    join(__dirname, "dist", "main.js"),
+    ["--library", "src", "--state", "state", "server", "--port", "3003"],
+    {
+      cwd: join(__dirname, ".dev-data"),
+      stdio: ["ignore", "inherit", "inherit"],
+    }
+  );
 });

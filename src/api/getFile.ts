@@ -176,7 +176,8 @@ export const getFileApi = async (
           );
 
         case defined(montageFrame):
-          const mfPath = file.preview?.montageFrames[montageFrame as any];
+          const mfPath =
+            file.preview?.montageFrames[assertExists(montageFrame)];
           if (!mfPath) {
             throw new ClientError(404, "No frame available");
           }

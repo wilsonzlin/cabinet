@@ -18,7 +18,12 @@ export default ({
 }) => {
   return (
     <div
-      className={classNames("acrylic", "playlist", closed && "playlist-closed")}
+      className={classNames(
+        "acrylic",
+        "floating",
+        "playlist",
+        closed && "playlist-closed"
+      )}
     >
       <div className="playlist-menu">
         <button className="playlist-picker">Now playing</button>

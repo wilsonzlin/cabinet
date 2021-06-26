@@ -1,4 +1,5 @@
 import classNames from "extlib/js/classNames";
+import { Duration } from "luxon";
 import React, { useEffect, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";
 import {
@@ -10,6 +11,7 @@ import {
   listFilesApi,
 } from "../../api/listFiles";
 import "./index.css";
+import { apiGetPath } from "../_common/api";
 
 export default ({
   extended,
@@ -43,7 +45,7 @@ export default ({
 
   const files =
     entries?.results.filter(
-      (r): r is ListedAudio | ListedPhoto | ListedVideo => r.type != "dir"
+      (r): r is ListedMedia | ListedPhoto => r.type != "dir"
     ) ?? [];
 
   return (
@@ -75,9 +77,19 @@ export default ({
                   );
                 }
               }}
+              style={{
+                backgroundImage: `url(${apiGetPath("getFile", {
+                  path: f.path,
+                  thumbnail: true,
+                })})`,
+              }}
             >
-              <div className="explorer-file-thumbnail" />
-              <div className="explorer-file-name">{f.name}</div>
+              {(f.type == "video" || f.type == "audio") && (
+                <div className="acrylic explorer-file-duration">
+                  {Duration.fromMillis(f.duration * 1000).toFormat("m:ss")}
+                </div>
+              )}
+              <div className="acrylic explorer-file-name">{f.name}</div>
             </button>
           ))}
         </div>
