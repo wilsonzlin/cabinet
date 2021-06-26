@@ -1,97 +1,119 @@
 #!/usr/bin/env node
 
-import mapExists from "extlib/js/mapExists";
+import assertExists from "extlib/js/assertExists";
+import mapDefined from "extlib/js/mapDefined";
 import { promises as fs, realpathSync } from "fs";
-import minimist from "minimist";
 import ora from "ora";
-import { cpus } from "os";
+import * as os from "os";
+import * as sacli from "sacli";
 import { createLibrary } from "./library/build";
 import { startServer } from "./server/server";
 import { buildVideoPreviews } from "./tool/buildVideoPreviews";
 import { convertVideos } from "./tool/convertVideos";
 
-const args = minimist(process.argv.slice(2));
-
 const rp = (p: string): string => realpathSync(p);
 
-const LIBRARY_DIR: string | undefined = mapExists(
-  args.library ?? process.cwd(),
-  rp
+const DEFAULT_AUDIO_EXTENSIONS = new Set("mp3,ogg,wav".split(","));
+const DEFAULT_VIDEO_EXTENSIONS = new Set("mp4,m4v,webm".split(","));
+const DEFAULT_PHOTO_EXTENSIONS = new Set(
+  "png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp".split(",")
 );
-const SOURCE_DIR: string | undefined = mapExists(args.source, rp);
-const PREVIEWS_DIR: string | undefined = mapExists(args.previews, rp);
-const SCRATCH_DIR: string | undefined = mapExists(args.scratch, rp);
-const AUDIO_EXTENSIONS: Set<string> = new Set(
-  (args.audio || "mp3,ogg,wav").split(",")
-);
-const VIDEO_EXTENSIONS: Set<string> = new Set(
-  (args.video || "mp4,m4v,webm").split(",")
-);
-const PHOTO_EXTENSIONS: Set<string> = new Set(
-  (args.photo || "png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp").split(",")
-);
-const INCLUDE_HIDDEN_FILES: boolean = args.hidden ?? false;
-const CONCURRENCY: number = +args.concurrency || cpus().length;
-const PORT: number = args.port || 0;
-const SSL_KEY: string | undefined = args.key;
-const SSL_CERT: string | undefined = args.cert;
-const SSL_DHPARAM: string | undefined = args.dh;
 
-if (args["build-video-previews"]) {
-  if (!PREVIEWS_DIR) {
-    throw new Error(`No preview directory provided`);
-  }
-  if (!LIBRARY_DIR) {
-    throw new Error(`No library directory provided`);
-  }
-  buildVideoPreviews({
-    previewsDir: PREVIEWS_DIR,
-    libraryDir: LIBRARY_DIR,
-    fileExtensions: VIDEO_EXTENSIONS,
-    includeHiddenFiles: INCLUDE_HIDDEN_FILES,
-    concurrency: CONCURRENCY,
-  }).then(() => process.exit(0), console.error);
-} else if (args["convert-videos"]) {
-  if (!SOURCE_DIR) {
-    throw new Error(`No source directory provided`);
-  }
-  convertVideos({
-    sourceDir: SOURCE_DIR,
-    convertedDir: rp(args.converted),
-    includeHiddenFiles: INCLUDE_HIDDEN_FILES,
-    concurrency: CONCURRENCY,
-  }).then(() => process.exit(0), console.error);
-} else {
-  (async () => {
-    if (!LIBRARY_DIR) {
-      throw new Error(`No library directory provided`);
+const cli = sacli.Command.new()
+  .optional("library", String)
+  .optional("state", String)
+  .boolean("hidden")
+  .optional("audio", (s) => new Set(s.split(",")))
+  .optional("photo", (s) => new Set(s.split(",")))
+  .optional("video", (s) => new Set(s.split(",")));
+
+cli
+  .subcommand("server")
+  .optional("port", Number.parseInt)
+  .optional("scratch", String)
+  .optional("sslkey", String)
+  .optional("sslcert", String)
+  .optional("ssldh", String)
+  .action(
+    async ({
+      library = process.cwd(),
+      state,
+      hidden,
+      audio = DEFAULT_AUDIO_EXTENSIONS,
+      photo = DEFAULT_PHOTO_EXTENSIONS,
+      video = DEFAULT_VIDEO_EXTENSIONS,
+      scratch,
+      port = 0,
+      ssldh,
+      sslcert,
+      sslkey,
+    }) => {
+      const spinner = ora("Finding videos and photos").start();
+      const server = await startServer({
+        library: await createLibrary({
+          audioExtensions: audio,
+          includeHiddenFiles: hidden,
+          photoExtensions: video,
+          previewsDir: mapDefined(state, rp),
+          rootDir: rp(library),
+          spinner,
+          videoExtensions: photo,
+        }),
+        port,
+        scratch: mapDefined(scratch, rp),
+        ssl:
+          !sslkey || !sslcert
+            ? undefined
+            : {
+                certificate: await fs.readFile(sslcert),
+                key: await fs.readFile(sslkey),
+                dhParameters: ssldh ? await fs.readFile(ssldh) : undefined,
+              },
+      });
+      spinner
+        .succeed(`Server started on port ${(server.address() as any).port}`)
+        .stop();
     }
-    const spinner = ora("Finding videos and photos").start();
-    const server = await startServer({
-      library: await createLibrary({
-        spinner,
-        includeHiddenFiles: INCLUDE_HIDDEN_FILES,
-        previewsDir: PREVIEWS_DIR,
-        audioExtensions: AUDIO_EXTENSIONS,
-        videoExtensions: VIDEO_EXTENSIONS,
-        photoExtensions: PHOTO_EXTENSIONS,
-        rootDir: LIBRARY_DIR,
-      }),
-      port: PORT,
-      scratch: SCRATCH_DIR,
-      ssl:
-        !SSL_KEY || !SSL_CERT
-          ? undefined
-          : {
-              certificate: await fs.readFile(SSL_CERT),
-              key: await fs.readFile(SSL_KEY),
-              dhParameters: SSL_DHPARAM
-                ? await fs.readFile(SSL_DHPARAM)
-                : undefined,
-            },
-    });
-    spinner
-      .succeed(`Server started on port ${(server.address() as any).port}`)
-      .stop();
-  })().catch(console.error);
-}
+  );
+
+cli
+  .subcommand("build-video-previews")
+  .optional("concurrency", Number.parseInt)
+  .action(
+    async ({
+      library = process.cwd(),
+      state,
+      hidden,
+      video = DEFAULT_VIDEO_EXTENSIONS,
+      concurrency = os.cpus().length,
+    }) => {
+      await buildVideoPreviews({
+        previewsDir: rp(assertExists(state, "state dir needs to be provided")),
+        libraryDir: rp(library),
+        fileExtensions: video,
+        includeHiddenFiles: hidden,
+        concurrency,
+      });
+    }
+  );
+
+cli
+  .subcommand("convert-videos")
+  .optional("concurrency", Number.parseInt)
+  .action(
+    async ({
+      library = process.cwd(),
+      state,
+      hidden,
+      concurrency = os.cpus().length,
+    }) => {
+      await convertVideos({
+        sourceDir: rp(library),
+        convertedDir: rp(assertExists(state, "state dir needs to be provided")),
+        includeHiddenFiles: hidden,
+        concurrency,
+      });
+    }
+  );
+
+cli.eval(process.argv.slice(2));

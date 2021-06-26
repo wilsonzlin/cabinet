@@ -1,7 +1,6 @@
 import isFile from "extlib/js/isFile";
 import mapDefined from "extlib/js/mapDefined";
 import pathExtension from "extlib/js/pathExtension";
-import pathWithoutExtension from "extlib/js/pathWithoutExtension";
 import recursiveReaddir from "extlib/js/recursiveReaddir";
 import { promises as fs } from "fs";
 import { mkdir } from "fs/promises";
@@ -38,8 +37,7 @@ const convertVideo = async (
 ) => {
   const absPath = file.fullPath;
   const relPath = file.path;
-  // Get absolute path to converted output file with extension replaced with 'mp4'.
-  const destPath = join(convertedDir, `${pathWithoutExtension(relPath)}.mp4`);
+  const destPath = join(convertedDir, relPath, `src.mp4`);
 
   // First convert to a temporary file so that if conversion does not finish successfully (e.g. script or system crashes),
   // when this script is run again, it will detect incompletion and restart the process.

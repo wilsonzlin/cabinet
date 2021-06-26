@@ -82,21 +82,21 @@ const getMediaProperties = async (
 const MONTAGE_FRAME_BASENAME = /^montageshot([0-9]+)\.jpg$/;
 
 export const createLibrary = async ({
-  rootDir,
-  includeHiddenFiles,
   audioExtensions,
-  videoExtensions,
+  includeHiddenFiles,
   photoExtensions,
   previewsDir,
+  rootDir,
   spinner,
+  videoExtensions,
 }: {
-  rootDir: string;
-  includeHiddenFiles: boolean;
   audioExtensions: Set<string>;
-  videoExtensions: Set<string>;
+  includeHiddenFiles: boolean;
   photoExtensions: Set<string>;
   previewsDir?: string;
+  rootDir: string;
   spinner: Ora;
+  videoExtensions: Set<string>;
 }): Promise<Library> => {
   const getVideoPreview = async (relPath: string) => {
     if (!previewsDir) {
