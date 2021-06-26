@@ -37,7 +37,7 @@ const convertVideo = async (
 ) => {
   const absPath = file.fullPath;
   const relPath = file.path;
-  const destPath = join(convertedDir, relPath, `src.mp4`);
+  const destPath = join(convertedDir, relPath, `converted.mp4`);
 
   // First convert to a temporary file so that if conversion does not finish successfully (e.g. script or system crashes),
   // when this script is run again, it will detect incompletion and restart the process.

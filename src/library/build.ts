@@ -108,15 +108,21 @@ export const createLibrary = async ({
     const thumbnailPath = join(previewsDir, relPath, "thumb50.jpg");
     const snippetPath = join(previewsDir, relPath, "snippet.mp4");
     const snippetStats = await maybeFileStats(snippetPath);
-    const montageFrames = await readdir(join(previewsDir, relPath)).then(
-      (files) =>
-        files
-          .filter((f) => MONTAGE_FRAME_BASENAME.test(f))
-          .map((f) => ({
-            fullPath: join(previewsDir, relPath, f),
-            basename: f,
-          }))
-    );
+    let stateDirEnts;
+    try {
+      stateDirEnts = await readdir(join(previewsDir, relPath));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return;
+      }
+      throw e;
+    }
+    const montageFrames = stateDirEnts
+      .filter((f) => MONTAGE_FRAME_BASENAME.test(f))
+      .map((f) => ({
+        fullPath: join(previewsDir, relPath, f),
+        basename: f,
+      }));
 
     return mapExists(
       await getImageSize(thumbnailPath, spinner),
@@ -242,12 +248,12 @@ export const createLibrary = async ({
         if (dirent.isFile()) {
           const ext = pathExtension(name);
           if (ext) {
-            if (photoExtensions.has(ext)) {
+            if (audioExtensions.has(ext)) {
+              entry = await queue.add(() => buildAudio(dir, name));
+            } else if (photoExtensions.has(ext)) {
               entry = await queue.add(() => buildPhoto(dir, name));
             } else if (videoExtensions.has(ext)) {
               entry = await queue.add(() => buildVideo(dir, name));
-            } else if (audioExtensions.has(ext)) {
-              entry = await queue.add(() => buildAudio(dir, name));
             }
           }
         } else if (dirent.isDirectory()) {

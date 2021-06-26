@@ -15,13 +15,19 @@ const PREVIEW_SCALED_WIDTH = 180;
 const generateSnippet = (
   src: string,
   out: string,
-  startTime: number,
-  duration: number
-): Promise<void> =>
-  ff.convert({
+  videoTotalDuration: number
+): Promise<void> => {
+  const PART_LEN = 3;
+  const chapterLen = videoTotalDuration / 8;
+  const parts = [];
+  for (let i = 0; i < 8; i++) {
+    const start = chapterLen * i + chapterLen / 2 - PART_LEN / 2;
+    const end = start + PART_LEN;
+    parts.push([start, end]);
+  }
+  return ff.convert({
     input: {
       file: src,
-      start: startTime,
     },
     metadata: false,
     video: {
@@ -30,14 +36,17 @@ const generateSnippet = (
       crf: 17,
       preset: "veryslow",
       resize: { width: PREVIEW_SCALED_WIDTH },
+      filter: `select='${parts
+        .map(([start, end]) => `between(t,${start},${end})`)
+        .join("+")}',setpts=N/FRAME_RATE/TB`,
     },
     audio: false,
     output: {
       file: out,
       format: "mp4",
-      duration: duration,
     },
   });
+};
 
 type PromiseGeneratorWithStatus = [string, () => Promise<any>];
 
@@ -47,14 +56,12 @@ export const buildVideoPreviews = async ({
   concurrency,
   fileExtensions,
   includeHiddenFiles,
-  snippetDuration = 5,
 }: {
   libraryDir: string;
   previewsDir: string;
   concurrency: number;
   fileExtensions: Set<string>;
   includeHiddenFiles: boolean;
-  snippetDuration?: number;
 }): Promise<void> => {
   const spinner = ora("Finding videos").start();
   const promises: PromiseGeneratorWithStatus[] = [];
@@ -99,13 +106,11 @@ export const buildVideoPreviews = async ({
     }
 
     // Create preview snippet.
-    const snippetPos = Math.max(0, duration * 0.5 - snippetDuration / 2);
     const snippetDest = join(outDir, "snippet.mp4");
     if (!(await isFile(snippetDest))) {
       promises.push([
         `Generating snippet for ${relPath}`,
-        () =>
-          generateSnippet(absPath, snippetDest, snippetPos, snippetDuration),
+        () => generateSnippet(absPath, snippetDest, duration),
       ]);
     }
 
