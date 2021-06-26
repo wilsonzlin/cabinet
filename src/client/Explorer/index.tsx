@@ -3,15 +3,13 @@ import { Duration } from "luxon";
 import React, { useEffect, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";
 import {
-  ListedAudio,
   ListedFolder,
   ListedMedia,
   ListedPhoto,
-  ListedVideo,
   listFilesApi,
 } from "../../api/listFiles";
-import "./index.css";
 import { apiGetPath } from "../_common/api";
+import "./index.css";
 
 export default ({
   extended,
@@ -85,11 +83,13 @@ export default ({
               }}
             >
               {(f.type == "video" || f.type == "audio") && (
-                <div className="acrylic explorer-file-duration">
+                <div className="acrylic acrylic-grey explorer-file-duration">
                   {Duration.fromMillis(f.duration * 1000).toFormat("m:ss")}
                 </div>
               )}
-              <div className="acrylic explorer-file-name">{f.name}</div>
+              <div className="acrylic acrylic-grey explorer-file-name">
+                {f.name}
+              </div>
             </button>
           ))}
         </div>

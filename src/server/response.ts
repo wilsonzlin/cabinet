@@ -64,15 +64,11 @@ const streamFile = (
     "Content-Type": type,
   });
 
-  pipeline(
-    createReadStream(path, { start, end, autoClose: true }),
-    res,
-    (err) => {
-      if (err) {
-        console.warn("Response stream error:", err);
-      }
+  pipeline(createReadStream(path, { start, end }), res, (err) => {
+    if (err) {
+      console.warn("Response stream error:", err);
     }
-  );
+  });
 };
 
 export const applyResponse = (

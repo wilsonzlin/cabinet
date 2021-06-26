@@ -1,11 +1,11 @@
 import { Duration } from "luxon";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
 import Explorer from "../Explorer";
 import Image from "../Image";
 import Media from "../Media";
 import Menu from "../Menu";
-import Path from "../Path";
+import PathImpl from "../Path";
 import Playback from "../Playback";
 import Playlist from "../Playlist";
 import PlaylistToggle from "../PlaylistToggle";
@@ -35,11 +35,14 @@ export default ({}: {}) => {
     appRef.current?.classList.toggle("app-dark", !!photo || isPlayingVideo);
   }, [photo, isPlayingVideo]);
 
+  const Path = useCallback(
+    () => <PathImpl components={path} onNavigate={(p) => setPath(p)} />,
+    [path]
+  );
+
   return (
     <div className="app" ref={appRef}>
-      <Menu
-        Path={() => <Path components={path} onNavigate={(p) => setPath(p)} />}
-      />
+      <Menu Path={Path} />
       <Explorer
         extended={playlistClosed}
         path={path}
