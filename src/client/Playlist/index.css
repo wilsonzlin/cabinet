@@ -54,6 +54,12 @@
   right: 10px;
 }
 
+.app-dark .playlist-menu,
+.app-dark .playlist-controls {
+  background: rgba(0, 0, 0, 0.6);
+  color: #f2f2f2;
+}
+
 .playlist-menu {
   top: 10px;
   display: flex;

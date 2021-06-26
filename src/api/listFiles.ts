@@ -10,12 +10,16 @@ export type ListedFolder = {
   itemCount: number;
 };
 
-export type ListedAudio = {
-  type: "audio";
+type BaseListedFile = {
   path: string;
   name: string;
   size: number;
   format: string;
+  convertedFormats: string[];
+};
+
+export type ListedAudio = BaseListedFile & {
+  type: "audio";
   duration: number;
   title: string;
   author?: string;
@@ -24,22 +28,14 @@ export type ListedAudio = {
   track?: number;
 };
 
-export type ListedPhoto = {
+export type ListedPhoto = BaseListedFile & {
   type: "photo";
-  path: string;
-  name: string;
-  size: number;
-  format: string;
   width: number;
   height: number;
 };
 
-export type ListedVideo = {
+export type ListedVideo = BaseListedFile & {
   type: "video";
-  path: string;
-  name: string;
-  size: number;
-  format: string;
   width: number;
   height: number;
   duration: number;
@@ -102,6 +98,7 @@ export const listFilesApi = async (
             name: e.name,
             size: e.size,
             format: e.mime,
+            convertedFormats: e.convertedFormats.map((f) => f.mime),
             duration: e.duration,
             author: e.artist,
             title: e.title ?? e.name,
@@ -117,6 +114,7 @@ export const listFilesApi = async (
             name: e.name,
             size: e.size,
             format: e.mime,
+            convertedFormats: e.convertedFormats.map((f) => f.mime),
             width: e.width,
             height: e.height,
           };
@@ -128,6 +126,7 @@ export const listFilesApi = async (
             name: e.name,
             size: e.size,
             format: e.mime,
+            convertedFormats: e.convertedFormats.map((f) => f.mime),
             width: e.width,
             height: e.height,
             duration: e.duration,

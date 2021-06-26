@@ -21,15 +21,28 @@ export default ({
   return (
     <div className={`media-${file.type}`}>
       <video
+        // A key is needed to ensure video reloads on sources change. See https://stackoverflow.com/questions/41303012/updating-source-url-on-html5-video-with-react.
+        key={file.path}
         ref={($media) => (mediaRef.element = $media ?? undefined)}
         autoPlay={true}
         controls={false}
-        src={apiGetPath("getFile", { path: file.path })}
         onEnded={onEnded}
         onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onTimeUpdate={(event) => onTimeUpdate(event.currentTarget.currentTime)}
-      />
+      >
+        <source
+          type={file.format}
+          src={apiGetPath("getFile", { path: file.path })}
+        />
+        {file.convertedFormats.map((mime) => (
+          <source
+            key={`${file.path}:${mime}`}
+            type={mime}
+            src={apiGetPath("getFile", { path: file.path, converted: mime })}
+          />
+        ))}
+      </video>
       <button className="media-close" onClick={onClose}>
         ←
       </button>

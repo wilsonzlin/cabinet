@@ -1,5 +1,4 @@
 import isFile from "extlib/js/isFile";
-import mapDefined from "extlib/js/mapDefined";
 import pathExtension from "extlib/js/pathExtension";
 import recursiveReaddir from "extlib/js/recursiveReaddir";
 import { promises as fs } from "fs";
@@ -7,20 +6,12 @@ import { mkdir } from "fs/promises";
 import ora from "ora";
 import { dirname, join } from "path";
 import ProgressBar from "progress";
-import { ff } from "../util/ff";
+import { DEFAULT_VIDEO_EXTENSIONS, ff } from "../util/ff";
 import { isHiddenFile } from "../util/fs";
 import PromiseQueue = require("promise-queue");
 
 // TODO Configurable.
-const CONVERTABLE_VIDEO_EXTENSIONS = new Set<string>([
-  "wmv",
-  "mkv",
-  "avi",
-  "rm",
-  "rmvb",
-  "flv",
-  "3gp",
-]);
+const SUPPORTED_EXTENSIONS = new Set(["mp4", "m4a", "webm"]);
 
 // TODO Configurable.
 const SUPPORTED_VIDEO_CODECS = new Set(["h264"]);
@@ -35,6 +26,10 @@ const convertVideo = async (
   },
   convertedDir: string
 ) => {
+  if (SUPPORTED_EXTENSIONS.has(pathExtension(file.path) ?? "")) {
+    return;
+  }
+
   const absPath = file.fullPath;
   const relPath = file.path;
   const destPath = join(convertedDir, relPath, `converted.mp4`);
@@ -91,11 +86,7 @@ export const convertVideos = async ({
 
   const files = [];
   for await (const relPath of recursiveReaddir(sourceDir)) {
-    if (
-      !mapDefined(pathExtension(relPath), (ext) =>
-        CONVERTABLE_VIDEO_EXTENSIONS.has(ext)
-      )
-    ) {
+    if (!DEFAULT_VIDEO_EXTENSIONS.has(pathExtension(relPath) ?? "")) {
       continue;
     }
     const fullPath = join(sourceDir, relPath);

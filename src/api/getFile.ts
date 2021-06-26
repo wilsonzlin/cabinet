@@ -128,6 +128,7 @@ export const getFileApi = async (
   ctx: ApiCtx,
   {
     path,
+    converted,
     thumbnail,
     snippet,
     montageFrame,
@@ -137,6 +138,8 @@ export const getFileApi = async (
     silent,
   }: {
     path: string;
+    // MIME of converted file to use instead of source.
+    converted?: string;
     thumbnail?: boolean;
     snippet?: boolean;
     montageFrame?: number;
@@ -156,6 +159,20 @@ export const getFileApi = async (
 
     case DirEntryType.VIDEO:
       switch (true) {
+        case defined(converted):
+          const convertedFile = file.convertedFormats.find(
+            (f) => f.mime === converted
+          );
+          if (!convertedFile) {
+            throw new ClientError(404, "Converted file not found");
+          }
+          return new StreamFile(
+            convertedFile.absPath,
+            convertedFile.size,
+            convertedFile.mime,
+            file.name
+          );
+
         case thumbnail:
           const thumbnailPath = file.preview?.thumbnailPath;
           if (!thumbnailPath) {

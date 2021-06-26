@@ -25,6 +25,7 @@ export type Directory = DirEntryBase & {
 };
 
 type FileBase = DirEntryBase & {
+  convertedFormats: { mime: string; absPath: string; size: number }[];
   size: number;
   mime: string;
 };

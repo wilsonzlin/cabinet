@@ -4,10 +4,10 @@ import mapExists from "extlib/js/mapExists";
 import maybeFileStats from "extlib/js/maybeFileStats";
 import maybeParseInt from "extlib/js/maybeParseInt";
 import pathExtension from "extlib/js/pathExtension";
+import fileType from "file-type";
 import { promises as fs } from "fs";
-import { readdir } from "fs/promises";
+import { readdir, stat } from "fs/promises";
 import { imageSize } from "image-size";
-import mime from "mime";
 import { Ora } from "ora";
 import * as os from "os";
 import { basename, join, relative } from "path";
@@ -24,13 +24,16 @@ import {
   Video,
 } from "./model";
 
-const getMimeType = (absPath: string, spinner: Ora): string | undefined => {
-  const type = mime.getType(absPath);
+const getMimeType = async (
+  absPath: string,
+  spinner: Ora
+): Promise<string | undefined> => {
+  const type = await fileType.fromFile(absPath);
   if (!type) {
     spinner.warn(`Failed to get MIME type of ${absPath}`);
     return undefined;
   }
-  return type;
+  return type.mime;
 };
 
 const getImageSize = (
@@ -100,6 +103,38 @@ export const createLibrary = async ({
   spinner: Ora;
   videoExtensions: Set<string>;
 }): Promise<Library> => {
+  const getConvertedFormats = async (relPath: string) => {
+    if (!previewsDir) {
+      return [];
+    }
+
+    let stateDirEnts;
+    try {
+      stateDirEnts = await readdir(join(previewsDir, relPath));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return [];
+      }
+      throw e;
+    }
+
+    const formats = [];
+    for (const f of stateDirEnts) {
+      if (!f.startsWith("converted.") || f.endsWith(".incomplete")) {
+        continue;
+      }
+      const absPath = join(previewsDir, relPath, f);
+      const stats = await stat(absPath);
+      const mime = await getMimeType(absPath, spinner);
+      if (!mime) {
+        continue;
+      }
+      formats.push({ mime, absPath, size: stats.size });
+    }
+
+    return formats;
+  };
+
   const getVideoPreview = async (relPath: string) => {
     if (!previewsDir) {
       return;
@@ -158,11 +193,12 @@ export const createLibrary = async ({
     return mapExists(
       await getMediaProperties(absPath, spinner),
       async (properties) =>
-        mapExists(getMimeType(absPath, spinner), async (mimeType) => ({
+        mapExists(await getMimeType(absPath, spinner), async (mimeType) => ({
           type: DirEntryType.AUDIO as const,
           name: file,
           relativePath: relPath,
           absolutePath: absPath,
+          convertedFormats: await getConvertedFormats(relPath),
           size: stats.size,
           mime: mimeType,
           duration: properties.duration,
@@ -186,11 +222,12 @@ export const createLibrary = async ({
     return mapExists(
       await getMediaProperties(absPath, spinner),
       async (properties) =>
-        mapExists(getMimeType(absPath, spinner), async (mimeType) => ({
+        mapExists(await getMimeType(absPath, spinner), async (mimeType) => ({
           type: DirEntryType.VIDEO as const,
           name: file,
           relativePath: relPath,
           absolutePath: absPath,
+          convertedFormats: await getConvertedFormats(relPath),
           size: stats.size,
           mime: mimeType,
           duration: properties.duration,
@@ -215,12 +252,13 @@ export const createLibrary = async ({
     const relPath = relative(rootDir, absPath);
     const stats = await fs.stat(absPath);
 
-    return mapExists(await getImageSize(absPath, spinner), (dimensions) =>
-      mapExists(getMimeType(absPath, spinner), (mimeType) => ({
+    return mapExists(await getImageSize(absPath, spinner), async (dimensions) =>
+      mapExists(await getMimeType(absPath, spinner), async (mimeType) => ({
         type: DirEntryType.PHOTO,
         name: file,
         absolutePath: absPath,
         relativePath: relPath,
+        convertedFormats: await getConvertedFormats(relPath),
         size: stats.size,
         mime: mimeType,
         height: dimensions.height,

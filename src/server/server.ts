@@ -12,19 +12,19 @@ import { applyResponse, ClientError } from "./response";
 declare const CLIENT_HTML: string;
 
 export const startServer = ({
-  ssl,
-  port,
   library,
+  port,
   scratch,
+  ssl,
 }: {
+  library: Library;
+  port: number;
+  scratch?: string;
   ssl?: {
     key: Buffer;
     certificate: Buffer;
     dhParameters?: Buffer;
   };
-  port: number;
-  library: Library;
-  scratch?: string;
 }) =>
   new Promise<http.Server>((onServerListening) => {
     const ctx: ApiCtx = {

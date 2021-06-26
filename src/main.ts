@@ -10,14 +10,13 @@ import { createLibrary } from "./library/build";
 import { startServer } from "./server/server";
 import { buildVideoPreviews } from "./tool/buildVideoPreviews";
 import { convertVideos } from "./tool/convertVideos";
+import {
+  DEFAULT_AUDIO_EXTENSIONS,
+  DEFAULT_PHOTO_EXTENSIONS,
+  DEFAULT_VIDEO_EXTENSIONS,
+} from "./util/ff";
 
 const rp = (p: string): string => realpathSync(p);
-
-const DEFAULT_AUDIO_EXTENSIONS = new Set("mp3,ogg,wav".split(","));
-const DEFAULT_VIDEO_EXTENSIONS = new Set("mp4,m4v,webm".split(","));
-const DEFAULT_PHOTO_EXTENSIONS = new Set(
-  "png,gif,jpg,jpeg,bmp,svg,tif,tiff,webp".split(",")
-);
 
 const cli = sacli.Command.new()
   .optional("library", String)

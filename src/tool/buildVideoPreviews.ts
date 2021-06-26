@@ -1,5 +1,4 @@
 import isFile from "extlib/js/isFile";
-import mapDefined from "extlib/js/mapDefined";
 import pathExtension from "extlib/js/pathExtension";
 import recursiveReaddir from "extlib/js/recursiveReaddir";
 import { mkdir } from "fs/promises";
@@ -66,7 +65,7 @@ export const buildVideoPreviews = async ({
   const spinner = ora("Finding videos").start();
   const promises: PromiseGeneratorWithStatus[] = [];
   for await (const relPath of await recursiveReaddir(libraryDir)) {
-    if (!mapDefined(pathExtension(relPath), (ext) => fileExtensions.has(ext))) {
+    if (!fileExtensions.has(pathExtension(relPath) ?? "")) {
       continue;
     }
 
