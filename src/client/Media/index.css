@@ -36,7 +36,7 @@
 }
 
 .media-next::before {
-  content: 'Next';
+  content: "Next";
   display: block;
   font-size: 12px;
   color: #aaa;

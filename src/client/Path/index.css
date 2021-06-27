@@ -58,7 +58,10 @@
   display: none;
 }
 
-.path-up, .path-components button, .path-search-container, .path-playlist-toggle {
+.path-up,
+.path-components button,
+.path-search-container,
+.path-playlist-toggle {
   /* To align with .path-search. */
   border: 1px solid transparent;
   border-radius: 3px;
@@ -89,7 +92,7 @@
 }
 
 .path-search-container::before {
-  content: '🔎︎';
+  content: "🔎︎";
   flex-shrink: 0;
   margin-right: 8px;
 }

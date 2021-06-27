@@ -215,7 +215,8 @@
   justify-content: center;
 }
 
-.playback-rewind, .playback-forward {
+.playback-rewind,
+.playback-forward {
   width: 36px;
   height: 36px;
   margin: 0 20px;
@@ -226,7 +227,8 @@
   height: 58px;
 }
 
-.playback-780 .playback-rewind, .playback-780 .playback-forward {
+.playback-780 .playback-rewind,
+.playback-780 .playback-forward {
   margin: 0 12px;
 }
 
@@ -243,7 +245,8 @@
   flex-grow: 1;
 }
 
-.playback-560 .playback-rewind, .playback-560 .playback-forward {
+.playback-560 .playback-rewind,
+.playback-560 .playback-forward {
   display: none;
 }
 
@@ -251,7 +254,8 @@
   margin-right: 12px;
 }
 
-.playback-progress-top, .playback-progress-bottom {
+.playback-progress-top,
+.playback-progress-bottom {
   display: flex;
   flex-direction: row-reverse;
   justify-content: space-between;

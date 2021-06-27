@@ -19,7 +19,8 @@
   padding-right: 332px;
 }
 
-.explorer-folders, .explorer-files {
+.explorer-folders,
+.explorer-files {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
@@ -38,7 +39,8 @@
   grid-auto-rows: 150px;
 }
 
-.explorer-folder, .explorer-file {
+.explorer-folder,
+.explorer-file {
   width: 100%;
 }
 
@@ -82,7 +84,8 @@
   opacity: 1;
 }
 
-.explorer-file-duration, .explorer-file-name {
+.explorer-file-duration,
+.explorer-file-name {
   border-radius: 3px;
   padding: 3px;
   position: absolute;
