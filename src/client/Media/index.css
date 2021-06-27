@@ -1,13 +1,13 @@
+.media-audio {
+  display: none;
+}
+
 .media-video {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
   right: 0;
-}
-
-.media-audio .media-close {
-  display: none;
 }
 
 .media-video .media-close {
@@ -17,11 +17,6 @@
   padding: 6px 8px;
   position: absolute;
   top: 12px;
-}
-
-.media-audio > video {
-  height: 0;
-  width: 0;
 }
 
 .media-video > video {
