@@ -1,6 +1,5 @@
 .explorer {
-  flex-grow: 1;
-
+  height: 100%;
   padding: 76px 20px 150px 20px;
   overflow: auto;
   transition: 0.4s;
@@ -67,8 +66,6 @@
 
   text-align: left;
   font-size: 12px;
-  color: white;
-  text-shadow: 1px 1px 3px #222;
   word-wrap: break-word;
 }
 

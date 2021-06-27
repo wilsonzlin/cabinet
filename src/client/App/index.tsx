@@ -73,6 +73,8 @@ export default ({}: {}) => {
       clearTimeout(isIdleTimeout.current);
     };
   }, []);
+  const isCurrentlyImmersed =
+    isViewing && isIdle && (playlistClosed || !playlistMaximised);
 
   return (
     <div
@@ -81,7 +83,7 @@ export default ({}: {}) => {
         isViewing && "app-dark",
         `app-pt-${pointerType}`,
         (width < 500 || height < 450) && "app-tucked",
-        isViewing && isIdle && "app-viewing-idle"
+        isCurrentlyImmersed && "app-immersed"
       )}
       ref={(elem) => setAppElem(elem ?? undefined)}
     >
@@ -135,9 +137,9 @@ export default ({}: {}) => {
       />
       {isPlayingMedia && (
         <Playback
+          canShowCard={!isCurrentlyImmersed}
           currentTime={currentPlaybackTime ?? Duration.fromMillis(0)}
           file={media}
-          idle={isIdle}
           mediaRef={mediaRef}
           // When the details button isn't showing, pressing the details
           // shows the extended details card.

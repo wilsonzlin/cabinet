@@ -56,7 +56,7 @@ const File = ({
   return (
     <button
       ref={(elem) => setButtonElem(elem ?? undefined)}
-      className="explorer-file"
+      className="shadowtext explorer-file"
       onClick={onClick}
       onMouseEnter={() => {
         if (videoRef.current) {

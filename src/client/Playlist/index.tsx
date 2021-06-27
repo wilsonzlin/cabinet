@@ -1,7 +1,7 @@
 import classNames from "extlib/js/classNames";
-import React from "react";
-import "./index.css";
+import React, { useEffect, useRef } from "react";
 import { ListedMedia } from "../../api/listFiles";
+import "./index.css";
 
 export default ({
   closed,
@@ -20,6 +20,11 @@ export default ({
   position: number;
   showCloseButton: boolean;
 }) => {
+  const listItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  useEffect(() => {
+    listItemRefs.current.splice(files.length);
+  }, [files.length]);
+
   return (
     <div
       className={classNames(
@@ -34,6 +39,7 @@ export default ({
         {files.map((f, i) => (
           <button
             key={i}
+            ref={(elem) => (listItemRefs.current[i] = elem)}
             className="playlist-item"
             onClick={() => onChangePosition(i)}
           >
@@ -54,7 +60,16 @@ export default ({
       </div>
       <div className="playlist-controls">
         <button onClick={() => onChangePosition(position - 1)}>⏮</button>
-        <button onClick={() => onChangePosition(-1)}>⏹</button>
+        <button
+          onClick={() =>
+            listItemRefs.current[position]?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            })
+          }
+        >
+          ◎
+        </button>
         <button onClick={() => onChangePosition(position + 1)}>⏭</button>
       </div>
     </div>

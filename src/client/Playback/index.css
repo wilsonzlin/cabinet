@@ -1,4 +1,11 @@
 .playback {
+  /*
+    TODO HACK WORKAROUND BUG
+    This is for the opacity bug on .path (see for more details).
+    This is needed when playlist is maximised.
+  */
+  z-index: 3;
+
   position: absolute;
   left: 40px;
   right: 40px;
@@ -13,16 +20,16 @@
 }
 
 .app-tucked .playback {
-  bottom: 12px;
-  left: 12px;
-  right: 12px;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
 }
 
 .app-tucked .playback-reserve-right-space {
   right: 367px;
 }
 
-.app-viewing-idle .playback {
+.app-immersed .playback {
   opacity: 0;
   pointer-events: none;
 }
@@ -104,7 +111,7 @@
 
 .playback-main {
   border-radius: 10px;
-  padding: 12px;
+  padding: 0 12px;
   height: 100px;
   pointer-events: auto;
 
@@ -112,19 +119,20 @@
   align-items: center;
 }
 
-.playback-main > * {
-  flex-shrink: 0;
-}
-
 .playback-690 .playback-main {
   /* For two level layout. */
   flex-wrap: wrap;
   height: auto;
+  padding: 12px;
+}
+
+.playback-main > * {
+  flex-shrink: 0;
 }
 
 .playback-thumbnail {
   border: 1px solid #ddd;
-  height: 100%;
+  height: calc(100% - 24px);
   margin-right: 16px;
   width: 120px;
   display: flex;
@@ -138,7 +146,30 @@
 }
 
 .playback-details {
+  /* Maximise touch target. */
+  height: 100%;
+  display: flex;
+  align-items: stretch;
   width: 160px;
+}
+
+.playback-780 .playback-details {
+  width: 120px;
+}
+
+.playback-690 .playback-details {
+  font-size: 14px;
+  height: auto;
+  width: 100%;
+}
+
+.playback-details-text {
+  /* TODO HACK This element is not a button (see index.tsx). */
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .playback-details-text > * {
@@ -163,20 +194,8 @@
   font-weight: bold;
 }
 
-.playback-780 .playback-details {
-  width: 120px;
-}
-
 .playback-780 .playback-path {
   display: none;
-}
-
-.playback-690 .playback-details {
-  font-size: 14px;
-  width: 100%;
-
-  display: flex;
-  align-items: stretch;
 }
 
 .playback-690 .playback-details-text {
@@ -250,7 +269,7 @@
   margin-left: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: center;
 }
 
 .playback-end-table button {

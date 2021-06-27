@@ -1,10 +1,8 @@
 .path {
   /*
     TODO HACK WORKAROUND BUG
-    Some browsers do not render opacity on back button when transitioning to
-    opacity = 1 unless z-index >= 1.
-    Because of this fix, .playlist also has a z-index set. Sync .playlist CSS
-    when this is changed.
+    Some browsers do not render opacity on back button when transitioning to opacity = 1 unless z-index >= 1.
+    Because of this fix, .playlist and .playback also have a z-index set. Sync their CSS when this is changed.
     Occurs on:
       - Firefox (Windows 64-bit, 89.0.2).
   */
@@ -26,7 +24,7 @@
   transition: 0.4s;
 }
 
-.app-viewing-idle .path {
+.app-immersed .path {
   opacity: 0;
 }
 

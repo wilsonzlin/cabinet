@@ -7,9 +7,9 @@ import { useElemDimensions } from "../_common/ui";
 import "./index.css";
 
 export default ({
+  canShowCard,
   currentTime,
   file,
-  idle,
   mediaRef: { current: element },
   onDetailsButtonVisibilityChange,
   onTogglePlaylistPanel,
@@ -17,9 +17,9 @@ export default ({
   reserveRightSpace,
   totalTime,
 }: {
+  canShowCard: boolean;
   currentTime: Duration;
   file: ListedAudio | ListedVideo;
-  idle: boolean;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   onDetailsButtonVisibilityChange: (isDetailsButtonShowing: boolean) => void;
   onTogglePlaylistPanel: () => void;
@@ -30,7 +30,7 @@ export default ({
   const [showCard, setShowCard] = useState(false);
   useEffect(() => {
     setShowCard(false);
-  }, [idle]);
+  }, [canShowCard]);
 
   const [elem, setElem] = useState<HTMLDivElement | undefined>(undefined);
   const { width } = useElemDimensions(elem);
@@ -90,6 +90,7 @@ export default ({
           {file.type == "audio" ? "🎵" : "📼"}
         </div>
         <div className="playback-details">
+          {/* TODO HACK This is not a button as overflow doesn't cause ellipsis. */}
           <div
             className="playback-details-text"
             onClick={() =>
