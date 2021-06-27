@@ -46,7 +46,7 @@
   white-space: nowrap;
 }
 
-.path-components button:hover {
+.app:not(.app-pt-touch) .path-components button:hover {
   background: rgba(242, 242, 242, 0.33);
 }
 

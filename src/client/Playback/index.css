@@ -1,21 +1,25 @@
 .playback {
   position: absolute;
   left: 40px;
-  right: 380px;
+  right: 40px;
   bottom: 30px;
   transition: 0.4s;
   /* .playback-card takes up invisible space. */
   pointer-events: none;
 }
 
-.playback-extended {
-  right: 40px;
+.playback-reserve-right-space {
+  right: 380px;
 }
 
 .playback-tucked {
   bottom: 12px;
   left: 12px;
   right: 12px;
+}
+
+.playback-tucked.playback-reserve-right-space {
+  right: 372px;
 }
 
 .playback-hidden {
@@ -27,7 +31,7 @@
   transition: 0.3s;
 }
 
-.playback button:hover {
+.app:not(.app-pt-touch) .playback button:hover {
   background: rgba(240, 240, 240, 0.5);
 }
 

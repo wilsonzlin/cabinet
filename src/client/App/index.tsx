@@ -1,7 +1,7 @@
 import classNames from "extlib/js/classNames";
 import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
 import { useElemDimensions } from "../_common/ui";
 import Explorer from "../Explorer";
@@ -34,10 +34,10 @@ export default ({}: {}) => {
   const isPlayingMedia = media?.type == "audio" || isPlayingVideo;
 
   const [appElem, setAppElem] = useState<HTMLDivElement | undefined>(undefined);
-  const { width: appWidth } = useElemDimensions(appElem);
-  const playlistMaximised = appWidth < 860;
-  const playbackTucked = appWidth < 500;
-  const pathUseMenu = appWidth < 1024;
+  const { width, height } = useElemDimensions(appElem);
+  const playlistMaximised = width < 860;
+  const tucked = width < 500 || height < 450;
+  const pathUseMenu = width < 1024;
 
   const Path = useCallback(
     () => (
@@ -50,14 +50,35 @@ export default ({}: {}) => {
     [path, pathUseMenu]
   );
 
+  const [pointerType, setPointerType] = useState("mouse");
+  useEffect(() => {
+    const listener = (ev: PointerEvent) => {
+      setPointerType(ev.pointerType);
+    };
+    const EVENTS = ["pointerdown", "pointermove"] as const;
+    for (const e of EVENTS) {
+      document.addEventListener(e, listener, true);
+    }
+    return () => {
+      for (const e of EVENTS) {
+        document.removeEventListener(e, listener, true);
+      }
+    };
+  }, []);
+
   return (
     <div
-      className={classNames("app", (photo || isPlayingVideo) && "app-dark")}
+      className={classNames(
+        "app",
+        (photo || isPlayingVideo) && "app-dark",
+        `app-pt-${pointerType}`
+      )}
       ref={(elem) => setAppElem(elem ?? undefined)}
     >
-      <Menu Path={Path} />
+      <Menu Path={Path} tucked={tucked} />
       <Explorer
-        extended={playlistClosed || playlistMaximised}
+        reserveRightSpace={!playlistClosed && !playlistMaximised}
+        tucked={tucked}
         path={path}
         onClickFolder={(f) => setPath((p) => p.concat(f))}
         onClickMediaFile={(files, file) => {
@@ -100,8 +121,8 @@ export default ({}: {}) => {
       {isPlayingMedia && (
         <Playback
           mediaRef={mediaRef.current}
-          tucked={playbackTucked}
-          extended={playlistClosed || playlistMaximised}
+          tucked={tucked}
+          reserveRightSpace={!playlistClosed && !playlistMaximised}
           hideAutomatically={!!photo || isPlayingVideo}
           onTogglePlaylistPanel={
             playlistMaximised ? () => setPlaylistClosed((s) => !s) : undefined

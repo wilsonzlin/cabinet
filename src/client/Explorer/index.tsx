@@ -62,13 +62,15 @@ const File = ({
 };
 
 export default ({
-  extended,
+  reserveRightSpace,
+  tucked,
   path,
   onClickFolder,
   onClickMediaFile,
   onClickPhotoFile,
 }: {
-  extended: boolean;
+  reserveRightSpace: boolean;
+  tucked: boolean;
   path: string[];
   onClickFolder: (name: string) => void;
   onClickMediaFile: (relatedFiles: ListedMedia[], file: ListedMedia) => void;
@@ -97,7 +99,13 @@ export default ({
     ) ?? [];
 
   return (
-    <div className={classNames("explorer", extended && "explorer-extended")}>
+    <div
+      className={classNames(
+        "explorer",
+        reserveRightSpace && "explorer-reserve-right-space",
+        tucked && "explorer-tucked"
+      )}
+    >
       <div className="explorer-entries">
         <div className="explorer-folders">
           {folders.map((f) => (

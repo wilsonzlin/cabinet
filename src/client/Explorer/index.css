@@ -1,21 +1,45 @@
 .explorer {
   height: 100%;
-  padding: 20px 340px 200px 20px;
+  padding: 20px 360px 20px 20px;
   overflow: auto;
   transition: 0.4s;
 }
 
-.explorer-extended {
-  padding-right: 20px;
+.explorer-reserve-right-space {
+  padding-right: 240px;
+}
+
+.explorer-tucked {
+  padding-left: 12px;
+  padding-right: 12px;
+  padding-top: 12px;
+}
+
+.explorer-reserve-right-space.explorer-tucked {
+  padding-right: 232px;
 }
 
 .explorer-folders, .explorer-files {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.explorer-tucked .explorer-folders,
+.explorer-tucked .explorer-files {
+  gap: 12px;
 }
 
 .explorer-folders:not(:empty) {
   margin-bottom: 100px;
+}
+
+.explorer-files {
+  grid-auto-rows: 150px;
+}
+
+.explorer-folder, .explorer-file {
+  width: 100%;
 }
 
 .explorer-folder {
@@ -26,21 +50,13 @@
 .explorer-folder {
   border-radius: 3px;
   border: 1px solid #ddd;
-  background: transparent;
-  margin-right: 20px;
-  margin-bottom: 20px;
   text-align: left;
-  width: 200px;
+  word-wrap: break-word;
 }
 
 .explorer-file {
   border: 1px solid #ddd;
   border-radius: 3px;
-  margin-right: 20px;
-  margin-bottom: 20px;
-  padding: 0;
-  height: 150px;
-  width: 200px;
 
   position: relative;
 
@@ -64,7 +80,7 @@
   transition: 0.3s;
 }
 
-.explorer-file-video-snippet:hover {
+.app:not(.app-pt-touch) .explorer-file-video-snippet:hover {
   opacity: 1;
 }
 

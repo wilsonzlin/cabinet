@@ -47,7 +47,7 @@
   word-wrap: break-word;
 }
 
-.playlist-item:hover {
+.app:not(.app-pt-touch) .playlist-item:hover {
   background-color: rgba(230, 230, 230, 0.2);
 }
 

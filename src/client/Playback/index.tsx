@@ -7,7 +7,7 @@ import { useElemDimensions } from "../_common/ui";
 import "./index.css";
 
 export default ({
-  extended,
+  reserveRightSpace,
   tucked,
   file,
   hideAutomatically,
@@ -16,7 +16,7 @@ export default ({
   playing,
   progress,
 }: {
-  extended: boolean;
+  reserveRightSpace: boolean;
   tucked: boolean;
   file: ListedAudio | ListedVideo;
   hideAutomatically: boolean;
@@ -66,7 +66,7 @@ export default ({
       ref={(e) => setElem(e ?? undefined)}
       className={classNames(
         "playback",
-        extended && "playback-extended",
+        reserveRightSpace && "playback-reserve-right-space",
         tucked && "playback-tucked",
         hidden && "playback-hidden",
         ...[480, 560, 690, 780, 940].map((bp) =>
