@@ -1,21 +1,35 @@
-import React, { MutableRefObject } from "react";
-import { ListedAudio, ListedVideo } from "../../api/listFiles";
+import classNames from "extlib/js/classNames";
+import mapDefined from "extlib/js/mapDefined";
+import React, { MutableRefObject, useState } from "react";
+import { ListedMedia } from "../../api/listFiles";
 import { apiGetPath } from "../_common/api";
 import "./index.css";
 
+const SHOW_NEXT_IN_LAST_N_SECS = 10;
+
 export default ({
-  mediaRef,
   file,
+  mediaRef,
+  next,
   onEnded,
   onPlaybackChange,
+  onRequestNext,
   onTimeUpdate,
 }: {
+  file: ListedMedia;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
-  file: ListedAudio | ListedVideo;
+  next?: ListedMedia;
   onEnded: () => void;
   onPlaybackChange: (playing: boolean) => void;
+  onRequestNext: () => void;
   onTimeUpdate: (currentTime: number) => void;
 }) => {
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalTime, setTotalTime] = useState(0);
+  const timeUntilNext = totalTime - currentTime;
+  const canShowNext =
+    timeUntilNext > 0 && timeUntilNext <= SHOW_NEXT_IN_LAST_N_SECS;
+
   return (
     <div className={`media-${file.type}`}>
       <video
@@ -25,9 +39,14 @@ export default ({
         autoPlay={true}
         controls={false}
         onEnded={onEnded}
+        onDurationChange={(e) => setTotalTime(e.currentTarget.duration)}
         onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}
-        onTimeUpdate={(event) => onTimeUpdate(event.currentTarget.currentTime)}
+        onTimeUpdate={(event) => {
+          const time = event.currentTarget.currentTime;
+          setCurrentTime(time);
+          onTimeUpdate(time);
+        }}
       >
         <source
           type={file.format}
@@ -41,6 +60,34 @@ export default ({
           />
         ))}
       </video>
+      {mapDefined(next, (next) => (
+        <button
+          // Have this always rendered to allow opacity transition in.
+          className={classNames(
+            "acrylic",
+            "media-next",
+            canShowNext && "media-next-visible"
+          )}
+          onClick={onRequestNext}
+        >
+          {canShowNext && (
+            <>
+              <div
+                className="media-next-fill"
+                style={{
+                  width: `${
+                    ((SHOW_NEXT_IN_LAST_N_SECS - timeUntilNext) /
+                      SHOW_NEXT_IN_LAST_N_SECS) *
+                    100
+                  }%`,
+                }}
+              />
+              <div className="media-next-title">{next.title}</div>
+              <div className="media-next-author">{next.author}</div>
+            </>
+          )}
+        </button>
+      ))}
     </div>
   );
 };

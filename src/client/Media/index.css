@@ -16,3 +16,41 @@
   width: 100%;
   object-fit: contain;
 }
+
+.media-next {
+  text-align: left;
+  position: absolute;
+  right: 0;
+  bottom: 200px;
+  padding: 10px;
+  font-size: 14px;
+  opacity: 0;
+  transition: 0.25s linear;
+
+  border-radius: 6px 0 0 6px;
+  overflow: hidden;
+}
+
+.media-next-visible {
+  opacity: 1;
+}
+
+.media-next::before {
+  content: 'Next';
+  display: block;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.media-next-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: 0.4s;
+}
+
+.media-next-title {
+  font-weight: bold;
+}

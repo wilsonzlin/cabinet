@@ -1,3 +1,4 @@
+import mapDefined from "extlib/js/mapDefined";
 import classNames from "extlib/js/classNames";
 import { Duration } from "luxon";
 import React, { useEffect, useRef, useState } from "react";
@@ -11,6 +12,8 @@ import Playback from "../Playback";
 import Playlist from "../Playlist";
 import "./index.css";
 
+const ZERO_DURATION = Duration.fromMillis(0);
+
 export default ({}: {}) => {
   const mediaRef = useRef<HTMLVideoElement | null>(null);
   const [mediaPlaylist, setMediaPlaylist] = useState<ListedMedia[]>([]);
@@ -23,8 +26,12 @@ export default ({}: {}) => {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
     Duration | undefined
   >(undefined);
-
   const media: ListedMedia | undefined = mediaPlaylist[mediaPlaylistPosition];
+  const currentTime = currentPlaybackTime ?? ZERO_DURATION;
+  const totalTime =
+    mapDefined(media, (media) => Duration.fromMillis(media.duration * 1000)) ??
+    ZERO_DURATION;
+
   const isPlayingVideo = media?.type == "video";
   const isPlayingMedia = media?.type == "audio" || isPlayingVideo;
   const isViewing = !!(photo || isPlayingVideo);
@@ -100,9 +107,11 @@ export default ({}: {}) => {
       {isPlayingMedia && (
         <Media
           mediaRef={mediaRef}
+          next={mediaPlaylist[mediaPlaylistPosition + 1]}
           file={media}
           onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
           onPlaybackChange={(playing) => setPlaying(playing)}
+          onRequestNext={() => setMediaPlaylistPosition((p) => p + 1)}
           onTimeUpdate={(currentTime) =>
             setCurrentPlaybackTime(Duration.fromMillis(currentTime * 1000))
           }
@@ -138,7 +147,7 @@ export default ({}: {}) => {
       {isPlayingMedia && (
         <Playback
           canShowCard={!isCurrentlyImmersed}
-          currentTime={currentPlaybackTime ?? Duration.fromMillis(0)}
+          currentTime={currentTime}
           file={media}
           mediaRef={mediaRef}
           // When the details button isn't showing, pressing the details
@@ -153,7 +162,7 @@ export default ({}: {}) => {
           onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
           playing={playing}
           reserveRightSpace={!playlistClosed && !playlistMaximised}
-          totalTime={Duration.fromMillis(media.duration * 1000)}
+          totalTime={totalTime}
         />
       )}
     </div>
