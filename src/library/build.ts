@@ -8,6 +8,7 @@ import fileType from "file-type";
 import { promises as fs } from "fs";
 import { readdir, stat } from "fs/promises";
 import { imageSize } from "image-size";
+import mime from "mime";
 import { Ora } from "ora";
 import * as os from "os";
 import { basename, join, relative } from "path";
@@ -28,12 +29,15 @@ const getMimeType = async (
   absPath: string,
   spinner: Ora
 ): Promise<string | undefined> => {
-  const type = await fileType.fromFile(absPath);
+  // "file-type" uses magic bytes, but doesn't detect every file type,
+  // so fall back to simple extension lookup via "mime".
+  const type =
+    (await fileType.fromFile(absPath))?.mime ?? mime.getType(absPath);
   if (!type) {
     spinner.warn(`Failed to get MIME type of ${absPath}`);
     return undefined;
   }
-  return type.mime;
+  return type;
 };
 
 const getImageSize = (
