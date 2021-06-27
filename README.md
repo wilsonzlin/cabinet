@@ -15,7 +15,8 @@ with a single command and zero configuration.
 
 ```bash
 npx @wzlin/cabinet \
-  --library /path/to/library/folder
+  --library /path/to/library/folder \
+  server \
   --port PORT_TO_LISTEN_ON
 ```
 
