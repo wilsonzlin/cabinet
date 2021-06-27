@@ -26,7 +26,7 @@
   font-size: 14px;
 
   opacity: 0;
-  transition: 0.25s linear;
+  transition: 0.25s;
 
   border-radius: 6px 0 0 6px;
   overflow: hidden;
@@ -49,7 +49,7 @@
   bottom: 0;
   left: 0;
   background-color: rgba(255, 255, 255, 0.1);
-  transition: 0.4s;
+  transition: 0.25s linear;
 }
 
 .media-next-title {
