@@ -27,8 +27,8 @@ export default ({
   const [currentTime, setCurrentTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const timeUntilNext = totalTime - currentTime;
-  const canShowNext =
-    timeUntilNext > 0 && timeUntilNext <= SHOW_NEXT_IN_LAST_N_SECS;
+  const nextCountdownDur = Math.min(totalTime, SHOW_NEXT_IN_LAST_N_SECS);
+  const canShowNext = timeUntilNext > 0 && timeUntilNext <= nextCountdownDur;
 
   return (
     <div className={`media-${file.type}`}>
@@ -76,8 +76,7 @@ export default ({
                 className="media-next-fill"
                 style={{
                   width: `${
-                    ((SHOW_NEXT_IN_LAST_N_SECS - timeUntilNext) /
-                      SHOW_NEXT_IN_LAST_N_SECS) *
+                    ((nextCountdownDur - timeUntilNext) / nextCountdownDur) *
                     100
                   }%`,
                 }}
