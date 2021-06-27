@@ -265,7 +265,24 @@
 
 .playback-slider {
   cursor: pointer;
+  height: 24px;
+  /* Use padding instead of margin to increase touch target. */
+  padding: 8px 0;
   width: 100%;
+}
+
+.playback-slider-tube {
+  background: #efefef;
+  border-radius: 3px;
+  border: 1px solid #d0d0d0;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.playback-slider-fill {
+  background: #767676;
+  height: 100%;
 }
 
 .playback-end-table {
