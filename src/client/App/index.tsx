@@ -1,7 +1,9 @@
+import classNames from "extlib/js/classNames";
 import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
+import { useElemDimensions } from "../_common/ui";
 import Explorer from "../Explorer";
 import Image from "../Image";
 import Media from "../Media";
@@ -13,8 +15,6 @@ import PlaylistToggle from "../PlaylistToggle";
 import "./index.css";
 
 export default ({}: {}) => {
-  const appRef = useRef<HTMLDivElement | null>(null);
-
   const mediaRef = useRef<{ element: HTMLMediaElement | undefined }>({
     element: undefined,
   });
@@ -23,7 +23,7 @@ export default ({}: {}) => {
     useState<number>(-1);
   const [photo, setPhoto] = useState<ListedPhoto | undefined>(undefined);
   const [path, setPath] = useState<Array<string>>([]);
-  const [playlistClosed, setPlaylistClosed] = useState(false);
+  const [playlistClosed, setPlaylistClosed] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
     Duration | undefined
@@ -32,20 +32,25 @@ export default ({}: {}) => {
   const media: ListedMedia | undefined = mediaPlaylist[mediaPlaylistPosition];
   const isPlayingVideo = media?.type == "video";
   const isPlayingMedia = media?.type == "audio" || isPlayingVideo;
-  useEffect(() => {
-    appRef.current?.classList.toggle("app-dark", !!photo || isPlayingVideo);
-  }, [photo, isPlayingVideo]);
 
   const Path = useCallback(
     () => <PathImpl components={path} onNavigate={(p) => setPath(p)} />,
     [path]
   );
 
+  const [appElem, setAppElem] = useState<HTMLDivElement | undefined>(undefined);
+  const { width: appWidth } = useElemDimensions(appElem);
+  const playlistMaximised = appWidth < 860;
+  const playbackTucked = appWidth < 500;
+
   return (
-    <div className="app" ref={appRef}>
+    <div
+      className={classNames("app", (photo || isPlayingVideo) && "app-dark")}
+      ref={(elem) => setAppElem(elem ?? undefined)}
+    >
       <Menu Path={Path} />
       <Explorer
-        extended={playlistClosed}
+        extended={playlistClosed || playlistMaximised}
         path={path}
         onClickFolder={(f) => setPath((p) => p.concat(f))}
         onClickMediaFile={(files, file) => {
@@ -79,6 +84,7 @@ export default ({}: {}) => {
       )}
       <Playlist
         closed={playlistClosed}
+        maximised={playlistMaximised}
         files={mediaPlaylist}
         position={mediaPlaylistPosition}
         onChangePosition={setMediaPlaylistPosition}
@@ -87,8 +93,12 @@ export default ({}: {}) => {
       {isPlayingMedia && (
         <Playback
           mediaRef={mediaRef.current}
-          extended={playlistClosed}
+          tucked={playbackTucked}
+          extended={playlistClosed || playlistMaximised}
           hideAutomatically={!!photo || isPlayingVideo}
+          onTogglePlaylistPanel={
+            playlistMaximised ? () => setPlaylistClosed((s) => !s) : undefined
+          }
           playing={playing}
           progress={mapDefined(currentPlaybackTime, (current) => ({
             current,
@@ -97,7 +107,7 @@ export default ({}: {}) => {
           file={media}
         />
       )}
-      {playlistClosed && (
+      {playlistClosed && !playlistMaximised && (
         <PlaylistToggle
           dark={!!photo || isPlayingVideo}
           onRequestOpenPlaylist={() => setPlaylistClosed(false)}

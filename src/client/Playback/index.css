@@ -4,10 +4,18 @@
   right: 380px;
   bottom: 30px;
   transition: 0.4s;
+  /* .playback-card takes up invisible space. */
+  pointer-events: none;
 }
 
 .playback-extended {
   right: 40px;
+}
+
+.playback-tucked {
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
 }
 
 .playback-hidden {
@@ -33,16 +41,23 @@
 
   margin-bottom: -15px;
   opacity: 0;
-  /* Use height: 0 instead of pointer-events: none as otherwise containing .playlist will still have large invisible mouse target. */
-  height: 0;
 
   transition: 0.25s;
+}
+
+.playback-940 .playback-card {
+  margin-left: 12px;
+}
+
+.playback-480 .playback-card {
+  margin-left: 0;
+  width: 100%;
 }
 
 .playback-card-open {
   margin-bottom: 5px;
   opacity: 1;
-  height: auto;
+  pointer-events: auto;
 }
 
 .playback-card-details {
@@ -87,6 +102,7 @@
   border-radius: 10px;
   padding: 12px;
   height: 100px;
+  pointer-events: auto;
 
   display: flex;
   align-items: center;
@@ -94,6 +110,12 @@
 
 .playback-main > * {
   flex-shrink: 0;
+}
+
+.playback-690 .playback-main {
+  /* For two level layout. */
+  flex-wrap: wrap;
+  height: auto;
 }
 
 .playback-thumbnail {
@@ -107,14 +129,22 @@
   font-size: 24px;
 }
 
+.playback-940 .playback-thumbnail {
+  display: none;
+}
+
 .playback-details {
   width: 160px;
 }
 
-.playback-details > * {
+.playback-details-text > * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.playback-details-button {
+  display: none;
 }
 
 .playback-path {
@@ -126,6 +156,32 @@
 
 .playback-title {
   font-weight: bold;
+}
+
+.playback-780 .playback-details {
+  width: 120px;
+}
+
+.playback-780 .playback-path {
+  display: none;
+}
+
+.playback-690 .playback-details {
+  font-size: 14px;
+  width: 100%;
+
+  display: flex;
+  align-items: stretch;
+}
+
+.playback-690 .playback-details-text {
+  flex-grow: 1;
+}
+
+.playback-690 .playback-details-button {
+  flex-shrink: 0;
+  padding: 0 8px;
+  display: block;
 }
 
 .playback-controls {
@@ -152,8 +208,29 @@
   height: 58px;
 }
 
+.playback-780 .playback-rewind, .playback-780 .playback-forward {
+  margin: 0 12px;
+}
+
+.playback-780 .playback-play {
+  width: 36px;
+  height: 36px;
+}
+
+.playback-690 .playback-rewind {
+  margin-left: 0;
+}
+
 .playback-progress {
   flex-grow: 1;
+}
+
+.playback-560 .playback-rewind, .playback-560 .playback-forward {
+  display: none;
+}
+
+.playback-560 .playback-play {
+  margin-right: 12px;
 }
 
 .playback-progress-top, .playback-progress-bottom {
@@ -181,4 +258,12 @@
   border-radius: 100%;
   border: 0;
   padding: 8px;
+}
+
+.playback-780 .playback-end-table {
+  margin-left: 10px;
+}
+
+.playback-690 .playback-end-table {
+  display: none;
 }

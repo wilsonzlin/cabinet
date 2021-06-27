@@ -15,6 +15,20 @@
   pointer-events: none;
 }
 
+.playlist-maximised {
+  border-radius: 10px 10px 0 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: auto;
+}
+
+.playlist-maximised.playlist-closed {
+  right: 0;
+  top: 100%;
+}
+
 .playlist-items {
   height: 100%;
   padding: 60px 0;
@@ -81,6 +95,10 @@
 .playlist-controls {
   bottom: 10px;
   display: flex;
+}
+
+.playlist-maximised .playlist-controls {
+  display: none;
 }
 
 .playlist-controls > * {

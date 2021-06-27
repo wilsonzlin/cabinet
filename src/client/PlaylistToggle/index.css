@@ -7,3 +7,9 @@
 .playlist-toggle-dark {
   color: #aaa;
 }
+
+@media (max-width: 768px) {
+  .playlist-toggle {
+    display: none;
+  }
+}

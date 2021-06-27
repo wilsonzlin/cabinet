@@ -3,21 +3,26 @@ import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { useEffect, useRef, useState } from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
+import { useElemDimensions } from "../_common/ui";
 import "./index.css";
 
 export default ({
-  mediaRef: { element },
   extended,
-  hideAutomatically,
-  playing,
+  tucked,
   file,
+  hideAutomatically,
+  mediaRef: { element },
+  onTogglePlaylistPanel,
+  playing,
   progress,
 }: {
-  mediaRef: { element: HTMLMediaElement | undefined };
   extended: boolean;
-  hideAutomatically: boolean;
-  playing: boolean;
+  tucked: boolean;
   file: ListedAudio | ListedVideo;
+  hideAutomatically: boolean;
+  mediaRef: { element: HTMLMediaElement | undefined };
+  onTogglePlaylistPanel?: () => void;
+  playing: boolean;
   progress?: {
     current: Duration;
     total: Duration;
@@ -53,12 +58,20 @@ export default ({
     };
   }, [hideAutomatically]);
 
+  const [elem, setElem] = useState<HTMLDivElement | undefined>(undefined);
+  const { width } = useElemDimensions(elem);
+
   return (
     <div
+      ref={(e) => setElem(e ?? undefined)}
       className={classNames(
         "playback",
         extended && "playback-extended",
-        hidden && "playback-hidden"
+        tucked && "playback-tucked",
+        hidden && "playback-hidden",
+        ...[480, 560, 690, 780, 940].map((bp) =>
+          width <= bp ? `playback-${bp}` : undefined
+        )
       )}
     >
       <div
@@ -101,16 +114,26 @@ export default ({
           {file.type == "audio" ? "🎵" : "📼"}
         </div>
         <div className="playback-details">
-          <div className="playback-path" title={file.path}>
-            {file.path}
-          </div>
           <div
-            className="playback-title"
+            className="playback-details-text"
+            onClick={() =>
+              onTogglePlaylistPanel
+                ? onTogglePlaylistPanel()
+                : setShowCard((s) => !s)
+            }
+          >
+            <div className="playback-path" title={file.path}>
+              {file.path}
+            </div>
+            <div className="playback-title">{file.title}</div>
+            <div>{file.author ?? ""}</div>
+          </div>
+          <button
+            className="playback-details-button"
             onClick={() => setShowCard((s) => !s)}
           >
-            {file.title}
-          </div>
-          <div>{file.author ?? ""}</div>
+            ⓘ
+          </button>
         </div>
         <div className="playback-controls">
           <button

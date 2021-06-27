@@ -9,12 +9,14 @@ export default ({
   closed,
   files,
   position,
+  maximised,
 }: {
   onChangePosition: (pos: number) => void;
   onRequestClose: () => void;
   closed: boolean;
   files: ListedMedia[];
   position: number;
+  maximised: boolean;
 }) => {
   return (
     <div
@@ -22,7 +24,8 @@ export default ({
         "acrylic",
         "floating",
         "playlist",
-        closed && "playlist-closed"
+        closed && "playlist-closed",
+        maximised && "playlist-maximised"
       )}
     >
       <div className="playlist-items">

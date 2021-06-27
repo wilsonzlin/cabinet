@@ -31,5 +31,6 @@ button {
   right: 0;
   overflow: hidden;
   background: #fff;
+  font-size: 16px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
