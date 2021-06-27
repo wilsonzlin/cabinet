@@ -35,6 +35,10 @@
   overflow: auto;
 }
 
+.playlist-maximised .playlist-items {
+  padding-bottom: 150px;
+}
+
 .playlist-item {
   display: block;
   padding: 8px 10px;

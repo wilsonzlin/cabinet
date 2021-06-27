@@ -33,15 +33,22 @@ export default ({}: {}) => {
   const isPlayingVideo = media?.type == "video";
   const isPlayingMedia = media?.type == "audio" || isPlayingVideo;
 
-  const Path = useCallback(
-    () => <PathImpl components={path} onNavigate={(p) => setPath(p)} />,
-    [path]
-  );
-
   const [appElem, setAppElem] = useState<HTMLDivElement | undefined>(undefined);
   const { width: appWidth } = useElemDimensions(appElem);
   const playlistMaximised = appWidth < 860;
   const playbackTucked = appWidth < 500;
+  const pathUseMenu = appWidth < 1024;
+
+  const Path = useCallback(
+    () => (
+      <PathImpl
+        components={path}
+        onNavigate={(p) => setPath(p)}
+        useMenu={pathUseMenu}
+      />
+    ),
+    [path, pathUseMenu]
+  );
 
   return (
     <div

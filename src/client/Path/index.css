@@ -1,24 +1,61 @@
 .path {
+  flex-grow: 1;
+}
+
+.path, .path-components, .path-components-list {
   display: flex;
   align-items: stretch;
 }
 
-.path-components > *, .path-search-container {
+.path-components {
+  flex-shrink: 0;
+}
+
+.path-use-menu .path-components {
+  position: relative;
+}
+
+.path-use-menu .path-components-list {
+  border-radius: 3px;
+  flex-direction: column;
+  left: 0;
+  position: absolute;
+  top: calc(100% + 6px);
+  width: 220px;
+}
+
+.path-use-menu .path-components-list > :last-child {
+  display: none;
+}
+
+.path-components button, .path-search-container {
+  /* To align with .path-search. */
   border: 1px solid transparent;
   border-radius: 3px;
   padding: 6px 8px;
   font-size: 14px;
 }
 
-.path-components > :hover {
+.path-use-menu .path-components button {
+  border: 0;
+  border-radius: 0;
+  padding: 8px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.path-components button:hover {
   background: rgba(242, 242, 242, 0.33);
 }
 
 .path-search-container {
   border-color: #eaeaea;
   margin-left: 8px;
-  width: 250px;
   display: flex;
+  flex-grow: 1;
+  max-width: 250px;
 }
 
 .path-search-container::before {
