@@ -8,27 +8,24 @@ import "./index.css";
 
 export default ({
   reserveRightSpace,
-  tucked,
   file,
   hideAutomatically,
   mediaRef: { current: element },
   onDetailsButtonVisibilityChange,
   onTogglePlaylistPanel,
   playing,
-  progress,
+  currentTime,
+  totalTime,
 }: {
   reserveRightSpace: boolean;
-  tucked: boolean;
   file: ListedAudio | ListedVideo;
   hideAutomatically: boolean;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   onDetailsButtonVisibilityChange: (isDetailsButtonShowing: boolean) => void;
   onTogglePlaylistPanel: () => void;
   playing: boolean;
-  progress?: {
-    current: Duration;
-    total: Duration;
-  };
+  currentTime: Duration;
+  totalTime: Duration;
 }) => {
   const [showCard, setShowCard] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -74,7 +71,6 @@ export default ({
       className={classNames(
         "playback",
         reserveRightSpace && "playback-reserve-right-space",
-        tucked && "playback-tucked",
         hidden && "playback-hidden",
         ...[480, 560, 690, 780, 940].map((bp) =>
           width <= bp ? `playback-${bp}` : undefined
@@ -177,32 +173,26 @@ export default ({
           </button>
         </div>
         <div className="playback-progress">
-          {progress && (
-            <>
-              <div className="playback-progress-top">
-                <div>&nbsp;</div>
-              </div>
-              <input
-                className="playback-slider"
-                type="range"
-                min={0}
-                max={progress.total.toMillis()}
-                step={1}
-                value={progress.current.toMillis()}
-                onChange={(e) => {
-                  if (element) {
-                    element.currentTime = e.currentTarget.valueAsNumber / 1000;
-                  }
-                }}
-              />
-              <div className="playback-progress-bottom">
-                <div>
-                  -{progress.total.minus(progress.current).toFormat("m:ss")}
-                </div>
-                <div>{progress.current.toFormat("m:ss")}</div>
-              </div>
-            </>
-          )}
+          <div className="playback-progress-top">
+            <div>&nbsp;</div>
+          </div>
+          <input
+            className="playback-slider"
+            type="range"
+            min={0}
+            max={totalTime.toMillis()}
+            step={1}
+            value={currentTime.toMillis()}
+            onChange={(e) => {
+              if (element) {
+                element.currentTime = e.currentTarget.valueAsNumber / 1000;
+              }
+            }}
+          />
+          <div className="playback-progress-bottom">
+            <div>-{totalTime.minus(currentTime).toFormat("m:ss")}</div>
+            <div>{currentTime.toFormat("m:ss")}</div>
+          </div>
         </div>
         <div className="playback-end-table">
           <button className="playback-fullscreen">⛶</button>

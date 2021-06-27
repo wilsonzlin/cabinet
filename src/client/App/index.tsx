@@ -1,5 +1,4 @@
 import classNames from "extlib/js/classNames";
-import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
@@ -33,7 +32,6 @@ export default ({}: {}) => {
   const [appElem, setAppElem] = useState<HTMLDivElement | undefined>(undefined);
   const { width, height } = useElemDimensions(appElem);
   const playlistMaximised = width < 860;
-  const tucked = width < 500 || height < 450;
   const pathUseMenu = width < 1024;
   const [canShowPlaylistToggle, setCanShowPlaylistToggle] = useState(false);
 
@@ -58,13 +56,13 @@ export default ({}: {}) => {
       className={classNames(
         "app",
         isViewing && "app-dark",
-        `app-pt-${pointerType}`
+        `app-pt-${pointerType}`,
+        (width < 500 || height < 450) && "app-tucked"
       )}
       ref={(elem) => setAppElem(elem ?? undefined)}
     >
       <Explorer
         reserveRightSpace={!playlistClosed && !playlistMaximised}
-        tucked={tucked}
         path={path}
         onClickFolder={(f) => setPath((p) => p.concat(f))}
         onClickMediaFile={(files, file) => {
@@ -114,7 +112,6 @@ export default ({}: {}) => {
       {isPlayingMedia && (
         <Playback
           mediaRef={mediaRef}
-          tucked={tucked}
           reserveRightSpace={!playlistClosed && !playlistMaximised}
           hideAutomatically={isViewing}
           // When the details button isn't showing, pressing the details
@@ -128,10 +125,8 @@ export default ({}: {}) => {
           }
           onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
           playing={playing}
-          progress={mapDefined(currentPlaybackTime, (current) => ({
-            current,
-            total: Duration.fromMillis(media.duration * 1000),
-          }))}
+          currentTime={currentPlaybackTime ?? Duration.fromMillis(0)}
+          totalTime={Duration.fromMillis(media.duration * 1000)}
           file={media}
         />
       )}

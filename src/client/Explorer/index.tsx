@@ -101,19 +101,17 @@ const File = ({
 };
 
 export default ({
-  reserveRightSpace,
-  tucked,
-  path,
   onClickFolder,
   onClickMediaFile,
   onClickPhotoFile,
+  path,
+  reserveRightSpace,
 }: {
-  reserveRightSpace: boolean;
-  tucked: boolean;
-  path: string[];
   onClickFolder: (name: string) => void;
   onClickMediaFile: (relatedFiles: ListedMedia[], file: ListedMedia) => void;
   onClickPhotoFile: (file: ListedPhoto) => void;
+  path: string[];
+  reserveRightSpace: boolean;
 }) => {
   const [entries, setEntries] = useState<
     JsonApiOutput<typeof listFilesApi> | undefined
@@ -141,8 +139,7 @@ export default ({
     <div
       className={classNames(
         "explorer",
-        reserveRightSpace && "explorer-reserve-right-space",
-        tucked && "explorer-tucked"
+        reserveRightSpace && "explorer-reserve-right-space"
       )}
     >
       <div className="explorer-entries">

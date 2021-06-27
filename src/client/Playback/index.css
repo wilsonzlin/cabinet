@@ -12,13 +12,13 @@
   right: 375px;
 }
 
-.playback-tucked {
+.app-tucked .playback {
   bottom: 12px;
   left: 12px;
   right: 12px;
 }
 
-.playback-tucked.playback-reserve-right-space {
+.app-tucked .playback-reserve-right-space {
   right: 367px;
 }
 

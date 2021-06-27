@@ -1,7 +1,7 @@
 .explorer {
   flex-grow: 1;
 
-  padding: 80px 20px 150px 20px;
+  padding: 76px 20px 150px 20px;
   overflow: auto;
   transition: 0.4s;
 }
@@ -10,13 +10,13 @@
   padding-right: 355px;
 }
 
-.explorer-tucked {
+.app-tucked .explorer {
   padding-left: 12px;
   padding-right: 12px;
-  padding-top: 70px;
+  padding-top: 56px;
 }
 
-.explorer-reserve-right-space.explorer-tucked {
+.app-tucked .explorer-reserve-right-space {
   padding-right: 332px;
 }
 
@@ -26,8 +26,8 @@
   gap: 20px;
 }
 
-.explorer-tucked .explorer-folders,
-.explorer-tucked .explorer-files {
+.app-tucked .explorer-folders,
+.app-tucked .explorer-files {
   gap: 12px;
 }
 
