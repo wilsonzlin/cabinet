@@ -12,17 +12,3 @@
   width: 100%;
   object-fit: contain;
 }
-
-.image-path {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-
-  border-radius: 3px;
-  color: #f2f2f2;
-  font-size: 14px;
-}
-
-.image-path > * {
-  padding: 6px 8px;
-}

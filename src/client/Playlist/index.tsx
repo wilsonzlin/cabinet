@@ -4,19 +4,21 @@ import "./index.css";
 import { ListedMedia } from "../../api/listFiles";
 
 export default ({
-  onChangePosition,
-  onRequestClose,
   closed,
   files,
-  position,
   maximised,
+  onChangePosition,
+  onRequestClose,
+  position,
+  showCloseButton,
 }: {
-  onChangePosition: (pos: number) => void;
-  onRequestClose: () => void;
   closed: boolean;
   files: ListedMedia[];
-  position: number;
   maximised: boolean;
+  onChangePosition: (pos: number) => void;
+  onRequestClose: () => void;
+  position: number;
+  showCloseButton: boolean;
 }) => {
   return (
     <div
@@ -44,9 +46,11 @@ export default ({
       </div>
       <div className="playlist-menu">
         <button className="playlist-picker">Now playing</button>
-        <button className="playlist-close" onClick={onRequestClose}>
-          ━
-        </button>
+        {showCloseButton && (
+          <button className="playlist-close" onClick={onRequestClose}>
+            ━
+          </button>
+        )}
       </div>
       <div className="playlist-controls">
         <button onClick={() => onChangePosition(position - 1)}>⏮</button>

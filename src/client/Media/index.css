@@ -10,15 +10,6 @@
   right: 0;
 }
 
-.media-video .media-close {
-  color: #ddd;
-  font-size: 14px;
-  left: 12px;
-  padding: 6px 8px;
-  position: absolute;
-  top: 12px;
-}
-
 .media-video > video {
   background: black;
   height: 100%;

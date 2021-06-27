@@ -148,7 +148,8 @@
 }
 
 .playback-details-button {
-  display: none;
+  flex-shrink: 0;
+  padding: 0 8px;
 }
 
 .playback-path {
@@ -180,12 +181,6 @@
 
 .playback-690 .playback-details-text {
   flex-grow: 1;
-}
-
-.playback-690 .playback-details-button {
-  flex-shrink: 0;
-  padding: 0 8px;
-  display: block;
 }
 
 .playback-controls {

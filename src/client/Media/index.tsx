@@ -1,19 +1,17 @@
-import React from "react";
+import React, { MutableRefObject } from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
-import "./index.css";
 import { apiGetPath } from "../_common/api";
+import "./index.css";
 
 export default ({
   mediaRef,
   file,
-  onClose,
   onEnded,
   onPlaybackChange,
   onTimeUpdate,
 }: {
-  mediaRef: { element: HTMLMediaElement | undefined };
+  mediaRef: MutableRefObject<HTMLVideoElement | null>;
   file: ListedAudio | ListedVideo;
-  onClose: () => void;
   onEnded: () => void;
   onPlaybackChange: (playing: boolean) => void;
   onTimeUpdate: (currentTime: number) => void;
@@ -23,7 +21,7 @@ export default ({
       <video
         // A key is needed to ensure video reloads on sources change. See https://stackoverflow.com/questions/41303012/updating-source-url-on-html5-video-with-react.
         key={file.path}
-        ref={($media) => (mediaRef.element = $media ?? undefined)}
+        ref={mediaRef}
         autoPlay={true}
         controls={false}
         onEnded={onEnded}
@@ -43,9 +41,6 @@ export default ({
           />
         ))}
       </video>
-      <button className="media-close" onClick={onClose}>
-        ←
-      </button>
     </div>
   );
 };

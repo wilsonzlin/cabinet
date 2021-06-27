@@ -1,7 +1,7 @@
 .explorer {
   flex-grow: 1;
 
-  padding: 20px 20px 150px 20px;
+  padding: 80px 20px 150px 20px;
   overflow: auto;
   transition: 0.4s;
 }
@@ -13,7 +13,7 @@
 .explorer-tucked {
   padding-left: 12px;
   padding-right: 12px;
-  padding-top: 12px;
+  padding-top: 70px;
 }
 
 .explorer-reserve-right-space.explorer-tucked {

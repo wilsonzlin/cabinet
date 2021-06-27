@@ -1,7 +1,7 @@
 import classNames from "extlib/js/classNames";
 import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
-import React, { useEffect, useRef, useState } from "react";
+import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
 import { useElemDimensions } from "../_common/ui";
 import "./index.css";
@@ -11,7 +11,8 @@ export default ({
   tucked,
   file,
   hideAutomatically,
-  mediaRef: { element },
+  mediaRef: { current: element },
+  onDetailsButtonVisibilityChange,
   onTogglePlaylistPanel,
   playing,
   progress,
@@ -20,8 +21,9 @@ export default ({
   tucked: boolean;
   file: ListedAudio | ListedVideo;
   hideAutomatically: boolean;
-  mediaRef: { element: HTMLMediaElement | undefined };
-  onTogglePlaylistPanel?: () => void;
+  mediaRef: MutableRefObject<HTMLVideoElement | null>;
+  onDetailsButtonVisibilityChange: (isDetailsButtonShowing: boolean) => void;
+  onTogglePlaylistPanel: () => void;
   playing: boolean;
   progress?: {
     current: Duration;
@@ -61,6 +63,10 @@ export default ({
 
   const [elem, setElem] = useState<HTMLDivElement | undefined>(undefined);
   const { width } = useElemDimensions(elem);
+  const showDetailsButton = width <= 690;
+  useEffect(() => {
+    onDetailsButtonVisibilityChange(showDetailsButton);
+  }, [showDetailsButton]);
 
   return (
     <div
@@ -118,7 +124,7 @@ export default ({
           <div
             className="playback-details-text"
             onClick={() =>
-              onTogglePlaylistPanel
+              showDetailsButton
                 ? onTogglePlaylistPanel()
                 : setShowCard((s) => !s)
             }
@@ -129,12 +135,14 @@ export default ({
             <div className="playback-title">{file.title}</div>
             <div>{file.author ?? ""}</div>
           </div>
-          <button
-            className="playback-details-button"
-            onClick={() => setShowCard((s) => !s)}
-          >
-            ⓘ
-          </button>
+          {showDetailsButton && (
+            <button
+              className="playback-details-button"
+              onClick={() => setShowCard((s) => !s)}
+            >
+              ⓘ
+            </button>
+          )}
         </div>
         <div className="playback-controls">
           <button

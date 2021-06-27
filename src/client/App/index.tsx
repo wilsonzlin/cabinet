@@ -1,23 +1,19 @@
 import classNames from "extlib/js/classNames";
 import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
 import { useElemDimensions } from "../_common/ui";
 import Explorer from "../Explorer";
 import Image from "../Image";
 import Media from "../Media";
-import Menu from "../Menu";
-import PathImpl from "../Path";
+import Path from "../Path";
 import Playback from "../Playback";
 import Playlist from "../Playlist";
-import PlaylistToggle from "../PlaylistToggle";
 import "./index.css";
 
 export default ({}: {}) => {
-  const mediaRef = useRef<{ element: HTMLMediaElement | undefined }>({
-    element: undefined,
-  });
+  const mediaRef = useRef<HTMLVideoElement | null>(null);
   const [mediaPlaylist, setMediaPlaylist] = useState<ListedMedia[]>([]);
   const [mediaPlaylistPosition, setMediaPlaylistPosition] =
     useState<number>(-1);
@@ -32,23 +28,14 @@ export default ({}: {}) => {
   const media: ListedMedia | undefined = mediaPlaylist[mediaPlaylistPosition];
   const isPlayingVideo = media?.type == "video";
   const isPlayingMedia = media?.type == "audio" || isPlayingVideo;
+  const isViewing = !!(photo || isPlayingVideo);
 
   const [appElem, setAppElem] = useState<HTMLDivElement | undefined>(undefined);
   const { width, height } = useElemDimensions(appElem);
   const playlistMaximised = width < 860;
   const tucked = width < 500 || height < 450;
   const pathUseMenu = width < 1024;
-
-  const Path = useCallback(
-    () => (
-      <PathImpl
-        components={path}
-        onNavigate={(p) => setPath(p)}
-        useMenu={pathUseMenu}
-      />
-    ),
-    [path, pathUseMenu]
-  );
+  const [canShowPlaylistToggle, setCanShowPlaylistToggle] = useState(false);
 
   const [pointerType, setPointerType] = useState("mouse");
   useEffect(() => {
@@ -70,12 +57,11 @@ export default ({}: {}) => {
     <div
       className={classNames(
         "app",
-        (photo || isPlayingVideo) && "app-dark",
+        isViewing && "app-dark",
         `app-pt-${pointerType}`
       )}
       ref={(elem) => setAppElem(elem ?? undefined)}
     >
-      <Menu Path={Path} tucked={tucked} />
       <Explorer
         reserveRightSpace={!playlistClosed && !playlistMaximised}
         tucked={tucked}
@@ -89,9 +75,8 @@ export default ({}: {}) => {
       />
       {isPlayingMedia && (
         <Media
-          mediaRef={mediaRef.current}
+          mediaRef={mediaRef}
           file={media}
-          onClose={() => setMediaPlaylistPosition(-1)}
           onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
           onPlaybackChange={(playing) => setPlaying(playing)}
           onTimeUpdate={(currentTime) =>
@@ -99,46 +84,55 @@ export default ({}: {}) => {
           }
         />
       )}
-      {photo && (
-        <Image
-          file={photo}
-          path={path}
-          onClose={() => setPhoto(undefined)}
-          onNavigate={(path) => {
-            setPath(path);
+      {photo && <Image file={photo} />}
+      <Path
+        components={path}
+        onNavigate={(p) => setPath(p)}
+        onRequestOpenPlaylist={() => setPlaylistClosed(false)}
+        onRequestClose={() => {
+          if (photo) {
             setPhoto(undefined);
-          }}
-        />
-      )}
+          } else {
+            setMediaPlaylistPosition(-1);
+          }
+        }}
+        showCloseButtonInsteadOfUp={isViewing}
+        showComponents={!isViewing}
+        showPlaylistToggle={canShowPlaylistToggle && playlistClosed}
+        showSearch={!isViewing}
+        useMenu={pathUseMenu}
+      />
       <Playlist
         closed={playlistClosed}
-        maximised={playlistMaximised}
         files={mediaPlaylist}
-        position={mediaPlaylistPosition}
+        maximised={playlistMaximised}
         onChangePosition={setMediaPlaylistPosition}
         onRequestClose={() => setPlaylistClosed(true)}
+        position={mediaPlaylistPosition}
+        showCloseButton={canShowPlaylistToggle}
       />
       {isPlayingMedia && (
         <Playback
-          mediaRef={mediaRef.current}
+          mediaRef={mediaRef}
           tucked={tucked}
           reserveRightSpace={!playlistClosed && !playlistMaximised}
-          hideAutomatically={!!photo || isPlayingVideo}
-          onTogglePlaylistPanel={
-            playlistMaximised ? () => setPlaylistClosed((s) => !s) : undefined
+          hideAutomatically={isViewing}
+          // When the details button isn't showing, pressing the details
+          // shows the extended details card.
+          // When the details button is showing, pressing the details
+          // toggles the playlist instead.
+          // When Playback is hidden (i.e. no playback started), this will
+          // always be true.
+          onDetailsButtonVisibilityChange={(showing) =>
+            setCanShowPlaylistToggle(!showing)
           }
+          onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
           playing={playing}
           progress={mapDefined(currentPlaybackTime, (current) => ({
             current,
             total: Duration.fromMillis(media.duration * 1000),
           }))}
           file={media}
-        />
-      )}
-      {playlistClosed && !playlistMaximised && (
-        <PlaylistToggle
-          dark={!!photo || isPlayingVideo}
-          onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         />
       )}
     </div>
