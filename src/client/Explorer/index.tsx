@@ -19,8 +19,43 @@ const File = ({
   onClick: () => void;
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const [visible, setVisible] = useState(false);
+  const visibleDelay = useRef<any>(undefined);
+  // Lazy load images as they appear, as some folders can have lots of files.
+  const observer = useRef(
+    new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        clearTimeout(visibleDelay.current);
+        if (e.isIntersecting) {
+          // We want to show the image, even if user is just scrolling/browsing.
+          // We should only not load if the user is scrolling rapidly to a specific position, as if it's really deep,
+          // a lot of images will be loaded unnecessarily.
+          visibleDelay.current = setTimeout(() => {
+            setTimeout(() => {
+              // Add some jitter so requests don't go all at once, which slows down both browser and server.
+              setVisible(true);
+            }, Math.random() * 300);
+          }, 50);
+        }
+      }
+    })
+  );
+
+  const [buttonElem, setButtonElem] = useState<HTMLButtonElement | undefined>(
+    undefined
+  );
+  useEffect(() => {
+    if (buttonElem) {
+      observer.current.observe(buttonElem);
+      return () => observer.current.unobserve(buttonElem);
+    }
+    return;
+  }, [buttonElem]);
+
   return (
     <button
+      ref={(elem) => setButtonElem(elem ?? undefined)}
       className="explorer-file"
       onClick={onClick}
       onMouseEnter={() => {
@@ -32,12 +67,16 @@ const File = ({
       onMouseLeave={() => {
         videoRef.current?.pause();
       }}
-      style={{
-        backgroundImage: `url(${apiGetPath("getFile", {
-          path: file.path,
-          thumbnail: true,
-        })})`,
-      }}
+      style={
+        !visible
+          ? undefined
+          : {
+              backgroundImage: `url(${apiGetPath("getFile", {
+                path: file.path,
+                thumbnail: true,
+              })})`,
+            }
+      }
     >
       {file.type == "video" && (
         <video

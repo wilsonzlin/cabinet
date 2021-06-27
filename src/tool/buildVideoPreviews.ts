@@ -9,7 +9,11 @@ import { ff } from "../util/ff";
 import { isHiddenFile } from "../util/fs";
 import PromiseQueue = require("promise-queue");
 
-const PREVIEW_SCALED_WIDTH = 180;
+// Consider:
+// - HiDPI displays and zoomed-in viewports e.g. logical 180px is physical 360px.
+// - Tile lists with awkward width where 2 columns can't fit so only 1 ultra-wide column is possible.
+// - Bandwidth: a list of just 20 will require 20 x THUMB_SIZE network data and requests.
+const PREVIEW_SCALED_WIDTH = 500;
 
 const generateSnippet = (
   src: string,

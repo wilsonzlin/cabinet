@@ -37,7 +37,8 @@ export default ({
     if (!hideAutomatically) {
       return;
     }
-    const EVENTS = ["click", "mousemove"];
+    // mousemove/pointermove don't seem to trigger continuously for touch.
+    const EVENTS = ["pointerdown", "pointermove", "touchmove"];
     const listener = () => {
       setHidden(false);
       clearTimeout(hideTimeout.current);
