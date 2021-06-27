@@ -7,7 +7,7 @@ import https from "https";
 import { APIS } from "../api/_apis";
 import { ApiCtx, ApiFn } from "../api/_common";
 import { Library } from "../library/model";
-import { applyResponse, ClientError } from "./response";
+import { applyResponse, ClientError, writeResponse } from "./response";
 
 declare const CLIENT_HTML: string;
 
@@ -40,11 +40,14 @@ export const startServer = ({
       const apiName = pathname.slice(1);
       const api = (APIS as any)[apiName] as ApiFn;
       if (!api) {
-        return res
-          .writeHead(200, {
+        return writeResponse(
+          res,
+          200,
+          {
             "Content-Type": "text/html",
-          })
-          .end(CLIENT_HTML);
+          },
+          CLIENT_HTML
+        );
       }
       let input;
       if (req.method == "GET") {
@@ -58,11 +61,14 @@ export const startServer = ({
         output = await api(ctx, input);
       } catch (e) {
         if (e instanceof ClientError) {
-          return res
-            .writeHead(e.status, {
+          return writeResponse(
+            res,
+            e.status,
+            {
               "Content-Type": "text/plain",
-            })
-            .end(e.message);
+            },
+            e.message
+          );
         }
         throw e;
       }

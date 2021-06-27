@@ -20,7 +20,7 @@ const streamVideoCapture = async ({
   video: Video;
   start?: number;
   end?: number;
-  type: string;
+  type?: string;
   silent: boolean;
 }) => {
   const { scratch } = ctx;
@@ -50,7 +50,7 @@ const streamVideoCapture = async ({
     medium: "video/mp4",
     high: "video/mp4",
     original: "video/mp4",
-  }[type];
+  }[type ?? ""];
   if (!mime) {
     throw new ClientError(400, "Invalid type");
   }
@@ -132,30 +132,52 @@ export const getFileApi = async (
     thumbnail,
     snippet,
     montageFrame,
-    start,
-    end,
-    type,
-    silent,
+    capture,
   }: {
     path: string;
     // MIME of converted file to use instead of source.
     converted?: string;
-    thumbnail?: boolean;
-    snippet?: boolean;
+    thumbnail?: true;
+    snippet?: true;
     montageFrame?: number;
-    start?: number;
-    end?: number;
-    type?: string;
-    silent: boolean;
+    capture?: {
+      start?: number;
+      end?: number;
+      type?: string;
+      silent: boolean;
+    };
   }
 ) => {
   const file = ctx.library.getFile(path);
   switch (file?.type) {
     case DirEntryType.AUDIO:
-      return new StreamFile(file.absolutePath, file.size, file.mime, file.name);
+      switch (true) {
+        case defined(converted):
+        case thumbnail:
+        case snippet:
+        case defined(montageFrame):
+        case defined(capture):
+          throw new ClientError(404, "Not available for audio file");
+        default:
+          return new StreamFile(
+            file.absolutePath,
+            file.size,
+            file.mime,
+            file.name
+          );
+      }
 
     case DirEntryType.PHOTO:
-      return new SendFile(file.absolutePath);
+      switch (true) {
+        case defined(converted):
+        case thumbnail:
+        case snippet:
+        case defined(montageFrame):
+        case defined(capture):
+          throw new ClientError(404, "Not available for photo file");
+        default:
+          return new SendFile(file.absolutePath);
+      }
 
     case DirEntryType.VIDEO:
       switch (true) {
@@ -200,15 +222,11 @@ export const getFileApi = async (
           }
           return new SendFile(mfPath);
 
-        case defined(start):
-        case defined(end):
+        case defined(capture):
           return await streamVideoCapture({
             ctx,
             video: file,
-            start,
-            end,
-            type: type || "",
-            silent,
+            ...assertExists(capture),
           });
 
         default:

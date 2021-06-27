@@ -2,7 +2,7 @@ import parseRangeHeader from "extlib/js/parseRangeHeader";
 import UnreachableError from "extlib/js/UnreachableError";
 import { createReadStream } from "fs";
 import * as http from "http";
-import { pipeline } from "stream";
+import { PassThrough, pipeline, Readable } from "stream";
 
 export class SendFile {
   constructor(readonly path: string) {}
@@ -26,6 +26,35 @@ export class Json<V> {
 }
 
 export type ApiOutput = SendFile | StreamFile | Json<any>;
+
+export const writeResponse = (
+  res: http.ServerResponse,
+  status: number,
+  headers: { [name: string]: string | number },
+  data: string | Uint8Array | Readable
+) => {
+  const actualHeaders = Object.fromEntries(
+    Object.entries(headers).map(([n, v]) => [n.toLowerCase(), v.toString()])
+  );
+  let src;
+  if (typeof data == "string" || data instanceof Uint8Array) {
+    const bytes = typeof data == "string" ? Buffer.from(data, "utf8") : data;
+    if (actualHeaders["content-length"] == undefined) {
+      actualHeaders["content-length"] = bytes.byteLength.toString();
+    }
+    src = new PassThrough();
+    src.write(data);
+    src.end();
+  } else {
+    src = data;
+  }
+  res.writeHead(status, actualHeaders);
+  pipeline(src, res, (err) => {
+    if (err) {
+      console.warn("Response stream error:", err);
+    }
+  });
+};
 
 const streamFile = (
   req: http.IncomingMessage,
@@ -53,22 +82,21 @@ const streamFile = (
 
   const streamLength = end - start + 1;
 
-  res.writeHead(206, {
-    "Accept-Ranges": "bytes",
-    "Content-Disposition": `inline; filename="${name.replace(
-      /[^a-zA-Z0-9-_'., ]/g,
-      "_"
-    )}"`,
-    "Content-Length": streamLength,
-    "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-    "Content-Type": type,
-  });
-
-  pipeline(createReadStream(path, { start, end }), res, (err) => {
-    if (err) {
-      console.warn("Response stream error:", err);
-    }
-  });
+  writeResponse(
+    res,
+    206,
+    {
+      "Accept-Ranges": "bytes",
+      "Content-Disposition": `inline; filename="${name.replace(
+        /[^a-zA-Z0-9-_'., ]/g,
+        "_"
+      )}"`,
+      "Content-Length": streamLength,
+      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+      "Content-Type": type,
+    },
+    createReadStream(path, { start, end })
+  );
 };
 
 export const applyResponse = (
@@ -77,19 +105,18 @@ export const applyResponse = (
   val: ApiOutput
 ) => {
   if (val instanceof SendFile) {
-    pipeline(createReadStream(val.path), res, (err) => {
-      if (err) {
-        console.warn("Response stream error:", err);
-      }
-    });
+    writeResponse(res, 200, {}, createReadStream(val.path));
   } else if (val instanceof StreamFile) {
     streamFile(req, res, val.path, val.name, val.size, val.type);
   } else if (val instanceof Json) {
-    res
-      .writeHead(200, {
+    writeResponse(
+      res,
+      200,
+      {
         "Content-Type": "application/json",
-      })
-      .end(JSON.stringify(val.value));
+      },
+      JSON.stringify(val.value)
+    );
   } else {
     throw new UnreachableError();
   }
