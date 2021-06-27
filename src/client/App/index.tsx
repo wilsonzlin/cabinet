@@ -51,25 +51,49 @@ export default ({}: {}) => {
     };
   }, []);
 
+  const [isIdle, setIsIdle] = useState(false);
+  const isIdleTimeout = useRef<any | undefined>(undefined);
+  useEffect(() => {
+    setIsIdle(false);
+    // mousemove/pointermove don't seem to trigger continuously for touch.
+    const EVENTS = ["pointerdown", "pointermove", "touchmove"];
+    const listener = () => {
+      setIsIdle(false);
+      clearTimeout(isIdleTimeout.current);
+      isIdleTimeout.current = setTimeout(() => setIsIdle(true), 1500);
+    };
+    listener();
+    for (const e of EVENTS) {
+      document.addEventListener(e, listener, true);
+    }
+    return () => {
+      for (const e of EVENTS) {
+        document.removeEventListener(e, listener, true);
+      }
+      clearTimeout(isIdleTimeout.current);
+    };
+  }, []);
+
   return (
     <div
       className={classNames(
         "app",
         isViewing && "app-dark",
         `app-pt-${pointerType}`,
-        (width < 500 || height < 450) && "app-tucked"
+        (width < 500 || height < 450) && "app-tucked",
+        isViewing && isIdle && "app-viewing-idle"
       )}
       ref={(elem) => setAppElem(elem ?? undefined)}
     >
       <Explorer
-        reserveRightSpace={!playlistClosed && !playlistMaximised}
-        path={path}
         onClickFolder={(f) => setPath((p) => p.concat(f))}
         onClickMediaFile={(files, file) => {
           setMediaPlaylist(files);
           setMediaPlaylistPosition(files.indexOf(file));
         }}
         onClickPhotoFile={(f) => setPhoto(f)}
+        path={path}
+        reserveRightSpace={!playlistClosed && !playlistMaximised}
       />
       {isPlayingMedia && (
         <Media
@@ -111,9 +135,10 @@ export default ({}: {}) => {
       />
       {isPlayingMedia && (
         <Playback
+          currentTime={currentPlaybackTime ?? Duration.fromMillis(0)}
+          file={media}
+          idle={isIdle}
           mediaRef={mediaRef}
-          reserveRightSpace={!playlistClosed && !playlistMaximised}
-          hideAutomatically={isViewing}
           // When the details button isn't showing, pressing the details
           // shows the extended details card.
           // When the details button is showing, pressing the details
@@ -125,9 +150,8 @@ export default ({}: {}) => {
           }
           onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
           playing={playing}
-          currentTime={currentPlaybackTime ?? Duration.fromMillis(0)}
+          reserveRightSpace={!playlistClosed && !playlistMaximised}
           totalTime={Duration.fromMillis(media.duration * 1000)}
-          file={media}
         />
       )}
     </div>

@@ -1,4 +1,15 @@
 .path {
+  /*
+    TODO HACK WORKAROUND BUG
+    Some browsers do not render opacity on back button when transitioning to
+    opacity = 1 unless z-index >= 1.
+    Because of this fix, .playlist also has a z-index set. Sync .playlist CSS
+    when this is changed.
+    Occurs on:
+      - Firefox (Windows 64-bit, 89.0.2).
+  */
+  z-index: 1;
+
   position: absolute;
   top: 0;
   left: 0;
@@ -11,10 +22,16 @@
 
   display: flex;
   align-items: stretch;
+
+  transition: 0.4s;
+}
+
+.app-viewing-idle .path {
+  opacity: 0;
 }
 
 .app-dark .path {
-  background: rgba(0, 0, 0, 0.5);
+  background: transparent;
   color: #f2f2f2;
   border: 0;
 }

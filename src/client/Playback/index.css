@@ -22,7 +22,7 @@
   right: 367px;
 }
 
-.playback-hidden {
+.app-viewing-idle .playback {
   opacity: 0;
   pointer-events: none;
 }

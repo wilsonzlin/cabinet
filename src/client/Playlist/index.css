@@ -1,4 +1,10 @@
 .playlist {
+  /*
+    TODO HACK WORKAROUND BUG
+    This is for the opacity bug on .path (see for more details).
+  */
+  z-index: 2;
+
   border-radius: 10px;
   position: absolute;
   top: 30px;

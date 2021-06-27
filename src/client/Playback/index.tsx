@@ -1,62 +1,36 @@
 import classNames from "extlib/js/classNames";
 import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import React, { MutableRefObject, useEffect, useState } from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
 import { useElemDimensions } from "../_common/ui";
 import "./index.css";
 
 export default ({
-  reserveRightSpace,
+  currentTime,
   file,
-  hideAutomatically,
+  idle,
   mediaRef: { current: element },
   onDetailsButtonVisibilityChange,
   onTogglePlaylistPanel,
   playing,
-  currentTime,
+  reserveRightSpace,
   totalTime,
 }: {
-  reserveRightSpace: boolean;
+  currentTime: Duration;
   file: ListedAudio | ListedVideo;
-  hideAutomatically: boolean;
+  idle: boolean;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   onDetailsButtonVisibilityChange: (isDetailsButtonShowing: boolean) => void;
   onTogglePlaylistPanel: () => void;
   playing: boolean;
-  currentTime: Duration;
+  reserveRightSpace: boolean;
   totalTime: Duration;
 }) => {
   const [showCard, setShowCard] = useState(false);
-  const [hidden, setHidden] = useState(false);
-  const hideTimeout = useRef<any | undefined>(undefined);
-
   useEffect(() => {
-    setHidden(false);
-    if (!hideAutomatically) {
-      return;
-    }
-    // mousemove/pointermove don't seem to trigger continuously for touch.
-    const EVENTS = ["pointerdown", "pointermove", "touchmove"];
-    const listener = () => {
-      setHidden(false);
-      clearTimeout(hideTimeout.current);
-      hideTimeout.current = setTimeout(() => {
-        setHidden(true);
-        setShowCard(false);
-      }, 1500);
-    };
-    listener();
-    for (const e of EVENTS) {
-      document.addEventListener(e, listener, true);
-    }
-    return () => {
-      for (const e of EVENTS) {
-        document.removeEventListener(e, listener, true);
-      }
-      clearTimeout(hideTimeout.current);
-    };
-  }, [hideAutomatically]);
+    setShowCard(false);
+  }, [idle]);
 
   const [elem, setElem] = useState<HTMLDivElement | undefined>(undefined);
   const { width } = useElemDimensions(elem);
@@ -71,7 +45,6 @@ export default ({
       className={classNames(
         "playback",
         reserveRightSpace && "playback-reserve-right-space",
-        hidden && "playback-hidden",
         ...[480, 560, 690, 780, 940].map((bp) =>
           width <= bp ? `playback-${bp}` : undefined
         )
