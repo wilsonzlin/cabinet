@@ -22,6 +22,10 @@ const PREVIEW_SCALED_WIDTH = 500;
 
 export abstract class DirEntry {
   constructor(readonly absPath: string) {}
+
+  fileName() {
+    return basename(this.absPath);
+  }
 }
 
 type DirEntries = { [name: string]: DirEntry };
@@ -111,11 +115,7 @@ export abstract class File extends DirEntry {
   }
 
   protected dataDir() {
-    return join(
-      dirname(this.absPath),
-      ".$Cabinet_data",
-      basename(this.absPath)
-    );
+    return join(dirname(this.absPath), ".$Cabinet_data", this.fileName());
   }
 
   // Subclasses should lazy generate thumbnails and return the absolute path to the file.
@@ -215,7 +215,10 @@ export class Audio extends Media {
 }
 
 export class Video extends Media {
-  private lazyPreviewPath: Promise<string> | undefined;
+  private lazyThumbnailPath: Promise<string> | undefined;
+  private lazyPreviewPath:
+    | Promise<{ absPath: string; size: number }>
+    | undefined;
 
   constructor(
     absPath: string,
@@ -230,7 +233,7 @@ export class Video extends Media {
 
   thumbnailPath() {
     return (
-      this.lazyPreviewPath ??
+      this.lazyThumbnailPath ??
       (async () => {
         const thumbnailPath = join(this.dataDir(), "thumbnail.jpg");
         await ff.extractFrame({
@@ -263,7 +266,7 @@ export class Video extends Media {
     return !!this.audioStream;
   }
 
-  previewPath() {
+  previewFile() {
     const previewPath = join(this.dataDir(), "preview.mp4");
     return (
       this.lazyPreviewPath ??
@@ -298,7 +301,8 @@ export class Video extends Media {
             format: "mp4",
           },
         });
-        return previewPath;
+        const stats = await stat(previewPath);
+        return { absPath: previewPath, size: stats.size };
       })()
     );
   }

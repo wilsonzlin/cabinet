@@ -1,9 +1,8 @@
 import assertExists from "extlib/js/assertExists";
-import defined from "extlib/js/defined";
 import maybeFileStats from "extlib/js/maybeFileStats";
 import { mkdir } from "fs/promises";
 import { dirname, join } from "path";
-import { DirEntryType, Video } from "../library/model";
+import { Video } from "../library/model";
 import { ClientError, SendFile, StreamFile } from "../server/response";
 import { ff } from "../util/ff";
 import { ApiCtx } from "./_common";
@@ -31,10 +30,10 @@ const streamVideoCapture = async ({
   if (
     start == undefined ||
     start < 0 ||
-    start > video.duration ||
+    start > video.duration() ||
     end == undefined ||
     end < 0 ||
-    end > video.duration
+    end > video.duration()
   ) {
     throw new ClientError(400, "Bad range");
   }
@@ -59,7 +58,7 @@ const streamVideoCapture = async ({
 
   const outputFile = join(
     scratch,
-    video.relativePath,
+    video.absPath,
     `capture.${start}-${end}.${type}${audio ? `` : `.silent`}`
   );
   await mkdir(dirname(outputFile), { recursive: true });
@@ -67,7 +66,7 @@ const streamVideoCapture = async ({
   if (!outputFileStats) {
     await ff.convert({
       input: {
-        file: video.absolutePath,
+        file: video.absPath,
         start,
         duration,
       },
@@ -77,8 +76,8 @@ const streamVideoCapture = async ({
           ? {
               codec: "gif",
               loop: true,
-              fps: Math.min(10, video.fps),
-              resize: { width: Math.min(800, video.width) },
+              fps: Math.min(10, video.fps()),
+              resize: { width: Math.min(800, video.width()) },
             }
           : {
               codec: "libx264",
@@ -92,7 +91,7 @@ const streamVideoCapture = async ({
                   : type == "high"
                   ? 60
                   : Infinity,
-                video.fps
+                video.fps()
               ),
               resize: {
                 width: Math.min(
@@ -103,10 +102,10 @@ const streamVideoCapture = async ({
                     : type == "high"
                     ? 1920
                     : Infinity,
-                  video.width
+                  video.width()
                 ),
               },
-              faststart: true,
+              movflags: ["faststart"],
             },
       audio: type != "gif" && audio,
       output: {
@@ -120,7 +119,9 @@ const streamVideoCapture = async ({
     outputFile,
     outputFileStats.size,
     mime,
-    `${video.name} (capture ${duration}s, ${type}${audio ? "" : ", silent"})`
+    `${video.fileName()} (capture ${duration}s, ${type}${
+      audio ? "" : ", silent"
+    })`
   );
 };
 
@@ -128,17 +129,14 @@ export const getFileApi = async (
   ctx: ApiCtx,
   {
     path,
-    converted,
     thumbnail,
-    snippet,
+    preview,
     montageFrame,
     capture,
   }: {
     path: string;
-    // MIME of converted file to use instead of source.
-    converted?: string;
     thumbnail?: true;
-    snippet?: true;
+    preview?: true;
     montageFrame?: number;
     capture?: {
       start?: number;
@@ -148,97 +146,50 @@ export const getFileApi = async (
     };
   }
 ) => {
-  const file = ctx.library.getFile(path);
-  switch (file?.type) {
-    case DirEntryType.AUDIO:
-      switch (true) {
-        case defined(converted):
-        case thumbnail:
-        case snippet:
-        case defined(montageFrame):
-        case defined(capture):
-          throw new ClientError(404, "Not available for audio file");
-        default:
-          return new StreamFile(
-            file.absolutePath,
-            file.size,
-            file.mime,
-            file.name
-          );
-      }
-
-    case DirEntryType.PHOTO:
-      switch (true) {
-        case defined(converted):
-        case thumbnail:
-        case snippet:
-        case defined(montageFrame):
-        case defined(capture):
-          throw new ClientError(404, "Not available for photo file");
-        default:
-          return new SendFile(file.absolutePath);
-      }
-
-    case DirEntryType.VIDEO:
-      switch (true) {
-        case defined(converted):
-          const convertedFile = file.convertedFormats.find(
-            (f) => f.mime === converted
-          );
-          if (!convertedFile) {
-            throw new ClientError(404, "Converted file not found");
-          }
-          return new StreamFile(
-            convertedFile.absPath,
-            convertedFile.size,
-            convertedFile.mime,
-            file.name
-          );
-
-        case thumbnail:
-          const thumbnailPath = file.preview?.thumbnailPath;
-          if (!thumbnailPath) {
-            throw new ClientError(404, "No thumbnail available");
-          }
-          return new SendFile(thumbnailPath);
-
-        case snippet:
-          const snippetMeta = file.preview?.snippet;
-          if (!snippetMeta) {
-            throw new ClientError(404, "No snippet available");
-          }
-          return new StreamFile(
-            snippetMeta.path,
-            snippetMeta.size,
-            "video/mp4",
-            file.name
-          );
-
-        case defined(montageFrame):
-          const mfPath =
-            file.preview?.montageFrames[assertExists(montageFrame)];
-          if (!mfPath) {
-            throw new ClientError(404, "No frame available");
-          }
-          return new SendFile(mfPath);
-
-        case defined(capture):
-          return await streamVideoCapture({
-            ctx,
-            video: file,
-            ...assertExists(capture),
-          });
-
-        default:
-          return new StreamFile(
-            file.absolutePath,
-            file.size,
-            file.mime,
-            file.name
-          );
-      }
-
-    case undefined:
-      throw new ClientError(404, "File not found");
+  const file = await ctx.library.getFile(path);
+  if (!file) {
+    throw new ClientError(404, "File not found");
   }
+
+  if (capture) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Capturing only supported on videos");
+    }
+    return await streamVideoCapture({
+      ctx,
+      video: file,
+      ...capture,
+    });
+  }
+
+  if (montageFrame) {
+    // TODO UNIMPLEMENTED
+    throw new ClientError(404, "No frame available");
+  }
+
+  if (preview) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Previews only available for videos");
+    }
+    const previewFile = await file.previewFile();
+    if (!previewFile) {
+      throw new ClientError(404, "No preview available");
+    }
+    return new StreamFile(
+      previewFile.absPath,
+      previewFile.size,
+      "video/mp4",
+      file.fileName()
+    );
+  }
+
+  if (thumbnail) {
+    const thumbnailPath = await file.thumbnailPath();
+    if (!thumbnailPath) {
+      throw new ClientError(404, "No thumbnail available");
+    }
+    return new SendFile(thumbnailPath);
+  }
+
+  return new StreamFile(file.absPath, file.size, file.mime, file.fileName());
 };
