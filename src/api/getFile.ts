@@ -58,7 +58,7 @@ const streamVideoCapture = async ({
 
   const outputFile = join(
     scratch,
-    video.absPath,
+    video.relPath,
     `capture.${start}-${end}.${type}${audio ? `` : `.silent`}`
   );
   await mkdir(dirname(outputFile), { recursive: true });
@@ -66,7 +66,7 @@ const streamVideoCapture = async ({
   if (!outputFileStats) {
     await ff.convert({
       input: {
-        file: video.absPath,
+        file: video.absPath(),
         start,
         duration,
       },
@@ -82,7 +82,7 @@ const streamVideoCapture = async ({
           : {
               codec: "libx264",
               preset: "veryfast",
-              crf: 17,
+              crf: 18,
               fps: Math.min(
                 type == "low"
                   ? 10
@@ -191,5 +191,5 @@ export const getFileApi = async (
     return new SendFile(thumbnailPath);
   }
 
-  return new StreamFile(file.absPath, file.size, file.mime, file.fileName());
+  return new StreamFile(file.absPath(), file.size, file.mime, file.fileName());
 };

@@ -25,7 +25,7 @@ const cli = sacli.Command.new()
       sslkey,
     }) => {
       const server = await startServer({
-        library: new Library(new Directory(rp(library))),
+        library: new Library(new Directory(rp(library), "")),
         port,
         scratch: mapDefined(scratch, rp),
         ssl:

@@ -1,6 +1,6 @@
-import propertyComparator from "extlib/js/propertyComparator";
+import derivedComparator from "extlib/js/derivedComparator";
 import UnreachableError from "extlib/js/UnreachableError";
-import { DirEntryType, isNotDir } from "../library/model";
+import { Audio, Directory, File, Photo, Video } from "../library/model";
 import { ClientError, Json } from "../server/response";
 import { ApiCtx } from "./_common";
 
@@ -15,7 +15,6 @@ type BaseListedFile = {
   name: string;
   size: number;
   format: string;
-  convertedFormats: string[];
 };
 
 export type ListedAudio = BaseListedFile & {
@@ -66,80 +65,78 @@ export const listFilesApi = async (
     results: Array<ListedFolder | ListedAudio | ListedPhoto | ListedVideo>;
   }>
 > => {
-  const dir = ctx.library.getDirectory(path);
+  const dir = await ctx.library.getDirectory(path);
   if (!dir) {
     throw new ClientError(404, "Directory not found");
   }
   // TODO Filter, subdirectories.
-  const entries = Object.values(dir.entries);
-  const files = entries.filter(isNotDir);
+  const entries = Object.values(await dir.entries());
+  const files = entries.filter((f): f is File => f instanceof File);
   const size = files.reduce((t, f) => t + f.size, 0);
   const duration = files.reduce(
-    (t, f) => t + (f.type == DirEntryType.VIDEO ? f.duration : 0),
+    (t, f) => t + (f instanceof Video ? f.duration() : 0),
     0
   );
   return new Json({
     approximateSize: size,
     approximateDuration: duration,
     approximateCount: entries.length,
-    results: entries.sort(propertyComparator("name")).map((e) => {
-      switch (e.type) {
-        case DirEntryType.DIRECTORY:
-          return {
-            type: "dir",
-            name: e.name,
-            itemCount: Object.keys(e.entries).length,
-          };
-
-        case DirEntryType.AUDIO:
-          return {
-            type: "audio",
-            path: e.relativePath,
-            name: e.name,
-            size: e.size,
-            format: e.mime,
-            convertedFormats: e.convertedFormats.map((f) => f.mime),
-            duration: e.duration,
-            author: e.artist,
-            title: e.title ?? e.name,
-            album: e.album,
-            genre: e.genre,
-            track: e.track,
-          };
-
-        case DirEntryType.PHOTO:
-          return {
-            type: "photo",
-            path: e.relativePath,
-            name: e.name,
-            size: e.size,
-            format: e.mime,
-            convertedFormats: e.convertedFormats.map((f) => f.mime),
-            width: e.width,
-            height: e.height,
-          };
-
-        case DirEntryType.VIDEO:
-          return {
-            type: "video",
-            path: e.relativePath,
-            name: e.name,
-            size: e.size,
-            format: e.mime,
-            convertedFormats: e.convertedFormats.map((f) => f.mime),
-            width: e.width,
-            height: e.height,
-            duration: e.duration,
-            author: e.artist,
-            title: e.title ?? e.name,
-            album: e.album,
-            genre: e.genre,
-            track: e.track,
-          };
-
-        default:
-          throw new UnreachableError(e);
+    results: entries.sort(derivedComparator((e) => e.fileName())).map((e) => {
+      if (e instanceof Directory) {
+        return {
+          type: "dir",
+          name: e.fileName(),
+          itemCount: Object.keys(e.entries).length,
+        };
       }
+
+      if (e instanceof Audio) {
+        return {
+          type: "audio",
+          path: e.relPath,
+          name: e.fileName(),
+          size: e.size,
+          format: e.mime,
+          duration: e.duration(),
+          author: e.metadata().artist,
+          title: e.metadata().title ?? e.fileName(),
+          album: e.metadata().album,
+          genre: e.metadata().genre,
+          track: e.metadata().track,
+        };
+      }
+
+      if (e instanceof Photo) {
+        return {
+          type: "photo",
+          path: e.relPath,
+          name: e.fileName(),
+          size: e.size,
+          format: e.mime,
+          width: e.width(),
+          height: e.height(),
+        };
+      }
+
+      if (e instanceof Video) {
+        return {
+          type: "video",
+          path: e.relPath,
+          name: e.fileName(),
+          size: e.size,
+          format: e.mime,
+          width: e.width(),
+          height: e.height(),
+          duration: e.duration(),
+          author: e.metadata().artist,
+          title: e.metadata().title ?? e.fileName(),
+          album: e.metadata().album,
+          genre: e.metadata().genre,
+          track: e.metadata().track,
+        };
+      }
+
+      throw new UnreachableError(e as any);
     }),
   });
 };

@@ -52,13 +52,6 @@ export default ({
           type={file.format}
           src={apiGetPath("getFile", { path: file.path })}
         />
-        {file.convertedFormats.map((mime) => (
-          <source
-            key={`${file.path}:${mime}`}
-            type={mime}
-            src={apiGetPath("getFile", { path: file.path, converted: mime })}
-          />
-        ))}
       </video>
       {mapDefined(next, (next) => (
         <button

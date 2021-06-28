@@ -60,13 +60,13 @@ const File = ({
       onClick={onClick}
       onMouseEnter={() => {
         if (videoRef.current) {
-          videoRef.current.currentTime = 0;
-          videoRef.current.play();
+          videoRef.current.src = apiGetPath("getFile", {
+            path: file.path,
+            preview: true,
+          });
         }
       }}
-      onMouseLeave={() => {
-        videoRef.current?.pause();
-      }}
+      onMouseLeave={() => videoRef.current?.removeAttribute("src")}
       style={
         !visible
           ? undefined
@@ -81,13 +81,10 @@ const File = ({
       {file.type == "video" && (
         <video
           ref={videoRef}
-          className="explorer-file-video-snippet"
+          className="explorer-file-video-preview"
           autoPlay={true}
           controls={false}
-          src={apiGetPath("getFile", {
-            path: file.path,
-            snippet: true,
-          })}
+          muted={true}
         />
       )}
       {(file.type == "video" || file.type == "audio") && (

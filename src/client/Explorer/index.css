@@ -71,7 +71,7 @@
   word-wrap: break-word;
 }
 
-.explorer-file-video-snippet {
+.explorer-file-video-preview {
   opacity: 0;
   height: 100%;
   width: 100%;
@@ -80,7 +80,7 @@
   transition: 0.3s;
 }
 
-.app:not(.app-pt-touch) .explorer-file-video-snippet:hover {
+.app:not(.app-pt-touch) .explorer-file-video-preview:hover {
   opacity: 1;
 }
 
