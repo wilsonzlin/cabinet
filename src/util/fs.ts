@@ -22,7 +22,7 @@ const getWindowsFileAttributes = (
     });
   });
 
-export const isHiddenFile = async (path: string) =>
+export const isHiddenFile = (path: string) =>
   process.platform === "win32"
     ? getWindowsFileAttributes(path).then(({ hidden }) => hidden)
-    : Promise.resolve(basename(path)[0] === ".");
+    : basename(path)[0] === ".";
