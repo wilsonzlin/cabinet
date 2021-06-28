@@ -50,106 +50,100 @@ export class Directory extends DirEntry {
   private lazyList: Promise<DirEntries> | undefined;
 
   entries(): Promise<DirEntries> {
-    return (
-      this.lazyList ??
-      (async () => {
-        const names = await readdir(this.absPath());
-        const entries = Object.create(null);
-        await Promise.all(
-          names.map(async (f) => {
-            if (f == DATA_DIR_NAME) {
+    return (this.lazyList ??= (async () => {
+      const names = await readdir(this.absPath());
+      const entries = Object.create(null);
+      await Promise.all(
+        names.map(async (f) => {
+          if (f == DATA_DIR_NAME) {
+            return;
+          }
+          const abs = join(this.absPath(), f);
+          const rel = join(this.relPath, f);
+          let entry: DirEntry;
+          const stats = await stat(abs);
+          if (stats.isDirectory()) {
+            entry = new Directory(this.rootAbsPath, rel);
+          } else if (stats.isFile()) {
+            // "file-type" uses magic bytes, but doesn't detect every file type,
+            // so fall back to simple extension lookup via "mime".
+            const mime =
+              (await fileType.fromFile(abs))?.mime ?? Mime.getType(abs);
+            if (!mime) {
               return;
             }
-            const abs = join(this.absPath(), f);
-            const rel = join(this.relPath, f);
-            let entry: DirEntry;
-            const stats = await stat(abs);
-            if (stats.isDirectory()) {
-              entry = new Directory(this.rootAbsPath, rel);
-            } else if (stats.isFile()) {
-              // "file-type" uses magic bytes, but doesn't detect every file type,
-              // so fall back to simple extension lookup via "mime".
-              const mime =
-                (await fileType.fromFile(abs))?.mime ?? Mime.getType(abs);
-              if (!mime) {
-                return;
+            const ext = pathExtension(f) ?? "";
+            if (MEDIA_EXTENSIONS.has(ext)) {
+              let probeDataPath = join(await dataDirForFile(abs), "probe.json");
+              let probe: ffprobeOutput;
+              try {
+                probe = JSON.parse(await readFile(probeDataPath, "utf8"));
+              } catch (e) {
+                if (e.code !== "ENOENT") {
+                  throw e;
+                }
+                probe = await ff.probe(abs, false);
+                await writeFile(probeDataPath, JSON.stringify(probe));
               }
-              const ext = pathExtension(f) ?? "";
-              if (MEDIA_EXTENSIONS.has(ext)) {
-                let probeDataPath = join(
-                  await dataDirForFile(abs),
-                  "probe.json"
+              const audio = probe.streams.find(
+                (s): s is ffprobeAudioStream => s.codec_type === "audio"
+              );
+              const video = probe.streams.find(
+                (s): s is ffprobeVideoStream => s.codec_type === "video"
+              );
+              if (video) {
+                entry = new Video(
+                  this.rootAbsPath,
+                  rel,
+                  stats.size,
+                  mime,
+                  probe,
+                  video,
+                  audio
                 );
-                let probe: ffprobeOutput;
-                try {
-                  probe = JSON.parse(await readFile(probeDataPath, "utf8"));
-                } catch (e) {
-                  if (e.code !== "ENOENT") {
-                    throw e;
-                  }
-                  probe = await ff.probe(abs, false);
-                  await writeFile(probeDataPath, JSON.stringify(probe));
-                }
-                const audio = probe.streams.find(
-                  (s): s is ffprobeAudioStream => s.codec_type === "audio"
+              } else if (audio) {
+                entry = new Audio(
+                  this.rootAbsPath,
+                  rel,
+                  stats.size,
+                  mime,
+                  probe,
+                  audio
                 );
-                const video = probe.streams.find(
-                  (s): s is ffprobeVideoStream => s.codec_type === "video"
-                );
-                if (video) {
-                  entry = new Video(
-                    this.rootAbsPath,
-                    rel,
-                    stats.size,
-                    mime,
-                    probe,
-                    video,
-                    audio
-                  );
-                } else if (audio) {
-                  entry = new Audio(
-                    this.rootAbsPath,
-                    rel,
-                    stats.size,
-                    mime,
-                    probe,
-                    audio
-                  );
-                } else {
-                  return;
-                }
-              } else if (PHOTO_EXTENSIONS.has(ext)) {
-                let metadata;
-                try {
-                  metadata = await sharp(abs).metadata();
-                } catch {
-                  return;
-                }
-                const { format, height, width } = metadata;
-                if (
-                  format == undefined ||
-                  height == undefined ||
-                  width == undefined
-                ) {
-                  return;
-                }
-                entry = new Photo(this.rootAbsPath, rel, stats.size, mime, {
-                  format,
-                  height,
-                  width,
-                });
               } else {
                 return;
               }
+            } else if (PHOTO_EXTENSIONS.has(ext)) {
+              let metadata;
+              try {
+                metadata = await sharp(abs).metadata();
+              } catch {
+                return;
+              }
+              const { format, height, width } = metadata;
+              if (
+                format == undefined ||
+                height == undefined ||
+                width == undefined
+              ) {
+                return;
+              }
+              entry = new Photo(this.rootAbsPath, rel, stats.size, mime, {
+                format,
+                height,
+                width,
+              });
             } else {
               return;
             }
-            entries[f] = entry;
-          })
-        );
-        return entries;
-      })()
-    );
+          } else {
+            return;
+          }
+          entries[f] = entry;
+        })
+      );
+      return entries;
+    })());
   }
 }
 
@@ -189,22 +183,19 @@ export class Photo extends File {
   }
 
   thumbnailPath() {
-    return (
-      this.lazyThumbnailPath ??
-      (async () => {
-        const thumbnailPath = join(await this.dataDir(), "thumbnail.jpg");
-        if (await maybeFileStats(thumbnailPath)) {
-          return thumbnailPath;
-        }
-        await sharp(this.absPath())
-          .resize({
-            width: PREVIEW_SCALED_WIDTH,
-          })
-          .jpeg()
-          .toFile(thumbnailPath);
+    return (this.lazyThumbnailPath ??= (async () => {
+      const thumbnailPath = join(await this.dataDir(), "thumbnail.jpg");
+      if (await maybeFileStats(thumbnailPath)) {
         return thumbnailPath;
-      })()
-    );
+      }
+      await sharp(this.absPath())
+        .resize({
+          width: PREVIEW_SCALED_WIDTH,
+        })
+        .jpeg()
+        .toFile(thumbnailPath);
+      return thumbnailPath;
+    })());
   }
 
   height() {
@@ -288,22 +279,19 @@ export class Video extends Media {
   }
 
   thumbnailPath() {
-    return (
-      this.lazyThumbnailPath ??
-      (async () => {
-        const thumbnailPath = join(await this.dataDir(), "thumbnail.jpg");
-        if (await maybeFileStats(thumbnailPath)) {
-          return thumbnailPath;
-        }
-        await ff.extractFrame({
-          input: this.absPath(),
-          output: thumbnailPath,
-          timestamp: this.duration() * 0.5,
-          scaleWidth: PREVIEW_SCALED_WIDTH,
-        });
+    return (this.lazyThumbnailPath ??= (async () => {
+      const thumbnailPath = join(await this.dataDir(), "thumbnail.jpg");
+      if (await maybeFileStats(thumbnailPath)) {
         return thumbnailPath;
-      })()
-    );
+      }
+      await ff.extractFrame({
+        input: this.absPath(),
+        output: thumbnailPath,
+        timestamp: this.duration() * 0.5,
+        scaleWidth: PREVIEW_SCALED_WIDTH,
+      });
+      return thumbnailPath;
+    })());
   }
 
   fps() {
@@ -326,76 +314,73 @@ export class Video extends Media {
   }
 
   previewFile() {
-    return (
-      this.lazyPreviewPath ??
-      (async () => {
-        const previewPath = join(await this.dataDir(), "preview.mp4");
-        let stats: Stats;
-        if (!(stats = await maybeFileStats(previewPath))) {
-          const PART_SEC = 3;
-          const PARTS = 8;
-          const chapterLen = this.duration() / PARTS;
-          const partFiles = [];
-          const partFilesListFile = `${previewPath}.parts.txt`;
-          const promises: Promise<void>[] = [];
-          // Using the ffmpeg select filter is excruciatingly slow for a tiny < 1 minute output.
-          // Manually seek and extract in parallel, and stitch at end.
-          for (let i = 0; i < PARTS; i++) {
-            const partFile = `${previewPath}.${i}`;
-            partFiles.push(`file '${partFile}'${EOL}`);
-            const start = chapterLen * i + chapterLen / 2 - PART_SEC / 2;
-            promises.push(
-              ff.convert({
-                input: {
-                  file: this.absPath(),
-                  start,
-                  duration: PART_SEC,
-                },
-                metadata: false,
-                video: {
-                  codec: "libx264",
-                  movflags: ["faststart"],
-                  crf: 23,
-                  fps: 24,
-                  preset: "veryfast",
-                  resize: { width: PREVIEW_SCALED_WIDTH },
-                },
-                audio: false,
-                output: {
-                  file: partFile,
-                  format: "mp4",
-                },
-              })
-            );
-          }
-          promises.push(writeFile(partFilesListFile, partFiles.join("")));
-          await Promise.all(promises);
-          // TODO Integrate with ff.
-          await new Promise<void>((resolve, reject) =>
-            execFile(
-              "ffmpeg",
-              [
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                partFilesListFile,
-                "-c",
-                "copy",
-                previewPath,
-              ],
-              (error) => (error ? reject(error) : resolve())
-            )
+    return (this.lazyPreviewPath ??= (async () => {
+      const previewPath = join(await this.dataDir(), "preview.mp4");
+      let stats: Stats;
+      if (!(stats = await maybeFileStats(previewPath))) {
+        const PART_SEC = 3;
+        const PARTS = 8;
+        const chapterLen = this.duration() / PARTS;
+        const partFiles = [];
+        const partFilesListFile = `${previewPath}.parts.txt`;
+        const promises: Promise<void>[] = [];
+        // Using the ffmpeg select filter is excruciatingly slow for a tiny < 1 minute output.
+        // Manually seek and extract in parallel, and stitch at end.
+        for (let i = 0; i < PARTS; i++) {
+          const partFile = `${previewPath}.${i}`;
+          partFiles.push(`file '${partFile}'${EOL}`);
+          const start = chapterLen * i + chapterLen / 2 - PART_SEC / 2;
+          promises.push(
+            ff.convert({
+              input: {
+                file: this.absPath(),
+                start,
+                duration: PART_SEC,
+              },
+              metadata: false,
+              video: {
+                codec: "libx264",
+                movflags: ["faststart"],
+                crf: 23,
+                fps: 24,
+                preset: "veryfast",
+                resize: { width: PREVIEW_SCALED_WIDTH },
+              },
+              audio: false,
+              output: {
+                file: partFile,
+                format: "mp4",
+              },
+            })
           );
-          stats = await stat(previewPath);
         }
-        return { absPath: previewPath, size: stats.size };
-      })()
-    );
+        promises.push(writeFile(partFilesListFile, partFiles.join("")));
+        await Promise.all(promises);
+        // TODO Integrate with ff.
+        await new Promise<void>((resolve, reject) =>
+          execFile(
+            "ffmpeg",
+            [
+              "-hide_banner",
+              "-loglevel",
+              "error",
+              "-f",
+              "concat",
+              "-safe",
+              "0",
+              "-i",
+              partFilesListFile,
+              "-c",
+              "copy",
+              previewPath,
+            ],
+            (error) => (error ? reject(error) : resolve())
+          )
+        );
+        stats = await stat(previewPath);
+      }
+      return { absPath: previewPath, size: stats.size };
+    })());
   }
 }
 
