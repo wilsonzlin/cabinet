@@ -50,7 +50,7 @@ export const writeResponse = (
   }
   res.writeHead(status, actualHeaders);
   pipeline(src, res, (err) => {
-    if (err) {
+    if (err && err.code !== "ERR_STREAM_PREMATURE_CLOSE") {
       console.warn("Response stream error:", err);
     }
   });

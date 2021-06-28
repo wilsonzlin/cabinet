@@ -3,7 +3,7 @@ import {
   ffprobeOutput,
   ffprobeVideoStream,
 } from "@wzlin/ff";
-import { execFile, spawn } from "child_process";
+import { execFile } from "child_process";
 import last from "extlib/js/last";
 import maybeFileStats from "extlib/js/maybeFileStats";
 import pathExtension from "extlib/js/pathExtension";
