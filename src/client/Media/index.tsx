@@ -163,12 +163,7 @@ export default ({
           onSeekOrTimeUpdate.current?.(time);
         }}
         src={videoSrc}
-      >
-        <source
-          type={file.format}
-          src={apiGetPath("getFile", { path: file.path })}
-        />
-      </video>
+      />
       {mapDefined(next, (next) => (
         <button
           // Have this always rendered to allow opacity transition in.

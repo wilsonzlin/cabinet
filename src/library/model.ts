@@ -8,6 +8,7 @@ import assertExists from "extlib/js/assertExists";
 import last from "extlib/js/last";
 import mapDefined from "extlib/js/mapDefined";
 import maybeFileStats from "extlib/js/maybeFileStats";
+import naturalOrdering from "extlib/js/naturalOrdering";
 import pathExtension from "extlib/js/pathExtension";
 import splitString from "extlib/js/splitString";
 import fileType from "file-type";
@@ -69,7 +70,7 @@ export class Directory extends DirEntry {
       const names = await readdir(this.absPath());
       const entries = Object.create(null);
       await Promise.all(
-        names.map(async (f) => {
+        names.sort(naturalOrdering).map(async (f) => {
           if (f == DATA_DIR_NAME) {
             return;
           }
