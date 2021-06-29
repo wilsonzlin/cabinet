@@ -91,17 +91,12 @@ export const BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS = new Map<
   [
     "mov,mp4,m4a,3gp,3g2,mj2",
     {
+      // Sources:
+      // - https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#mpeg-4_mp4
+      // - https://www.w3.org/2008/WebVideo/Fragments/wiki/State_of_the_Art/Containers
       argValue: "mp4",
-      audioCodecs: new Set([
-        "aac",
-        "alac",
-        "av1",
-        "h264",
-        "mp3",
-        "vorbis",
-        "vp9",
-      ]),
-      videoCodecs: new Set(["aac", "flac", "mp3", "opus"]),
+      audioCodecs: new Set(["aac", "alac", "flac", "mp3", "opus", "vorbis"]),
+      videoCodecs: new Set(["av1", "h264", "vp9"]),
     },
   ],
   [

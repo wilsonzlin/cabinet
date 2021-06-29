@@ -321,13 +321,23 @@ export class Video extends Media {
       const container = this.format.format_name;
       const videoCodec = this.videoStream.codec_name;
       const audioCodec = this.audioStream?.codec_name;
-      const containerSupported =
-        BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS.has(container);
+      const containerConfig =
+        BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS.get(container);
+      const containerSupported = !!containerConfig;
       const videoSupported = BROWSER_SUPPORTED_VIDEO_CODECS.has(videoCodec);
       const audioSupported =
         mapDefined(audioCodec, (c) => BROWSER_SUPPORTED_AUDIO_CODECS.has(c)) ??
         true;
-      if (containerSupported && videoSupported && audioSupported) {
+      const containerSupportsAV =
+        containerConfig?.videoCodecs.has(videoCodec) &&
+        (audioCodec == undefined ||
+          containerConfig?.audioCodecs.has(audioCodec));
+      if (
+        containerSupported &&
+        videoSupported &&
+        audioSupported &&
+        containerSupportsAV
+      ) {
         return { absPath: this.absPath(), mime: this.mime, size: this.size };
       }
       // Audio conversion is very quick. Also, segmenting audio is very difficult to get right
@@ -362,7 +372,7 @@ export class Video extends Media {
               metadata: false,
               audio: !audioCodec
                 ? false
-                : audioSupported
+                : convertedAudioCodec === audioCodec
                 ? true
                 : { codec: convertedAudioCodec as any },
               video: true,
