@@ -1,4 +1,5 @@
 import derivedComparator from "extlib/js/derivedComparator";
+import naturalOrdering from "extlib/js/naturalOrdering";
 import UnreachableError from "extlib/js/UnreachableError";
 import { Audio, Directory, File, Photo, Video } from "../library/model";
 import { ClientError, Json } from "../server/response";
@@ -81,62 +82,64 @@ export const listFilesApi = async (
     approximateSize: size,
     approximateDuration: duration,
     approximateCount: entries.length,
-    results: entries.sort(derivedComparator((e) => e.fileName())).map((e) => {
-      if (e instanceof Directory) {
-        return {
-          type: "dir",
-          name: e.fileName(),
-          itemCount: Object.keys(e.entries).length,
-        };
-      }
+    results: entries
+      .sort(derivedComparator((e) => e.fileName(), naturalOrdering))
+      .map((e) => {
+        if (e instanceof Directory) {
+          return {
+            type: "dir",
+            name: e.fileName(),
+            itemCount: Object.keys(e.entries).length,
+          };
+        }
 
-      if (e instanceof Audio) {
-        return {
-          type: "audio",
-          path: e.relPath,
-          name: e.fileName(),
-          size: e.size,
-          format: e.mime,
-          duration: e.duration(),
-          author: e.metadata().artist,
-          title: e.metadata().title ?? e.fileName(),
-          album: e.metadata().album,
-          genre: e.metadata().genre,
-          track: e.metadata().track,
-        };
-      }
+        if (e instanceof Audio) {
+          return {
+            type: "audio",
+            path: e.relPath,
+            name: e.fileName(),
+            size: e.size,
+            format: e.mime,
+            duration: e.duration(),
+            author: e.metadata().artist,
+            title: e.metadata().title ?? e.fileName(),
+            album: e.metadata().album,
+            genre: e.metadata().genre,
+            track: e.metadata().track,
+          };
+        }
 
-      if (e instanceof Photo) {
-        return {
-          type: "photo",
-          path: e.relPath,
-          name: e.fileName(),
-          size: e.size,
-          format: e.mime,
-          width: e.width(),
-          height: e.height(),
-        };
-      }
+        if (e instanceof Photo) {
+          return {
+            type: "photo",
+            path: e.relPath,
+            name: e.fileName(),
+            size: e.size,
+            format: e.mime,
+            width: e.width(),
+            height: e.height(),
+          };
+        }
 
-      if (e instanceof Video) {
-        return {
-          type: "video",
-          path: e.relPath,
-          name: e.fileName(),
-          size: e.size,
-          format: e.mime,
-          width: e.width(),
-          height: e.height(),
-          duration: e.duration(),
-          author: e.metadata().artist,
-          title: e.metadata().title ?? e.fileName(),
-          album: e.metadata().album,
-          genre: e.metadata().genre,
-          track: e.metadata().track,
-        };
-      }
+        if (e instanceof Video) {
+          return {
+            type: "video",
+            path: e.relPath,
+            name: e.fileName(),
+            size: e.size,
+            format: e.mime,
+            width: e.width(),
+            height: e.height(),
+            duration: e.duration(),
+            author: e.metadata().artist,
+            title: e.metadata().title ?? e.fileName(),
+            album: e.metadata().album,
+            genre: e.metadata().genre,
+            track: e.metadata().track,
+          };
+        }
 
-      throw new UnreachableError(e as any);
-    }),
+        throw new UnreachableError(e as any);
+      }),
   });
 };
