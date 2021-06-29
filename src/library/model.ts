@@ -546,7 +546,7 @@ export class Video extends Media {
         // Manually seek and extract in parallel, and stitch at end.
         for (let i = 0; i < PARTS; i++) {
           const partFile = `${previewPath}.${i}`;
-          partFiles.push(`file '${partFile}'${EOL}`);
+          partFiles.push(`file '${partFile.replaceAll("'", "'\\''")}'${EOL}`);
           const start = chapterLen * i + chapterLen / 2 - PART_SEC / 2;
           promises.push(
             ff.convert({
