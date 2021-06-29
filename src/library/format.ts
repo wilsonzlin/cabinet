@@ -1,3 +1,24 @@
+const PCM_CODECS = [
+  "pcm_s16be",
+  "pcm_s16le",
+  "pcm_s24be",
+  "pcm_s24le",
+  "pcm_s32be",
+  "pcm_s32le",
+  "pcm_s64be",
+  "pcm_s64le",
+  "pcm_s8",
+  "pcm_u16be",
+  "pcm_u16le",
+  "pcm_u24be",
+  "pcm_u24le",
+  "pcm_u32be",
+  "pcm_u32le",
+  "pcm_u64be",
+  "pcm_u64le",
+  "pcm_u8",
+];
+
 export const MEDIA_EXTENSIONS = new Set([
   "3gp",
   "aac",
@@ -7,6 +28,7 @@ export const MEDIA_EXTENSIONS = new Set([
   "gifv",
   "m2v",
   "m4v",
+  "mka",
   "mkv",
   "mp3",
   "mp4",
@@ -15,6 +37,7 @@ export const MEDIA_EXTENSIONS = new Set([
   "oga",
   "ogg",
   "ogv",
+  "opus",
   "rm",
   "rmvb",
   "wav",
@@ -34,15 +57,90 @@ export const PHOTO_EXTENSIONS = new Set([
   "webp",
 ]);
 
-export const BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS = new Set([
-  "aac",
-  "flac",
-  "matroska,webm",
-  "mov,mp4,m4a,3gp,3g2,mj2",
-  "mp3",
-  "ogg",
-  "wav",
+export const BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS = new Map<
+  string,
+  {
+    argValue?: string;
+    audioCodecs: Set<string>;
+    videoCodecs: Set<string>;
+  }
+>([
+  [
+    "aac",
+    {
+      argValue: "alac",
+      audioCodecs: new Set(["aac"]),
+      videoCodecs: new Set(),
+    },
+  ],
+  [
+    "flac",
+    {
+      audioCodecs: new Set(["flac"]),
+      videoCodecs: new Set(),
+    },
+  ],
+  [
+    "matroska,webm",
+    {
+      argValue: "webm",
+      audioCodecs: new Set(["opus", "vorbis"]),
+      videoCodecs: new Set(["av1", "vp8", "vp9"]),
+    },
+  ],
+  [
+    "mov,mp4,m4a,3gp,3g2,mj2",
+    {
+      argValue: "mp4",
+      audioCodecs: new Set([
+        "aac",
+        "alac",
+        "av1",
+        "h264",
+        "mp3",
+        "vorbis",
+        "vp9",
+      ]),
+      videoCodecs: new Set(["aac", "flac", "mp3", "opus"]),
+    },
+  ],
+  [
+    "mp3",
+    {
+      audioCodecs: new Set(["mp3"]),
+      videoCodecs: new Set(),
+    },
+  ],
+  [
+    "ogg",
+    {
+      audioCodecs: new Set(["opus", "vorbis"]),
+      videoCodecs: new Set(["theora"]),
+    },
+  ],
+  [
+    "wav",
+    {
+      audioCodecs: new Set(PCM_CODECS),
+      videoCodecs: new Set(),
+    },
+  ],
 ]);
+
+export const findSuitableContainer = (
+  videoCodec?: string,
+  audioCodec?: string
+) => {
+  for (const [k, v] of BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS) {
+    if (
+      (audioCodec == undefined || v.audioCodecs.has(audioCodec)) &&
+      (videoCodec == undefined || v.videoCodecs.has(videoCodec))
+    ) {
+      return v.argValue ?? k;
+    }
+  }
+  return undefined;
+};
 
 export const BROWSER_SUPPORTED_VIDEO_CODECS = new Set([
   "av1",
@@ -57,23 +155,6 @@ export const BROWSER_SUPPORTED_AUDIO_CODECS = new Set([
   "aac",
   "flac",
   "mp3",
-  "pcm_s16be",
-  "pcm_s16le",
-  "pcm_s24be",
-  "pcm_s24le",
-  "pcm_s32be",
-  "pcm_s32le",
-  "pcm_s64be",
-  "pcm_s64le",
-  "pcm_s8",
-  "pcm_u16be",
-  "pcm_u16le",
-  "pcm_u24be",
-  "pcm_u24le",
-  "pcm_u32be",
-  "pcm_u32le",
-  "pcm_u64be",
-  "pcm_u64le",
-  "pcm_u8",
+  ...PCM_CODECS,
   "vorbis",
 ]);

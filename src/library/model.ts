@@ -1,10 +1,12 @@
 import {
   ffprobeAudioStream,
+  ffprobeFormat,
   ffprobeOutput,
   ffprobeVideoStream,
 } from "@wzlin/ff";
-import { execFile } from "child_process";
+import assertExists from "extlib/js/assertExists";
 import last from "extlib/js/last";
+import mapDefined from "extlib/js/mapDefined";
 import maybeFileStats from "extlib/js/maybeFileStats";
 import pathExtension from "extlib/js/pathExtension";
 import splitString from "extlib/js/splitString";
@@ -16,7 +18,14 @@ import { EOL } from "os";
 import { basename, dirname, join, sep } from "path";
 import sharp from "sharp";
 import { ff } from "../util/ff";
-import { MEDIA_EXTENSIONS, PHOTO_EXTENSIONS } from "./format";
+import {
+  BROWSER_SUPPORTED_AUDIO_CODECS,
+  BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS,
+  BROWSER_SUPPORTED_VIDEO_CODECS,
+  findSuitableContainer,
+  MEDIA_EXTENSIONS,
+  PHOTO_EXTENSIONS,
+} from "./format";
 
 // Consider:
 // - HiDPI displays and zoomed-in viewports e.g. logical 180px is physical 360px.
@@ -30,6 +39,12 @@ const dataDirForFile = async (absPath: string) => {
   const dir = join(dirname(absPath), DATA_DIR_NAME, basename(absPath));
   await mkdir(dir, { recursive: true });
   return dir;
+};
+
+const fileMime = async (absPath: string) => {
+  // "file-type" uses magic bytes, but doesn't detect every file type,
+  // so fall back to simple extension lookup via "mime".
+  return (await fileType.fromFile(absPath))?.mime ?? Mime.getType(absPath);
 };
 
 export abstract class DirEntry {
@@ -65,10 +80,7 @@ export class Directory extends DirEntry {
           if (stats.isDirectory()) {
             entry = new Directory(this.rootAbsPath, rel);
           } else if (stats.isFile()) {
-            // "file-type" uses magic bytes, but doesn't detect every file type,
-            // so fall back to simple extension lookup via "mime".
-            const mime =
-              (await fileType.fromFile(abs))?.mime ?? Mime.getType(abs);
+            const mime = await fileMime(abs);
             if (!mime) {
               return;
             }
@@ -97,7 +109,7 @@ export class Directory extends DirEntry {
                   rel,
                   stats.size,
                   mime,
-                  probe,
+                  probe.format,
                   video,
                   audio
                 );
@@ -107,7 +119,7 @@ export class Directory extends DirEntry {
                   rel,
                   stats.size,
                   mime,
-                  probe,
+                  probe.format,
                   audio
                 );
               } else {
@@ -217,13 +229,13 @@ export abstract class Media extends File {
     relPath: string,
     size: number,
     mime: string,
-    private readonly probe: ffprobeOutput
+    protected readonly format: ffprobeFormat
   ) {
     super(rootAbsPath, relPath, size, mime);
   }
 
   duration() {
-    return Number(this.probe.format.duration);
+    return Number(this.format.duration);
   }
 
   // Many videos also use the same standard audio metadata tags.
@@ -234,7 +246,7 @@ export abstract class Media extends File {
     title?: string;
     track?: number;
   } {
-    return this.probe.format.tags;
+    return this.format.tags ?? {};
   }
 }
 
@@ -244,10 +256,10 @@ export class Audio extends Media {
     relPath: string,
     size: number,
     mime: string,
-    probe: ffprobeOutput,
+    format: ffprobeFormat,
     private readonly audioStream: ffprobeAudioStream
   ) {
-    super(rootAbsPath, relPath, size, mime, probe);
+    super(rootAbsPath, relPath, size, mime, format);
   }
 
   channels() {
@@ -261,6 +273,32 @@ export class Audio extends Media {
 }
 
 export class Video extends Media {
+  private lazyContent:
+    | Promise<
+        | {
+            absPath: string;
+            mime: string;
+            size: number;
+          }
+        | {
+            video: {
+              segments: readonly {
+                readonly start: number;
+                file(): Promise<{
+                  absPath: string;
+                  mime: string;
+                  size: number;
+                }>;
+              }[];
+            };
+            audio?: {
+              absPath: string;
+              mime: string;
+              size: number;
+            };
+          }
+      >
+    | undefined;
   private lazyThumbnailPath: Promise<string> | undefined;
   private lazyPreviewPath:
     | Promise<{ absPath: string; size: number }>
@@ -271,11 +309,181 @@ export class Video extends Media {
     relPath: string,
     size: number,
     mime: string,
-    probe: ffprobeOutput,
+    format: ffprobeFormat,
     private readonly videoStream: ffprobeVideoStream,
     private readonly audioStream?: ffprobeAudioStream
   ) {
-    super(rootAbsPath, relPath, size, mime, probe);
+    super(rootAbsPath, relPath, size, mime, format);
+  }
+
+  content() {
+    return (this.lazyContent ??= (async () => {
+      const container = this.format.format_name;
+      const videoCodec = this.videoStream.codec_name;
+      const audioCodec = this.audioStream?.codec_name;
+      const containerSupported =
+        BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS.has(container);
+      const videoSupported = BROWSER_SUPPORTED_VIDEO_CODECS.has(videoCodec);
+      const audioSupported =
+        mapDefined(audioCodec, (c) => BROWSER_SUPPORTED_AUDIO_CODECS.has(c)) ??
+        true;
+      if (containerSupported && videoSupported && audioSupported) {
+        return { absPath: this.absPath(), mime: this.mime, size: this.size };
+      }
+      // Audio conversion is very quick. Also, segmenting audio is very difficult to get right
+      // without skips/stutters between segments. For both reasons, we always convert any audio
+      // in entirety directly.
+      if (videoSupported) {
+        let convertedAudioCodec = audioSupported ? audioCodec : "aac";
+        let convertedContainer = findSuitableContainer(
+          videoCodec,
+          convertedAudioCodec
+        );
+        // If no suitable container found for existing video and audio codec, opt to convert audio.
+        for (const audioCodec of BROWSER_SUPPORTED_AUDIO_CODECS) {
+          if (convertedContainer != undefined) {
+            break;
+          }
+          convertedAudioCodec = audioCodec;
+          convertedContainer = findSuitableContainer(
+            videoCodec,
+            convertedAudioCodec
+          );
+        }
+        // If still no suitable container found for video codec, we can only convert the video.
+        if (convertedContainer != undefined) {
+          const convertedPath = join(await this.dataDir(), "converted");
+          let convertedStats;
+          if (!(convertedStats = await maybeFileStats(convertedPath))) {
+            await ff.convert({
+              input: {
+                file: this.absPath(),
+              },
+              metadata: false,
+              audio: !audioCodec
+                ? false
+                : audioSupported
+                ? true
+                : { codec: convertedAudioCodec as any },
+              video: true,
+              output: {
+                file: convertedPath,
+                format: convertedContainer,
+              },
+            });
+            convertedStats = await stat(convertedPath);
+          }
+          return {
+            absPath: convertedPath,
+            mime: assertExists(
+              await fileMime(convertedPath),
+              "converted video has no MIME"
+            ),
+            size: convertedStats.size,
+          };
+        }
+      }
+      let convertAudioPromise: Promise<unknown> | undefined;
+      let convertedAudioPath: string | undefined;
+      let convertedAudioStats: Stats | undefined;
+      if (audioCodec != undefined) {
+        convertedAudioPath = join(await this.dataDir(), "converted.audio");
+        if (!(convertedAudioStats = await maybeFileStats(convertedAudioPath))) {
+          convertAudioPromise = ff
+            .convert({
+              input: {
+                file: this.absPath(),
+              },
+              metadata: false,
+              audio: { codec: "aac" },
+              video: false,
+              output: {
+                file: convertedAudioPath,
+                format: "adts",
+              },
+            })
+            .then(
+              async () =>
+                (convertedAudioStats = await stat(convertedAudioPath!))
+            );
+        }
+      }
+      const [keyframes] = await Promise.all([
+        ff.getKeyframeTimestamps(this.absPath(), false),
+        convertAudioPromise,
+      ]);
+      const keyframesMajor = [0];
+      for (const ts of keyframes) {
+        // Ensure segments are at least 9 seconds apart and not within last 9 seconds of video.
+        if (ts - last(keyframesMajor) >= 9 && this.duration() - ts >= 9) {
+          keyframesMajor.push(ts);
+        }
+      }
+      return {
+        audio: await mapDefined(convertedAudioPath, async (absPath) => ({
+          absPath,
+          mime: assertExists(
+            await fileMime(absPath),
+            "converted video audio has no MIME"
+          ),
+          size: assertExists(convertedAudioStats).size,
+        })),
+        video: {
+          segments: keyframesMajor.map((ts, i, a) => {
+            let lazyAbsPath:
+              | Promise<{
+                  absPath: string;
+                  mime: string;
+                  size: number;
+                }>
+              | undefined;
+            const nextTs: number | undefined = a[i + 1];
+            return {
+              start: ts,
+              file: () => {
+                return (lazyAbsPath ??= (async () => {
+                  const segmentAbsPath = join(
+                    await this.dataDir(),
+                    `converted.video.segment.${i}`
+                  );
+                  let stats;
+                  if (!(stats = await maybeFileStats(segmentAbsPath))) {
+                    await ff.convert({
+                      input: {
+                        file: this.absPath(),
+                        start: ts,
+                        end: nextTs,
+                      },
+                      video: {
+                        codec: "libx264",
+                        preset: "veryfast",
+                        crf: 18,
+                        movflags: ["default_base_moof", "empty_moov"],
+                      },
+                      audio: false,
+                      metadata: false,
+                      output: {
+                        format: "mp4",
+                        file: segmentAbsPath,
+                      },
+                    });
+                    stats = await stat(segmentAbsPath);
+                  }
+                  return {
+                    absPath: segmentAbsPath,
+                    mime: assertExists(
+                      await fileMime(segmentAbsPath),
+                      "video segment has no MIME"
+                    ),
+                    size: stats.size,
+                  };
+                })());
+              },
+            };
+          }),
+        },
+      };
+    })());
   }
 
   thumbnailPath() {
@@ -356,27 +564,10 @@ export class Video extends Media {
         }
         promises.push(writeFile(partFilesListFile, partFiles.join("")));
         await Promise.all(promises);
-        // TODO Integrate with ff.
-        await new Promise<void>((resolve, reject) =>
-          execFile(
-            "ffmpeg",
-            [
-              "-hide_banner",
-              "-loglevel",
-              "error",
-              "-f",
-              "concat",
-              "-safe",
-              "0",
-              "-i",
-              partFilesListFile,
-              "-c",
-              "copy",
-              previewPath,
-            ],
-            (error) => (error ? reject(error) : resolve())
-          )
-        );
+        await ff.concat({
+          filesListFile: partFilesListFile,
+          output: previewPath,
+        });
         stats = await stat(previewPath);
       }
       return { absPath: previewPath, size: stats.size };

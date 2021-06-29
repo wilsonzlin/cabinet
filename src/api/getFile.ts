@@ -3,7 +3,7 @@ import maybeFileStats from "extlib/js/maybeFileStats";
 import { mkdir } from "fs/promises";
 import { dirname, join } from "path";
 import { Video } from "../library/model";
-import { ClientError, SendFile, StreamFile } from "../server/response";
+import { ClientError, Json, SendFile, StreamFile } from "../server/response";
 import { ff } from "../util/ff";
 import { ApiCtx } from "./_common";
 
@@ -129,15 +129,21 @@ export const getFileApi = async (
   ctx: ApiCtx,
   {
     path,
-    thumbnail,
-    preview,
+    audioTrack,
+    contentManifest,
     montageFrame,
+    preview,
+    segment,
+    thumbnail,
     capture,
   }: {
     path: string;
-    thumbnail?: true;
-    preview?: true;
+    audioTrack?: true;
+    contentManifest?: true;
     montageFrame?: number;
+    preview?: true;
+    segment?: number;
+    thumbnail?: true;
     capture?: {
       start?: number;
       end?: number;
@@ -151,6 +157,26 @@ export const getFileApi = async (
     throw new ClientError(404, "File not found");
   }
 
+  if (audioTrack) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Capturing only supported on videos");
+    }
+    const content = await file.content();
+    if ("absPath" in content) {
+      throw new ClientError(404, "Video does not have segments");
+    }
+    const { audio } = content;
+    if (!audio) {
+      throw new ClientError(404, "Video does not have extracted audio");
+    }
+    return new StreamFile(
+      audio.absPath,
+      audio.size,
+      audio.mime,
+      file.fileName()
+    );
+  }
+
   if (capture) {
     if (!(file instanceof Video)) {
       throw new ClientError(400, "Capturing only supported on videos");
@@ -159,6 +185,23 @@ export const getFileApi = async (
       ctx,
       video: file,
       ...capture,
+    });
+  }
+
+  if (contentManifest) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Content manifests only available for videos");
+    }
+    const content = await file.content();
+    if ("absPath" in content) {
+      return new Json({
+        type: "src",
+      });
+    }
+    return new Json({
+      type: "segments",
+      audio: !!content.audio,
+      video: content.video.segments.map((s) => s.start),
     });
   }
 
@@ -183,6 +226,22 @@ export const getFileApi = async (
     );
   }
 
+  if (segment != undefined) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Segments only available for videos");
+    }
+    const content = await file.content();
+    if ("absPath" in content) {
+      throw new ClientError(404, "Video does not have segments");
+    }
+    const s = content.video.segments[segment];
+    if (!s) {
+      throw new ClientError(404, "Segment not found");
+    }
+    const f = await s.file();
+    return new StreamFile(f.absPath, f.size, f.mime, file.fileName());
+  }
+
   if (thumbnail) {
     const thumbnailPath = await file.thumbnailPath();
     if (!thumbnailPath) {
@@ -191,5 +250,17 @@ export const getFileApi = async (
     return new SendFile(thumbnailPath);
   }
 
+  if (file instanceof Video) {
+    const content = await file.content();
+    if (!("absPath" in content)) {
+      throw new ClientError(404, "Video must be accessed via segments");
+    }
+    return new StreamFile(
+      content.absPath,
+      content.size,
+      content.mime,
+      file.fileName()
+    );
+  }
   return new StreamFile(file.absPath(), file.size, file.mime, file.fileName());
 };

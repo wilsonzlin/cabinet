@@ -31,8 +31,8 @@
   },
   "homepage": "https://github.com/wilsonzlin/cabinet#readme",
   "dependencies": {
-    "@wzlin/ff": "^0.11.3",
-    "extlib": "^0.16.1",
+    "@wzlin/ff": "^0.12.0",
+    "extlib": "^0.16.2",
     "file-type": "^16.5.0",
     "luxon": "^1.27.0",
     "mime": "^2.5.2",
