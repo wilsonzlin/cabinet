@@ -1,9 +1,11 @@
 import assertState from "extlib/js/assertState";
 import classNames from "extlib/js/classNames";
+import defined from "extlib/js/defined";
 import filterValue from "extlib/js/filterValue";
 import mapDefined from "extlib/js/mapDefined";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedMedia } from "../../api/listFiles";
+import { GaplessMetadata } from "../../util/media";
 import { apiGetPath } from "../_common/api";
 import "./index.css";
 
@@ -61,55 +63,112 @@ export default ({
           assertState(type === "segments");
 
           const src = new MediaSource();
-          let srcBuf: SourceBuffer | undefined;
+          let videoSrcBuf: SourceBuffer | undefined;
+          let audioSrcBuf: SourceBuffer | undefined;
           // TODO URL.revokeObjectURL?
           setVideoSrc(URL.createObjectURL(src));
           src.addEventListener("sourceopen", () => {
             src.setLiveSeekableRange(0, file.duration);
-            srcBuf = src.addSourceBuffer('video/mp4; codecs="avc1.64001F"');
-            srcBuf.mode = "segments";
-            ensureTimeRangeFetched(0, 60);
+            videoSrcBuf = src.addSourceBuffer(
+              // Example values:
+              // - video/webm; codecs="vp9, opus"
+              // - video/mp4; codecs="avc1.64001F, mp4a.40.2"
+              'video/mp4; codecs="avc1.64001F"'
+            );
+            videoSrcBuf.mode = "segments";
 
-            if (!audio) {
-              return;
+            if (audio) {
+              audioSrcBuf = src.addSourceBuffer(
+                'audio/mp4; codecs="mp4a.40.2"'
+              );
             }
-            const audioSrcBuf = src.addSourceBuffer("audio/aac");
-            // TODO await audioSrcBuf.on('updateend').
-            fetch(apiGetPath("getFile", { path: file.path, audioTrack: true }))
-              .then((r) => r.arrayBuffer())
-              .then((b) => audioSrcBuf.appendBuffer(b));
+
+            ensureTimeRangeFetched(0, 60);
           });
 
           const segmentFetchQueue: number[] = [];
           const segmentFetchStarted = new Set<number>();
           let segmentFetchInProgress = false;
           const processSegmentFetchQueue: () => void = async () => {
-            if (segmentFetchInProgress || !srcBuf) {
+            if (segmentFetchInProgress) {
               return;
             }
             segmentFetchInProgress = true;
-            for (
-              let segment;
-              (segment = segmentFetchQueue.shift()) !== undefined;
+            while (segmentFetchQueue.length) {
+              const fetched = await Promise.all(
+                segmentFetchQueue.splice(0).map(async (segment) => {
+                  if (segmentFetchStarted.has(segment)) {
+                    return undefined;
+                  }
+                  segmentFetchStarted.add(segment);
 
-            ) {
-              if (segmentFetchStarted.has(segment)) {
-                continue;
-              }
-              segmentFetchStarted.add(segment);
-              srcBuf.timestampOffset = segments[segment];
-              const segmentUrl = apiGetPath("getFile", {
-                path: file.path,
+                  return await Promise.all(
+                    (
+                      [
+                        ["audio", audioSrcBuf],
+                        ["video", videoSrcBuf],
+                      ] as const
+                    ).map(async ([streamName, streamBuf]) => {
+                      if (!streamBuf) {
+                        return;
+                      }
+                      const segmentUrl = apiGetPath("getFile", {
+                        path: file.path,
+                        segment: { index: segment, stream: streamName },
+                      });
+                      return {
+                        segment,
+                        data: await fetch(segmentUrl).then((r) =>
+                          r.arrayBuffer()
+                        ),
+                        stream: streamBuf,
+                        gaplessMetadata:
+                          streamName == "audio"
+                            ? await fetch(
+                                apiGetPath("getFile", {
+                                  path: file.path,
+                                  segmentGaplessMetadata: segment,
+                                })
+                              )
+                                .then((r) => r.json())
+                                .then(
+                                  (o) =>
+                                    o.gaplessMetadata as
+                                      | GaplessMetadata
+                                      | undefined
+                                )
+                            : undefined,
+                      };
+                    })
+                  );
+                })
+              ).then((fetched) => fetched.flat().filter(defined));
+
+              for (const {
                 segment,
-              });
-              srcBuf.appendBuffer(
-                await fetch(segmentUrl).then((r) => r.arrayBuffer())
-              );
-              await new Promise((resolve) =>
-                srcBuf!.addEventListener("updateend", resolve, { once: true })
-              );
-              if (segment == segments.length - 1) {
-                src.endOfStream();
+                data,
+                stream,
+                gaplessMetadata,
+              } of fetched) {
+                const offset = segments[segment];
+                if (gaplessMetadata) {
+                  // Is audio.
+                  // Avoid floating point problems.
+                  // If we don't do this, we'll get out of range errors like
+                  // "expected (0, 6.006] but got 6.006".
+                  stream.appendWindowStart = Math.max(0, offset - 0.001);
+                  stream.appendWindowEnd = segments[segment + 1] ?? Infinity;
+                  stream.timestampOffset = offset - gaplessMetadata.start;
+                } else {
+                  stream.timestampOffset = offset;
+                }
+                stream.appendBuffer(data);
+                await new Promise((resolve) =>
+                  stream.addEventListener("updateend", resolve, { once: true })
+                );
+                if (stream == videoSrcBuf && segment == segments.length - 1) {
+                  src.endOfStream();
+                }
               }
             }
             segmentFetchInProgress = false;
@@ -132,7 +191,7 @@ export default ({
             processSegmentFetchQueue();
           };
           onSeekOrTimeUpdate.current = (ts) =>
-            ensureTimeRangeFetched(ts, ts + 60);
+            ensureTimeRangeFetched(ts, ts + 30);
         }
       );
     return () => {

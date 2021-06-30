@@ -3,8 +3,8 @@ import maybeFileStats from "extlib/js/maybeFileStats";
 import { mkdir } from "fs/promises";
 import { dirname, join } from "path";
 import { Video } from "../library/model";
-import { ClientError, Json, SendFile, StreamFile } from "../server/response";
-import { ff } from "../util/ff";
+import { ClientError, Json, StreamFile } from "../server/response";
+import { ff } from "../util/media";
 import { ApiCtx } from "./_common";
 
 const streamVideoCapture = async ({
@@ -105,12 +105,12 @@ const streamVideoCapture = async ({
                   video.width()
                 ),
               },
-              movflags: ["faststart"],
             },
       audio: type != "gif" && audio,
       output: {
         format: type == "gif" ? "gif" : "mp4",
         file: outputFile,
+        movflags: ["faststart"],
       },
     });
     outputFileStats = assertExists(await maybeFileStats(outputFile));
@@ -129,20 +129,20 @@ export const getFileApi = async (
   ctx: ApiCtx,
   {
     path,
-    audioTrack,
     contentManifest,
     montageFrame,
     preview,
     segment,
+    segmentGaplessMetadata,
     thumbnail,
     capture,
   }: {
     path: string;
-    audioTrack?: true;
     contentManifest?: true;
     montageFrame?: number;
     preview?: true;
-    segment?: number;
+    segment?: { index: number; stream: "audio" | "video" };
+    segmentGaplessMetadata?: number;
     thumbnail?: true;
     capture?: {
       start?: number;
@@ -155,26 +155,6 @@ export const getFileApi = async (
   const file = await ctx.library.getFile(path);
   if (!file) {
     throw new ClientError(404, "File not found");
-  }
-
-  if (audioTrack) {
-    if (!(file instanceof Video)) {
-      throw new ClientError(400, "Capturing only supported on videos");
-    }
-    const content = await file.content();
-    if ("absPath" in content) {
-      throw new ClientError(404, "Video does not have segments");
-    }
-    const { audio } = content;
-    if (!audio) {
-      throw new ClientError(404, "Video does not have extracted audio");
-    }
-    return new StreamFile(
-      audio.absPath,
-      audio.size,
-      audio.mime,
-      file.fileName()
-    );
   }
 
   if (capture) {
@@ -192,7 +172,7 @@ export const getFileApi = async (
     if (!(file instanceof Video)) {
       throw new ClientError(400, "Content manifests only available for videos");
     }
-    const content = await file.content();
+    const content = await file.content.compute();
     if ("absPath" in content) {
       return new Json({
         type: "src",
@@ -214,7 +194,7 @@ export const getFileApi = async (
     if (!(file instanceof Video)) {
       throw new ClientError(400, "Previews only available for videos");
     }
-    const previewFile = await file.previewFile();
+    const previewFile = await file.preview.compute();
     if (!previewFile) {
       throw new ClientError(404, "No preview available");
     }
@@ -230,28 +210,52 @@ export const getFileApi = async (
     if (!(file instanceof Video)) {
       throw new ClientError(400, "Segments only available for videos");
     }
-    const content = await file.content();
+    const content = await file.content.compute();
     if ("absPath" in content) {
       throw new ClientError(404, "Video does not have segments");
     }
-    const s = content.video.segments[segment];
+    const stream = content[segment.stream];
+    const s = stream?.segments[segment.index];
     if (!s) {
       throw new ClientError(404, "Segment not found");
     }
-    const f = await s.file();
+    const f = await s.file.compute();
     return new StreamFile(f.absPath, f.size, f.mime, file.fileName());
   }
 
+  if (segmentGaplessMetadata != undefined) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Segments only available for videos");
+    }
+    const content = await file.content.compute();
+    if ("absPath" in content) {
+      throw new ClientError(404, "Video does not have segments");
+    }
+    const s = content.audio?.segments[segmentGaplessMetadata];
+    if (!s) {
+      throw new ClientError(404, "Segment not found");
+    }
+    const f = await s.file.compute();
+    return new Json({
+      gaplessMetadata: f.gaplessMetadata,
+    });
+  }
+
   if (thumbnail) {
-    const thumbnailPath = await file.thumbnailPath();
-    if (!thumbnailPath) {
+    const thumbnailMeta = await file.thumbnail.compute();
+    if (!thumbnailMeta) {
       throw new ClientError(404, "No thumbnail available");
     }
-    return new SendFile(thumbnailPath);
+    return new StreamFile(
+      thumbnailMeta.absPath,
+      thumbnailMeta.size,
+      thumbnailMeta.mime,
+      file.fileName()
+    );
   }
 
   if (file instanceof Video) {
-    const content = await file.content();
+    const content = await file.content.compute();
     if (!("absPath" in content)) {
       throw new ClientError(404, "Video must be accessed via segments");
     }
