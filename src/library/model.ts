@@ -264,6 +264,7 @@ export class Audio extends Media {
     computedFile(
       join(this.dataDir(), "waveform.png"),
       (waveformAbsPath) =>
+        // https://trac.ffmpeg.org/wiki/Waveform.
         exec(
           "ffmpeg",
           "-hide_banner",
@@ -378,7 +379,7 @@ export class Video extends Media {
               // - AAC can store padding metadata in MP4/M4A container format (but not AAC container).
               // - ffmpeg (as of 2021-06-30) cannot place this info in the container.
               // - fdkaac (a CLI for a superior AAC codec) can when container format chosen is M4A.
-              // - The MIME specified to MediaSource must be audio/mp4, not audio/x-m4a. See official W3C spec for supported formats: https://www.w3.org/TR/mse-byte-stream-format-registry/#registry.
+              // - The MIME specified to MediaSource must be audio/mp4, not audio/x-m4a. See official W3C spec for supported formats: https://www.w3.org/TR/mse-byte-stream-format-registry/#registry. For more details, see https://developer.mozilla.org/en-US/docs/Web/Media/Formats/codecs_parameter.
               //   - Additionally, a codec string must be provided on Chrome-like browsers. This can be sourced using mp4info, part of Bento4.
               //   - Notice: spec says FLAC and WAV are not supported.
               // TODO There is another gapless metadata format stored in edge + sgpd that is worth investigating to see if this flow can be simplified. See https://www.mail-archive.com/ffmpeg-devel@ffmpeg.org/msg95677.html.
@@ -448,6 +449,7 @@ export class Video extends Media {
                     output: {
                       file: out,
                       format: "mp4",
+                      // See video segment code for more info.
                       movflags: ["default_base_moof", "empty_moov"],
                     },
                   }),
@@ -484,6 +486,7 @@ export class Video extends Media {
                     audio: false,
                     metadata: false,
                     output: {
+                      // https://developer.mozilla.org/en-US/docs/Web/API/Media_Source_Extensions_API/Transcoding_assets_for_MSE.
                       movflags: ["default_base_moof", "empty_moov"],
                       format: "mp4",
                       file: segmentAbsPath,

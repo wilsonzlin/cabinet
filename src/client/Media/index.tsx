@@ -60,6 +60,7 @@ export default ({
             setVideoSrc(apiGetPath("getFile", { path: file.path }));
             return;
           }
+          // See server code for how this works.
           assertState(type === "segments");
 
           const src = new MediaSource();

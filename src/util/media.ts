@@ -46,7 +46,7 @@ export type GaplessMetadata = {
   end: number;
 };
 
-// Sourced from https://developers.google.com/web/fundamentals/media/mse/seamless-playback#appendix-a-creating-gapless-content.
+// Sourced from https://developers.google.com/web/fundamentals/media/mse/seamless-playback.
 export const parseGaplessMetadata = (
   bytesAsString: string,
   sampleRate: number
