@@ -34,7 +34,11 @@ export const isHiddenFile = (path: string) =>
 export const fileMime = async (absPath: string) => {
   // "file-type" uses magic bytes, but doesn't detect every file type,
   // so fall back to simple extension lookup via "mime".
-  return (await fileType.fromFile(absPath))?.mime ?? Mime.getType(absPath);
+  return (
+    (await fileType.fromFile(absPath))?.mime ??
+    Mime.getType(absPath) ??
+    undefined
+  );
 };
 
 export class LazyP<T> {
