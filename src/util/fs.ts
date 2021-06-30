@@ -58,38 +58,41 @@ export type ComputedFile = {
   size: number;
 };
 
+export const getFileMetadata = async (absPath: string) => {
+  const stats = await maybeFileStats(absPath);
+  if (stats) {
+    const mime = await fileMime(absPath);
+    if (mime != undefined) {
+      return { stats, mime };
+    }
+  }
+  return undefined;
+};
+
 export const computedFile = async (
   absPath: string,
   provider: (incompleteAbsPath: string) => Promise<unknown>,
   errorMsg: string
 ): Promise<ComputedFile> => {
-  let stats;
-  let mime;
-  if (!(stats = await maybeFileStats(absPath))) {
+  let meta;
+  if (!(meta = await getFileMetadata(absPath))) {
     // Ensure incomplete path keeps extension to allow programs like ffmpeg to continue to autodetect output format.
     const incompleteAbsPath = join(
       dirname(absPath),
       `.incomplete_${basename(absPath)}`
     );
     await provider(incompleteAbsPath);
-    stats = await maybeFileStats(incompleteAbsPath);
-    if (!stats) {
-      throw new Error(errorMsg);
-    }
-    mime = await fileMime(incompleteAbsPath);
-    if (!mime) {
+    meta = await getFileMetadata(incompleteAbsPath);
+    if (!meta) {
       throw new Error(errorMsg);
     }
     await rename(incompleteAbsPath, absPath);
   } else {
-    mime = await fileMime(absPath);
-    if (!mime) {
-      throw new Error(errorMsg);
-    }
+    throw new Error(errorMsg);
   }
   return {
     absPath,
-    mime,
-    size: stats.size,
+    mime: meta.mime,
+    size: meta.stats.size,
   };
 };

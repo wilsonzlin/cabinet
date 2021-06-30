@@ -14,7 +14,13 @@ import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
 import { EOL } from "os";
 import { basename, dirname, join, sep } from "path";
 import sharp from "sharp";
-import { ComputedFile, computedFile, fileMime, LazyP } from "../util/fs";
+import {
+  ComputedFile,
+  computedFile,
+  fileMime,
+  getFileMetadata,
+  LazyP,
+} from "../util/fs";
 import { ff, GaplessMetadata, parseGaplessMetadata } from "../util/media";
 import {
   BROWSER_SUPPORTED_AUDIO_CODECS,
@@ -327,12 +333,23 @@ export class Video extends Media {
       return { absPath: this.absPath(), mime: this.mime, size: this.size };
     }
 
+    // If the file was previously converted externally somehow, assume it works and use it.
+    const convertedWholeFilePath = join(this.dataDir(), "converted");
+    const externalFileMeta = await getFileMetadata(convertedWholeFilePath);
+    if (externalFileMeta) {
+      return {
+        absPath: convertedWholeFilePath,
+        mime: externalFileMeta.mime,
+        size: externalFileMeta.stats.size,
+      };
+    }
+
     if (videoSupported && audioSupported) {
       const convertedContainer = findSuitableContainer(videoCodec, audioCodec);
       // If no suitable container found for existing video and audio codec, we can only transcode.
       if (convertedContainer != undefined) {
         return await computedFile(
-          join(this.dataDir(), "converted"),
+          convertedWholeFilePath,
           async (incompleteAbsPath) => {
             await ff.convert({
               input: {
