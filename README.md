@@ -12,6 +12,7 @@ with a single command and zero configuration.
 
 - [Node.js](https://nodejs.org)
 - [ffmpeg](https://ffmpeg.org)
+- [fdkaac](https://github.com/nu774/fdkaac)
 - Any modern browser
 
 ## Quick start

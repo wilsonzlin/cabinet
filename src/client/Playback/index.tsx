@@ -84,7 +84,8 @@ export default ({
         clearTimeout(scrubbingDebounce.current);
         scrubbingDebounce.current = setTimeout(() => {
           if (element) {
-            element.currentTime = element.duration * ratio;
+            // Don't use element.totalTime as end segment might not have loaded yet.
+            element.currentTime = totalTime.as("seconds") * ratio;
           }
         }, 100);
       }
@@ -216,7 +217,8 @@ export default ({
               setScrubbingRect(rect);
               const ratio = getRatio(e.pageX, rect);
               if (element) {
-                element.currentTime = element.duration * ratio;
+                // Don't use element.totalTime as end segment might not have loaded yet.
+                element.currentTime = totalTime.as("seconds") * ratio;
               }
             }}
           >
