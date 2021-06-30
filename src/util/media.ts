@@ -1,9 +1,23 @@
 import { Ff, FfmpegLogLevel } from "@wzlin/ff";
+import exec from "extlib/js/exec";
+import PromiseQueue from "extlib/js/PromiseQueue";
+import os from "os";
+
+const queue = new PromiseQueue(os.cpus().length);
 
 export const ff = new Ff({
-  logLevel: FfmpegLogLevel.ERROR,
-  ffprobeCommand: "ffprobe",
   ffmpegCommand: "ffmpeg",
+  ffprobeCommand: "ffprobe",
+  logLevel: FfmpegLogLevel.ERROR,
+  runCommandWithoutStdout: (command, args) =>
+    queue.add(() => exec(command, ...args).status()),
+  runCommandWithStdout: (command, args, throwOnStderr) =>
+    queue.add(() =>
+      exec(command, ...args)
+        .killOnStderr(throwOnStderr)
+        .text()
+        .output()
+    ),
 });
 
 // We could use this in the future.
