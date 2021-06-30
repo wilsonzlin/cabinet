@@ -87,8 +87,6 @@ export const computedFile = async (
       throw new Error(errorMsg);
     }
     await rename(incompleteAbsPath, absPath);
-  } else {
-    throw new Error(errorMsg);
   }
   return {
     absPath,
