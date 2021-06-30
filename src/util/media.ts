@@ -3,7 +3,10 @@ import exec from "extlib/js/exec";
 import PromiseQueue from "extlib/js/PromiseQueue";
 import os from "os";
 
-const queue = new PromiseQueue(os.cpus().length);
+// Leave 1 virtual core:
+// - Allow HTTP requests to continue to be processed.
+// - ffmpeg commands are already multithreaded, so utilising all cores is probably oversaturating the CPU.
+const queue = new PromiseQueue(os.cpus().length - 1);
 
 export const ff = new Ff({
   ffmpegCommand: "ffmpeg",
