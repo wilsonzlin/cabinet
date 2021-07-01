@@ -10,6 +10,7 @@ import {
 } from "../../api/listFiles";
 import { apiGetPath } from "../_common/api";
 import "./index.css";
+import { fileThumbnailCss } from "../_common/ui";
 
 const File = ({
   file,
@@ -67,16 +68,7 @@ const File = ({
         }
       }}
       onMouseLeave={() => videoRef.current?.removeAttribute("src")}
-      style={
-        !visible
-          ? undefined
-          : {
-              backgroundImage: `url(${apiGetPath("getFile", {
-                path: file.path,
-                thumbnail: true,
-              })})`,
-            }
-      }
+      style={!visible ? undefined : fileThumbnailCss(file)}
     >
       {file.type == "video" && (
         <video

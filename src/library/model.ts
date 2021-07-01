@@ -14,14 +14,13 @@ import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
 import { EOL } from "os";
 import { basename, dirname, join, sep } from "path";
 import sharp from "sharp";
+import { ComputedFile, computedFile, getFileMetadata, LazyP } from "../util/fs";
 import {
-  ComputedFile,
-  computedFile,
-  fileMime,
-  getFileMetadata,
-  LazyP,
-} from "../util/fs";
-import { ff, GaplessMetadata, parseGaplessMetadata } from "../util/media";
+  ff,
+  GaplessMetadata,
+  parseGaplessMetadata,
+  queue,
+} from "../util/media";
 import {
   BROWSER_SUPPORTED_AUDIO_CODECS,
   BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS,
@@ -81,10 +80,6 @@ export class Directory extends DirEntry {
           if (stats.isDirectory()) {
             entry = new Directory(this.rootAbsPath, rel);
           } else if (stats.isFile()) {
-            const mime = await fileMime(abs);
-            if (!mime) {
-              return;
-            }
             const ext = pathExtension(f) ?? "";
             if (MEDIA_EXTENSIONS.has(ext)) {
               let probeDataPath = join(
@@ -94,11 +89,14 @@ export class Directory extends DirEntry {
               let probe: ffprobeOutput;
               try {
                 probe = JSON.parse(await readFile(probeDataPath, "utf8"));
-              } catch (e) {
-                if (e.code !== "ENOENT") {
-                  throw e;
+              } catch {
+                try {
+                  probe = await ff.probe(abs);
+                } catch (e) {
+                  console.warn(`Failed to probe ${abs}: ${e}`);
+                  // Invalid file.
+                  return;
                 }
-                probe = await ff.probe(abs, false);
                 await writeFile(probeDataPath, JSON.stringify(probe));
               }
               const audio = probe.streams.find(
@@ -112,7 +110,6 @@ export class Directory extends DirEntry {
                   this.rootAbsPath,
                   rel,
                   stats.size,
-                  mime,
                   probe.format,
                   video,
                   audio
@@ -122,7 +119,6 @@ export class Directory extends DirEntry {
                   this.rootAbsPath,
                   rel,
                   stats.size,
-                  mime,
                   probe.format,
                   audio
                 );
@@ -145,7 +141,7 @@ export class Directory extends DirEntry {
               ) {
                 return;
               }
-              entry = new Photo(this.rootAbsPath, rel, stats.size, mime, {
+              entry = new Photo(this.rootAbsPath, rel, stats.size, {
                 format,
                 height,
                 width,
@@ -168,8 +164,7 @@ export abstract class File extends DirEntry {
   protected constructor(
     rootAbsPath: string,
     relPath: string,
-    readonly size: number,
-    readonly mime: string
+    readonly size: number
   ) {
     super(rootAbsPath, relPath);
   }
@@ -178,7 +173,7 @@ export abstract class File extends DirEntry {
     return dataDirForFile(this.absPath());
   }
 
-  abstract readonly thumbnail: LazyP<ComputedFile>;
+  abstract readonly thumbnail: LazyP<ComputedFile | undefined>;
 }
 
 export class Photo extends File {
@@ -186,27 +181,29 @@ export class Photo extends File {
     rootAbsPath: string,
     relPath: string,
     size: number,
-    mime: string,
     private readonly metadata: {
       format: string;
       height: number;
       width: number;
     }
   ) {
-    super(rootAbsPath, relPath, size, mime);
+    super(rootAbsPath, relPath, size);
   }
 
   readonly thumbnail = new LazyP(() =>
-    computedFile(
-      join(this.dataDir(), "thumbnail.jpg"),
-      (thumbnailPath) =>
+    computedFile(join(this.dataDir(), "thumbnail.jpg"), (thumbnailPath) =>
+      queue.add(() =>
         sharp(this.absPath())
           .resize({
+            fastShrinkOnLoad: true,
             width: PREVIEW_SCALED_WIDTH,
+            withoutEnlargement: true,
           })
-          .jpeg()
-          .toFile(thumbnailPath),
-      "Failed to generate photo thumbnail"
+          .jpeg({
+            quality: 50,
+          })
+          .toFile(thumbnailPath)
+      )
     )
   );
 
@@ -228,10 +225,9 @@ export abstract class Media extends File {
     rootAbsPath: string,
     relPath: string,
     size: number,
-    mime: string,
     protected readonly format: ffprobeFormat
   ) {
-    super(rootAbsPath, relPath, size, mime);
+    super(rootAbsPath, relPath, size);
   }
 
   duration() {
@@ -255,11 +251,10 @@ export class Audio extends Media {
     rootAbsPath: string,
     relPath: string,
     size: number,
-    mime: string,
     format: ffprobeFormat,
     private readonly audioStream: ffprobeAudioStream
   ) {
-    super(rootAbsPath, relPath, size, mime, format);
+    super(rootAbsPath, relPath, size, format);
   }
 
   channels() {
@@ -267,10 +262,9 @@ export class Audio extends Media {
   }
 
   thumbnail = new LazyP(() =>
-    computedFile(
-      join(this.dataDir(), "waveform.png"),
-      (waveformAbsPath) =>
-        // https://trac.ffmpeg.org/wiki/Waveform.
+    computedFile(join(this.dataDir(), "waveform.png"), (waveformAbsPath) =>
+      // https://trac.ffmpeg.org/wiki/Waveform and https://stackoverflow.com/questions/32254818/generating-a-waveform-using-ffmpeg.
+      queue.add(() =>
         exec(
           "ffmpeg",
           "-hide_banner",
@@ -281,12 +275,14 @@ export class Audio extends Media {
           "-i",
           this.absPath(),
           "-filter_complex",
-          `aformat=channel_layouts=stereo,showwavespic=s=${PREVIEW_SCALED_WIDTH}x${PREVIEW_SCALED_WIDTH}`,
+          `aformat=channel_layouts=mono,showwavespic=s=${PREVIEW_SCALED_WIDTH}x${Math.round(
+            PREVIEW_SCALED_WIDTH * 0.4
+          )}:colors=#969696`,
           "-frames:v",
           "1",
           waveformAbsPath
-        ).status(),
-      "Failed to generate audio waveform"
+        ).status()
+      )
     )
   );
 }
@@ -311,6 +307,17 @@ export class Video extends Media {
         };
       }
   >(async () => {
+    // Prioritise any existing converted file, whether created by us or externally.
+    // Assume it works and is better shaped for network streaming and browser viewing.
+    const convertedWholeFilePath = join(this.dataDir(), "converted");
+    const externalFileMeta = await getFileMetadata(convertedWholeFilePath);
+    if (externalFileMeta) {
+      return {
+        absPath: convertedWholeFilePath,
+        size: externalFileMeta.size,
+      };
+    }
+
     const container = this.format.format_name;
     const videoCodec = this.videoStream.codec_name;
     const audioCodec = this.audioStream?.codec_name;
@@ -330,18 +337,7 @@ export class Video extends Media {
       audioSupported &&
       containerSupportsAV
     ) {
-      return { absPath: this.absPath(), mime: this.mime, size: this.size };
-    }
-
-    // If the file was previously converted externally somehow, assume it works and use it.
-    const convertedWholeFilePath = join(this.dataDir(), "converted");
-    const externalFileMeta = await getFileMetadata(convertedWholeFilePath);
-    if (externalFileMeta) {
-      return {
-        absPath: convertedWholeFilePath,
-        mime: externalFileMeta.mime,
-        size: externalFileMeta.stats.size,
-      };
+      return { absPath: this.absPath(), size: this.size };
     }
 
     if (videoSupported && audioSupported) {
@@ -519,81 +515,90 @@ export class Video extends Media {
     };
   });
 
-  readonly thumbnail = new LazyP<ComputedFile>(() =>
-    computedFile(
-      join(this.dataDir(), "thumbnail.jpg"),
-      (thumbnailPath) =>
-        ff.extractFrame({
-          input: this.absPath(),
-          output: thumbnailPath,
-          timestamp: this.duration() * 0.5,
-          scaleWidth: PREVIEW_SCALED_WIDTH,
-        }),
-      "Failed to generate video thumbnail"
+  readonly thumbnail = new LazyP(() =>
+    computedFile(join(this.dataDir(), "thumbnail.jpg"), (thumbnailPath) =>
+      ff.extractFrame({
+        input: this.absPath(),
+        output: thumbnailPath,
+        timestamp: this.duration() * 0.5,
+        scaleWidth: PREVIEW_SCALED_WIDTH,
+      })
     )
   );
 
-  readonly preview = new LazyP<ComputedFile>(() =>
-    computedFile(
-      join(this.dataDir(), "preview.mp4"),
-      async (previewPath) => {
-        const PART_SEC = 3;
-        const PARTS = 8;
-        const chapterLen = this.duration() / PARTS;
-        const partFiles = [];
-        const partFilesListFile = `${previewPath}.parts.txt`;
-        const promises: Promise<void>[] = [];
-        // Using the ffmpeg select filter is excruciatingly slow for a tiny < 1 minute output.
-        // Manually seek and extract in parallel, and stitch at end.
-        for (let i = 0; i < PARTS; i++) {
-          const partFile = `${previewPath}.${i}`;
-          partFiles.push(`file '${partFile.replaceAll("'", "'\\''")}'${EOL}`);
-          const start = chapterLen * i + chapterLen / 2 - PART_SEC / 2;
-          promises.push(
-            ff.convert({
-              input: {
-                file: this.absPath(),
-                start,
-                duration: PART_SEC,
-              },
-              metadata: false,
-              video: {
-                codec: "libx264",
-                crf: 23,
-                fps: 24,
-                preset: "veryfast",
-                resize: { width: PREVIEW_SCALED_WIDTH },
-              },
-              audio: false,
-              output: {
-                file: partFile,
-                format: "mp4",
-                movflags: ["faststart"],
-              },
-            })
-          );
-        }
-        promises.push(writeFile(partFilesListFile, partFiles.join("")));
-        await Promise.all(promises);
-        await ff.concat({
-          filesListFile: partFilesListFile,
-          output: previewPath,
+  readonly preview = new LazyP(() =>
+    computedFile(join(this.dataDir(), "preview.mp4"), async (previewPath) => {
+      const VIDEO_PARAMS = {
+        codec: "libx264",
+        crf: 23,
+        fps: Math.min(24, this.fps()),
+        preset: "veryfast",
+        resize: { width: PREVIEW_SCALED_WIDTH },
+      } as const;
+      const PART_SEC = 3;
+      const PARTS = 8;
+      if (this.duration() < PART_SEC * (PARTS + 2)) {
+        await ff.convert({
+          input: {
+            file: this.absPath(),
+          },
+          metadata: false,
+          video: VIDEO_PARAMS,
+          audio: false,
+          output: {
+            file: previewPath,
+            format: "mp4",
+            movflags: ["faststart"],
+          },
         });
-      },
-      "Failed to generate video preview"
-    )
+        return;
+      }
+      const chapterLen = this.duration() / PARTS;
+      const partFiles = [];
+      const partFilesListFile = `${previewPath}.parts.txt`;
+      const promises: Promise<void>[] = [];
+      // Using the ffmpeg select filter is excruciatingly slow for a tiny < 1 minute output.
+      // Manually seek and extract in parallel, and stitch at end.
+      for (let i = 0; i < PARTS; i++) {
+        const partFile = `${previewPath}.${i}`;
+        partFiles.push(`file '${partFile.replaceAll("'", "'\\''")}'${EOL}`);
+        const start = chapterLen * i + chapterLen / 2 - PART_SEC / 2;
+        promises.push(
+          ff.convert({
+            input: {
+              file: this.absPath(),
+              start,
+              duration: PART_SEC,
+            },
+            metadata: false,
+            video: VIDEO_PARAMS,
+            audio: false,
+            output: {
+              file: partFile,
+              format: "mp4",
+              movflags: ["faststart"],
+            },
+          })
+        );
+      }
+      promises.push(writeFile(partFilesListFile, partFiles.join("")));
+      await Promise.all(promises);
+      await ff.concat({
+        filesListFile: partFilesListFile,
+        output: previewPath,
+      });
+    })
   );
 
   constructor(
     rootAbsPath: string,
     relPath: string,
     size: number,
-    mime: string,
     format: ffprobeFormat,
     private readonly videoStream: ffprobeVideoStream,
     private readonly audioStream?: ffprobeAudioStream
   ) {
-    super(rootAbsPath, relPath, size, mime, format);
+    super(rootAbsPath, relPath, size, format);
   }
 
   fps() {

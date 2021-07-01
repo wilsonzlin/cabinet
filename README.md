@@ -1,6 +1,6 @@
 # Cabinet
 
-Quickly explore and view local photos and videos in a browser over the network
+Quickly explore and view local photos, music, and videos in a browser over the network
 with a single command and zero configuration.
 
 - View and play all formats, even ones not browser- or streaming-friendly.

@@ -1,19 +1,14 @@
 import parseRangeHeader from "extlib/js/parseRangeHeader";
-import UnreachableError from "extlib/js/UnreachableError";
 import { createReadStream } from "fs";
 import * as http from "http";
 import { PassThrough, pipeline, Readable } from "stream";
-
-export class SendFile {
-  constructor(readonly path: string) {}
-}
 
 export class StreamFile {
   constructor(
     readonly path: string,
     readonly size: number,
-    readonly type: string,
-    readonly name: string
+    readonly mime?: string,
+    readonly name?: string
   ) {}
 }
 
@@ -25,7 +20,7 @@ export class Json<V> {
   constructor(readonly value: V) {}
 }
 
-export type ApiOutput = SendFile | StreamFile | Json<any>;
+export type ApiOutput = StreamFile | Json<any>;
 
 export const writeResponse = (
   res: http.ServerResponse,
@@ -59,17 +54,24 @@ export const writeResponse = (
 const streamFile = (
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  path: string,
-  name: string,
-  fileSize: number,
-  type: string
+  {
+    name,
+    mime,
+    path,
+    size,
+  }: {
+    path: string;
+    size: number;
+    name?: string;
+    mime?: string;
+  }
 ): void => {
   let start: number;
   let end: number;
 
   const range = req.headers.range;
   if (range) {
-    const parsed = parseRangeHeader(range, fileSize);
+    const parsed = parseRangeHeader(range, size);
     if (!parsed) {
       return res.writeHead(400).end(`Invalid range`);
     }
@@ -77,24 +79,32 @@ const streamFile = (
     end = parsed.end;
   } else {
     start = 0;
-    end = fileSize - 1;
+    end = size - 1;
   }
 
   const streamLength = end - start + 1;
 
+  const headers: { [name: string]: string } = {
+    "Accept-Ranges": "bytes",
+    "Content-Length": streamLength.toString(),
+  };
+  if (range) {
+    headers["Content-Range"] = `bytes ${start}-${end}/${size}`;
+  }
+  if (name != undefined) {
+    headers["Content-Disposition"] = `inline; filename="${name.replace(
+      /[^a-zA-Z0-9-_'., ]/g,
+      "_"
+    )}"`;
+  }
+  if (mime != undefined) {
+    headers["Content-Type"] = mime;
+  }
+
   writeResponse(
     res,
-    206,
-    {
-      "Accept-Ranges": "bytes",
-      "Content-Disposition": `inline; filename="${name.replace(
-        /[^a-zA-Z0-9-_'., ]/g,
-        "_"
-      )}"`,
-      "Content-Length": streamLength,
-      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-      "Content-Type": type,
-    },
+    range ? 206 : 200,
+    headers,
     createReadStream(path, { start, end })
   );
 };
@@ -104,11 +114,9 @@ export const applyResponse = (
   res: http.ServerResponse,
   val: ApiOutput
 ) => {
-  if (val instanceof SendFile) {
-    writeResponse(res, 200, {}, createReadStream(val.path));
-  } else if (val instanceof StreamFile) {
-    streamFile(req, res, val.path, val.name, val.size, val.type);
-  } else if (val instanceof Json) {
+  if (val instanceof StreamFile) {
+    streamFile(req, res, val);
+  } else {
     writeResponse(
       res,
       200,
@@ -117,7 +125,5 @@ export const applyResponse = (
       },
       JSON.stringify(val.value)
     );
-  } else {
-    throw new UnreachableError();
   }
 };

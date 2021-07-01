@@ -3,7 +3,7 @@ const minifyHtml = require("@minify-html/core");
 const fs = require("fs");
 const path = require("path");
 
-const build = (module.exports.build = () => {
+const build = (module.exports.build = (debug) => {
   fs.rmSync(path.join(__dirname, "dist"), { recursive: true, force: true });
   fs.mkdirSync(path.join(__dirname, "dist"));
   const minifyCfg = minifyHtml.createConfiguration({});
@@ -14,11 +14,13 @@ const build = (module.exports.build = () => {
   const { outputFiles } = esbuild.buildSync({
     bundle: true,
     define: {
-      "process.env.NODE_ENV": JSON.stringify("production"),
+      "process.env.NODE_ENV": JSON.stringify(
+        debug ? "development" : "production"
+      ),
     },
     entryPoints: ["src/client/index.tsx"],
     legalComments: "none",
-    minify: true,
+    minify: !debug,
     outdir: "dist",
     write: false,
   });
@@ -35,14 +37,16 @@ const build = (module.exports.build = () => {
   esbuild.buildSync({
     bundle: true,
     define: {
-      "process.env.NODE_ENV": JSON.stringify("production"),
+      "process.env.NODE_ENV": JSON.stringify(
+        debug ? "development" : "production"
+      ),
       CLIENT_HTML: JSON.stringify(
         minifyHtml.minify(html, minifyCfg).toString()
       ),
     },
     entryPoints: ["src/main.ts"],
     external: Object.keys(require("./package.json").dependencies),
-    minify: true,
+    minify: !debug,
     outdir: "dist",
     platform: "node",
     write: true,

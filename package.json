@@ -31,11 +31,9 @@
   },
   "homepage": "https://github.com/wilsonzlin/cabinet#readme",
   "dependencies": {
-    "@wzlin/ff": "^0.13.3",
-    "extlib": "^0.16.4",
-    "file-type": "^16.5.0",
+    "@wzlin/ff": "^0.14.1",
+    "extlib": "^0.17.0",
     "luxon": "^1.27.0",
-    "mime": "^2.5.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "sacli": "^3.0.0",
@@ -44,9 +42,7 @@
   },
   "devDependencies": {
     "@minify-html/core": "^0.4.11",
-    "@types/file-type": "^10.9.1",
     "@types/luxon": "^1.27.0",
-    "@types/mime": "^2.0.3",
     "@types/node": "^15.12.4",
     "@types/react": "^17.0.11",
     "@types/react-dom": "^17.0.8",

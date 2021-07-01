@@ -15,7 +15,6 @@ type BaseListedFile = {
   path: string;
   name: string;
   size: number;
-  format: string;
 };
 
 export type ListedAudio = BaseListedFile & {
@@ -99,7 +98,6 @@ export const listFilesApi = async (
             path: e.relPath,
             name: e.fileName(),
             size: e.size,
-            format: e.mime,
             duration: e.duration(),
             author: e.metadata().artist,
             title: e.metadata().title ?? e.fileName(),
@@ -115,7 +113,6 @@ export const listFilesApi = async (
             path: e.relPath,
             name: e.fileName(),
             size: e.size,
-            format: e.mime,
             width: e.width(),
             height: e.height(),
           };
@@ -127,7 +124,6 @@ export const listFilesApi = async (
             path: e.relPath,
             name: e.fileName(),
             size: e.size,
-            format: e.mime,
             width: e.width(),
             height: e.height(),
             duration: e.duration(),

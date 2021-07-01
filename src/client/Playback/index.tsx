@@ -4,7 +4,7 @@ import mapDefined from "extlib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
-import { useElemDimensions } from "../_common/ui";
+import { fileThumbnailCss, useElemDimensions } from "../_common/ui";
 import "./index.css";
 
 const getRatio = (pageX: number, rect: DOMRect) =>
@@ -145,9 +145,7 @@ export default ({
         </div>
       </div>
       <div className="acrylic floating playback-main">
-        <div className="playback-thumbnail">
-          {file.type == "audio" ? "🎵" : "📼"}
-        </div>
+        <div className="playback-thumbnail" style={fileThumbnailCss(file)} />
         <div className="playback-details">
           {/* TODO HACK This is not a button as overflow doesn't cause ellipsis. */}
           <div

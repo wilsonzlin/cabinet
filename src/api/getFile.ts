@@ -198,12 +198,7 @@ export const getFileApi = async (
     if (!previewFile) {
       throw new ClientError(404, "No preview available");
     }
-    return new StreamFile(
-      previewFile.absPath,
-      previewFile.size,
-      "video/mp4",
-      file.fileName()
-    );
+    return new StreamFile(previewFile.absPath, previewFile.size, "video/mp4");
   }
 
   if (segment != undefined) {
@@ -220,7 +215,7 @@ export const getFileApi = async (
       throw new ClientError(404, "Segment not found");
     }
     const f = await s.file.compute();
-    return new StreamFile(f.absPath, f.size, f.mime, file.fileName());
+    return new StreamFile(f.absPath, f.size);
   }
 
   if (segmentGaplessMetadata != undefined) {
@@ -246,12 +241,7 @@ export const getFileApi = async (
     if (!thumbnailMeta) {
       throw new ClientError(404, "No thumbnail available");
     }
-    return new StreamFile(
-      thumbnailMeta.absPath,
-      thumbnailMeta.size,
-      thumbnailMeta.mime,
-      file.fileName()
-    );
+    return new StreamFile(thumbnailMeta.absPath, thumbnailMeta.size);
   }
 
   if (file instanceof Video) {
@@ -259,12 +249,7 @@ export const getFileApi = async (
     if (!("absPath" in content)) {
       throw new ClientError(404, "Video must be accessed via segments");
     }
-    return new StreamFile(
-      content.absPath,
-      content.size,
-      content.mime,
-      file.fileName()
-    );
+    return new StreamFile(content.absPath, content.size);
   }
-  return new StreamFile(file.absPath(), file.size, file.mime, file.fileName());
+  return new StreamFile(file.absPath(), file.size);
 };

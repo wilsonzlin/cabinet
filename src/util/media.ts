@@ -1,25 +1,39 @@
-import { Ff, FfmpegLogLevel } from "@wzlin/ff";
-import exec from "extlib/js/exec";
+import { Ff } from "@wzlin/ff";
+import { execFile, spawn } from "child_process";
 import PromiseQueue from "extlib/js/PromiseQueue";
 import os from "os";
 
 // Leave 1 virtual core:
 // - Allow HTTP requests to continue to be processed.
 // - ffmpeg commands are already multithreaded, so utilising all cores is probably oversaturating the CPU.
-const queue = new PromiseQueue(os.cpus().length - 1);
+// - NOTE: It still won't prevent storage bottlenecks.
+export const queue = new PromiseQueue(os.cpus().length - 1);
 
+// TODO BUG extlib/js/exec has bugs around heavy concurrent invocation causing lost stdout. It's also quite slow. Temporarily directly use built-in library.
 export const ff = new Ff({
-  ffmpegCommand: "ffmpeg",
-  ffprobeCommand: "ffprobe",
-  logLevel: FfmpegLogLevel.ERROR,
   runCommandWithoutStdout: (command, args) =>
-    queue.add(() => exec(command, ...args).status()),
-  runCommandWithStdout: (command, args, throwOnStderr) =>
-    queue.add(() =>
-      exec(command, ...args)
-        .killOnStderr(throwOnStderr)
-        .text()
-        .output()
+    queue.add(
+      () =>
+        new Promise((resolve, reject) => {
+          const proc = spawn(command, args, {
+            stdio: ["ignore", "inherit", "inherit"],
+          });
+          proc.on("error", reject);
+          proc.on("exit", resolve);
+        })
+    ),
+  runCommandWithStdout: (command, args) =>
+    queue.add(
+      () =>
+        new Promise((resolve, reject) => {
+          execFile(command, args, (error, stdout) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(stdout);
+            }
+          });
+        })
     ),
 });
 
