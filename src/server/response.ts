@@ -1,7 +1,7 @@
 import parseRangeHeader from "extlib/js/parseRangeHeader";
 import { createReadStream } from "fs";
-import * as http from "http";
 import { PassThrough, pipeline, Readable } from "stream";
+import { ServerReq, ServerRes } from "./server";
 
 export class StreamFile {
   constructor(
@@ -23,7 +23,7 @@ export class Json<V> {
 export type ApiOutput = StreamFile | Json<any>;
 
 export const writeResponse = (
-  res: http.ServerResponse,
+  res: ServerRes,
   status: number,
   headers: { [name: string]: string | number },
   data: string | Uint8Array | Readable
@@ -52,8 +52,8 @@ export const writeResponse = (
 };
 
 const streamFile = (
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
+  req: ServerReq,
+  res: ServerRes,
   {
     name,
     mime,
@@ -70,7 +70,7 @@ const streamFile = (
   let end: number;
 
   const range = req.headers.range;
-  if (range) {
+  if (typeof range == "string") {
     const parsed = parseRangeHeader(range, size);
     if (!parsed) {
       return res.writeHead(400).end(`Invalid range`);
@@ -110,8 +110,8 @@ const streamFile = (
 };
 
 export const applyResponse = (
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
+  req: ServerReq,
+  res: ServerRes,
   val: ApiOutput
 ) => {
   if (val instanceof StreamFile) {

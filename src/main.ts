@@ -24,7 +24,7 @@ const cli = sacli.Command.new()
       sslcert,
       sslkey,
     }) => {
-      const server = await startServer({
+      const serverPort = await startServer({
         library: new Library(new Directory(rp(library), "")),
         port,
         scratch: mapDefined(scratch, rp),
@@ -37,7 +37,7 @@ const cli = sacli.Command.new()
                 dhParameters: ssldh ? await fs.readFile(ssldh) : undefined,
               },
       });
-      console.log(`Cabinet started on port ${(server.address() as any).port}`);
+      console.log(`Cabinet started on port ${serverPort}`);
     }
   );
 

@@ -3,13 +3,25 @@ import decodeUtf8 from "extlib/js/decodeUtf8";
 import readBufferStream from "extlib/js/readBufferStream";
 import splitString from "extlib/js/splitString";
 import * as http from "http";
-import https from "https";
+import * as http2 from "http2";
+import { AddressInfo } from "net";
+import { Readable, Writable } from "stream";
 import { APIS } from "../api/_apis";
 import { ApiCtx, ApiFn } from "../api/_common";
 import { Library } from "../library/model";
 import { applyResponse, ClientError, writeResponse } from "./response";
 
 declare const CLIENT_HTML: string;
+
+export type ServerReq = Readable & {
+  url?: string;
+  method?: string;
+  headers: { [name: string]: string | string[] | undefined };
+};
+
+export type ServerRes = Writable & {
+  writeHead(status: number, headers?: { [name: string]: string }): Writable;
+};
 
 export const startServer = ({
   library,
@@ -26,16 +38,13 @@ export const startServer = ({
     dhParameters?: Buffer;
   };
 }) =>
-  new Promise<http.Server>((onServerListening) => {
+  new Promise<number>((onServerListening) => {
     const ctx: ApiCtx = {
       library,
       scratch,
     };
 
-    const requestHandler = async (
-      req: http.IncomingMessage,
-      res: http.ServerResponse
-    ) => {
+    const requestHandler = async (req: ServerReq, res: ServerRes) => {
       const [pathname, queryString] = splitString(req.url ?? "", "?", 2);
       const apiName = pathname.slice(1);
       const api = (APIS as any)[apiName] as ApiFn;
@@ -77,15 +86,18 @@ export const startServer = ({
 
     // Start server
     const server = ssl
-      ? https.createServer(
+      ? http2.createSecureServer(
           {
-            key: ssl.key,
+            allowHTTP1: true,
             cert: ssl.certificate,
             dhparam: ssl.dhParameters,
+            key: ssl.key,
           },
           requestHandler
         )
       : http.createServer(requestHandler);
 
-    server.listen(port, () => onServerListening(server));
+    server.listen(port, () =>
+      onServerListening((server.address() as AddressInfo).port)
+    );
   });
