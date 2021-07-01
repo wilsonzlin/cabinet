@@ -81,7 +81,7 @@ export const startServer = ({
         }
         throw e;
       }
-      applyResponse(req, res, output);
+      await applyResponse(req, res, output);
     };
 
     // Start server

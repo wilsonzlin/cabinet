@@ -1,4 +1,5 @@
 import parseRangeHeader from "extlib/js/parseRangeHeader";
+import FileType from "file-type";
 import { createReadStream } from "fs";
 import { PassThrough, pipeline, Readable } from "stream";
 import { ServerReq, ServerRes } from "./server";
@@ -51,7 +52,7 @@ export const writeResponse = (
   });
 };
 
-const streamFile = (
+const streamFile = async (
   req: ServerReq,
   res: ServerRes,
   {
@@ -65,7 +66,16 @@ const streamFile = (
     name?: string;
     mime?: string;
   }
-): void => {
+) => {
+  // Every browser except Safari can handle media sent without Content-Type. But alas,
+  // we have to implement this special code for the special browser.
+  // This should not be too much of a performance drag, since we are going to stream the file anyway
+  // (albeit not necessarily from the start). We don't enumerate MIMEs upon listing a directory
+  // to avoid having to read lots of random sectors before the user can even start viewing a single file.
+  if (mime == undefined) {
+    mime = (await FileType.fromFile(path))?.mime;
+  }
+
   let start: number;
   let end: number;
 
@@ -109,7 +119,7 @@ const streamFile = (
   );
 };
 
-export const applyResponse = (
+export const applyResponse = async (
   req: ServerReq,
   res: ServerRes,
   val: ApiOutput
