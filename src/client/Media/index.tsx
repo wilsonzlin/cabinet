@@ -204,8 +204,6 @@ export default ({
   return (
     <div className={`media-${file.type}`}>
       <video
-        // A key is needed to ensure video reloads on sources change. See https://stackoverflow.com/questions/41303012/updating-source-url-on-html5-video-with-react.
-        key={file.path}
         ref={mediaRef}
         autoPlay={true}
         controls={false}

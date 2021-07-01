@@ -87,7 +87,7 @@ export default ({
             // Don't use element.totalTime as end segment might not have loaded yet.
             element.currentTime = totalTime.as("seconds") * ratio;
           }
-        }, 100);
+        }, 33);
       }
     };
     const EVENTS = ["mousemove", "touchmove"] as const;
