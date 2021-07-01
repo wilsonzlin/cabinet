@@ -346,8 +346,8 @@ export class Video extends Media {
       if (convertedContainer != undefined) {
         return await computedFile(
           convertedWholeFilePath,
-          async (incompleteAbsPath) => {
-            await ff.convert({
+          (incompleteAbsPath) =>
+            ff.convert({
               input: {
                 file: this.absPath(),
               },
@@ -358,8 +358,7 @@ export class Video extends Media {
                 file: incompleteAbsPath,
                 format: convertedContainer,
               },
-            });
-          },
+            }),
           "Failed to convert video to different container"
         );
       }
