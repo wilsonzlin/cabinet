@@ -19,7 +19,7 @@ const File = ({
   file: ListedMedia | ListedPhoto;
   onClick: () => void;
 }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | undefined>(undefined);
 
   const [visible, setVisible] = useState(false);
   const visibleDelay = useRef<any>(undefined);
@@ -59,20 +59,20 @@ const File = ({
       ref={(elem) => setButtonElem(elem ?? undefined)}
       className="shadowtext explorer-file"
       onClick={onClick}
-      onMouseEnter={() => {
-        if (videoRef.current) {
-          videoRef.current.src = apiGetPath("getFile", {
+      onMouseEnter={() =>
+        setPreviewSrc(
+          apiGetPath("getFile", {
             path: file.path,
             preview: true,
-          });
-        }
-      }}
-      onMouseLeave={() => videoRef.current?.removeAttribute("src")}
+          })
+        )
+      }
+      onMouseLeave={() => setPreviewSrc(undefined)}
       style={!visible ? undefined : fileThumbnailCss(file)}
     >
       {file.type == "video" && (
         <video
-          ref={videoRef}
+          src={previewSrc}
           className="explorer-file-video-preview"
           autoPlay={true}
           controls={false}
