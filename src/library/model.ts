@@ -59,105 +59,99 @@ export abstract class DirEntry {
   }
 }
 
-type DirEntries = { [name: string]: DirEntry };
-
 export class Directory extends DirEntry {
-  private lazyList: Promise<DirEntries> | undefined;
-
-  entries(): Promise<DirEntries> {
-    return (this.lazyList ??= (async () => {
-      const names = await readdir(this.absPath());
-      const entries = Object.create(null);
-      await Promise.all(
-        names.map(async (f) => {
-          if (f == DATA_DIR_NAME) {
-            return;
-          }
-          const abs = join(this.absPath(), f);
-          const rel = join(this.relPath, f);
-          let entry: DirEntry;
-          const stats = await stat(abs);
-          if (stats.isDirectory()) {
-            entry = new Directory(this.rootAbsPath, rel);
-          } else if (stats.isFile()) {
-            const ext = pathExtension(f) ?? "";
-            if (MEDIA_EXTENSIONS.has(ext)) {
-              let probeDataPath = join(
-                await ensureDataDirForFile(abs),
-                "probe.json"
-              );
-              let probe: ffprobeOutput;
+  entries = new LazyP(async () => {
+    const names = await readdir(this.absPath());
+    const entries: { [name: string]: DirEntry } = Object.create(null);
+    await Promise.all(
+      names.map(async (f) => {
+        if (f == DATA_DIR_NAME) {
+          return;
+        }
+        const abs = join(this.absPath(), f);
+        const rel = join(this.relPath, f);
+        let entry: DirEntry;
+        const stats = await stat(abs);
+        if (stats.isDirectory()) {
+          entry = new Directory(this.rootAbsPath, rel);
+        } else if (stats.isFile()) {
+          const ext = pathExtension(f) ?? "";
+          if (MEDIA_EXTENSIONS.has(ext)) {
+            let probeDataPath = join(
+              await ensureDataDirForFile(abs),
+              "probe.json"
+            );
+            let probe: ffprobeOutput;
+            try {
+              probe = JSON.parse(await readFile(probeDataPath, "utf8"));
+            } catch {
               try {
-                probe = JSON.parse(await readFile(probeDataPath, "utf8"));
-              } catch {
-                try {
-                  probe = await ff.probe(abs);
-                } catch (e) {
-                  console.warn(`Failed to probe ${abs}: ${e}`);
-                  // Invalid file.
-                  return;
-                }
-                await writeFile(probeDataPath, JSON.stringify(probe));
+                probe = await ff.probe(abs);
+              } catch (e) {
+                console.warn(`Failed to probe ${abs}: ${e}`);
+                // Invalid file.
+                return;
               }
-              const audio = probe.streams.find(
-                (s): s is ffprobeAudioStream => s.codec_type === "audio"
+              await writeFile(probeDataPath, JSON.stringify(probe));
+            }
+            const audio = probe.streams.find(
+              (s): s is ffprobeAudioStream => s.codec_type === "audio"
+            );
+            const video = probe.streams.find(
+              (s): s is ffprobeVideoStream => s.codec_type === "video"
+            );
+            if (video) {
+              entry = new Video(
+                this.rootAbsPath,
+                rel,
+                stats.size,
+                probe.format,
+                video,
+                audio
               );
-              const video = probe.streams.find(
-                (s): s is ffprobeVideoStream => s.codec_type === "video"
+            } else if (audio) {
+              entry = new Audio(
+                this.rootAbsPath,
+                rel,
+                stats.size,
+                probe.format,
+                audio
               );
-              if (video) {
-                entry = new Video(
-                  this.rootAbsPath,
-                  rel,
-                  stats.size,
-                  probe.format,
-                  video,
-                  audio
-                );
-              } else if (audio) {
-                entry = new Audio(
-                  this.rootAbsPath,
-                  rel,
-                  stats.size,
-                  probe.format,
-                  audio
-                );
-              } else {
-                return;
-              }
-            } else if (PHOTO_EXTENSIONS.has(ext)) {
-              await ensureDataDirForFile(abs);
-              let metadata;
-              try {
-                metadata = await sharp(abs).metadata();
-              } catch {
-                return;
-              }
-              const { format, height, width } = metadata;
-              if (
-                format == undefined ||
-                height == undefined ||
-                width == undefined
-              ) {
-                return;
-              }
-              entry = new Photo(this.rootAbsPath, rel, stats.size, {
-                format,
-                height,
-                width,
-              });
             } else {
               return;
             }
+          } else if (PHOTO_EXTENSIONS.has(ext)) {
+            await ensureDataDirForFile(abs);
+            let metadata;
+            try {
+              metadata = await sharp(abs).metadata();
+            } catch {
+              return;
+            }
+            const { format, height, width } = metadata;
+            if (
+              format == undefined ||
+              height == undefined ||
+              width == undefined
+            ) {
+              return;
+            }
+            entry = new Photo(this.rootAbsPath, rel, stats.size, {
+              format,
+              height,
+              width,
+            });
           } else {
             return;
           }
-          entries[f] = entry;
-        })
-      );
-      return entries;
-    })());
-  }
+        } else {
+          return;
+        }
+        entries[f] = entry;
+      })
+    );
+    return entries;
+  });
 }
 
 export abstract class File extends DirEntry {
@@ -626,7 +620,7 @@ export class Library {
   async getDirectory(path: string[]): Promise<Directory | undefined> {
     let cur: Directory = this.root;
     for (const component of path) {
-      const entries = await cur.entries();
+      const entries = await cur.entries.compute();
       const entry = entries[component];
       if (!(entry instanceof Directory)) {
         return undefined;
@@ -639,7 +633,7 @@ export class Library {
   async getFile(path: string): Promise<File | undefined> {
     const pathComponents = splitString(path, sep);
     const dir = await this.getDirectory(pathComponents.slice(0, -1));
-    const entries = await dir?.entries();
+    const entries = await dir?.entries.compute();
     const entry = entries?.[last(pathComponents)];
     return entry instanceof File ? entry : undefined;
   }

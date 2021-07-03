@@ -70,7 +70,7 @@ export const listFilesApi = async (
     throw new ClientError(404, "Directory not found");
   }
   // TODO Filter, subdirectories.
-  const entries = Object.values(await dir.entries());
+  const entries = Object.values(await dir.entries.compute());
   const files = entries.filter((f): f is File => f instanceof File);
   const size = files.reduce((t, f) => t + f.size, 0);
   const duration = files.reduce(
