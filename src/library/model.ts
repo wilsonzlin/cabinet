@@ -447,7 +447,7 @@ export class Video extends Media {
                 )
               ).sample_rate;
               gaplessMetadata = parseGaplessMetadata(
-                await readFile(fdkFile.absPath, "utf8"),
+                await readFile(fdkFile.absPath, "ascii"),
                 sampleRate
               );
               const finalFile = await computedFile(
