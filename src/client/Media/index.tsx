@@ -1,8 +1,8 @@
-import assertState from "extlib/js/assertState";
-import classNames from "extlib/js/classNames";
-import defined from "extlib/js/defined";
-import filterValue from "extlib/js/filterValue";
-import mapDefined from "extlib/js/mapDefined";
+import assertState from "@xtjs/lib/js/assertState";
+import classNames from "@xtjs/lib/js/classNames";
+import defined from "@xtjs/lib/js/defined";
+import filterValue from "@xtjs/lib/js/filterValue";
+import mapDefined from "@xtjs/lib/js/mapDefined";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedMedia } from "../../api/listFiles";
 import { GaplessMetadata } from "../../util/media";

@@ -1,4 +1,4 @@
-import maybeFileStats from "extlib/js/maybeFileStats";
+import maybeFileStats from "@xtjs/lib/js/maybeFileStats";
 import { rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
 

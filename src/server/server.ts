@@ -1,7 +1,7 @@
-import decodeUrlEncoded from "extlib/js/decodeUrlEncoded";
-import decodeUtf8 from "extlib/js/decodeUtf8";
-import readBufferStream from "extlib/js/readBufferStream";
-import splitString from "extlib/js/splitString";
+import decodeUrlEncoded from "@xtjs/lib/js/decodeUrlEncoded";
+import decodeUtf8 from "@xtjs/lib/js/decodeUtf8";
+import readBufferStream from "@xtjs/lib/js/readBufferStream";
+import splitString from "@xtjs/lib/js/splitString";
 import * as http from "http";
 import * as http2 from "http2";
 import { AddressInfo } from "net";

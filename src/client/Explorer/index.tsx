@@ -1,4 +1,4 @@
-import classNames from "extlib/js/classNames";
+import classNames from "@xtjs/lib/js/classNames";
 import { Duration } from "luxon";
 import React, { useEffect, useRef, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";

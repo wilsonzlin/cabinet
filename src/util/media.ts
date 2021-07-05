@@ -1,6 +1,6 @@
 import { Ff } from "@wzlin/ff";
 import { execFile, spawn } from "child_process";
-import PromiseQueue from "extlib/js/PromiseQueue";
+import PromiseQueue from "@xtjs/lib/js/PromiseQueue";
 import os from "os";
 
 // Leave 1 virtual core:
@@ -9,7 +9,7 @@ import os from "os";
 // - NOTE: It still won't prevent storage bottlenecks.
 export const queue = new PromiseQueue(os.cpus().length - 1);
 
-// TODO BUG extlib/js/exec has bugs around heavy concurrent invocation causing lost stdout. It's also quite slow. Temporarily directly use built-in library.
+// TODO BUG @xtjs/lib/js/exec has bugs around heavy concurrent invocation causing lost stdout. It's also quite slow. Temporarily directly use built-in library.
 export const ff = new Ff({
   runCommandWithoutStdout: (command, args) =>
     queue.add(

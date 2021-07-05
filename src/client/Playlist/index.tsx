@@ -1,4 +1,4 @@
-import classNames from "extlib/js/classNames";
+import classNames from "@xtjs/lib/js/classNames";
 import React, { useEffect, useRef } from "react";
 import { ListedMedia } from "../../api/listFiles";
 import "./index.css";

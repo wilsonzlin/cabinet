@@ -4,12 +4,12 @@ import {
   ffprobeOutput,
   ffprobeVideoStream,
 } from "@wzlin/ff";
-import assertExists from "extlib/js/assertExists";
-import exec from "extlib/js/exec";
-import last from "extlib/js/last";
-import mapDefined from "extlib/js/mapDefined";
-import pathExtension from "extlib/js/pathExtension";
-import splitString from "extlib/js/splitString";
+import assertExists from "@xtjs/lib/js/assertExists";
+import exec from "@xtjs/lib/js/exec";
+import last from "@xtjs/lib/js/last";
+import mapDefined from "@xtjs/lib/js/mapDefined";
+import pathExtension from "@xtjs/lib/js/pathExtension";
+import splitString from "@xtjs/lib/js/splitString";
 import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
 import { EOL } from "os";
 import { basename, dirname, join, sep } from "path";

@@ -1,5 +1,5 @@
-import assertExists from "extlib/js/assertExists";
-import maybeFileStats from "extlib/js/maybeFileStats";
+import assertExists from "@xtjs/lib/js/assertExists";
+import maybeFileStats from "@xtjs/lib/js/maybeFileStats";
 import { mkdir } from "fs/promises";
 import { dirname, join } from "path";
 import { Video } from "../library/model";

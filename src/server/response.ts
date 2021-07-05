@@ -1,4 +1,4 @@
-import parseRangeHeader from "extlib/js/parseRangeHeader";
+import parseRangeHeader from "@xtjs/lib/js/parseRangeHeader";
 import FileType from "file-type";
 import { createReadStream } from "fs";
 import { PassThrough, pipeline, Readable } from "stream";

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import mapDefined from "extlib/js/mapDefined";
+import mapDefined from "@xtjs/lib/js/mapDefined";
 import { promises as fs, realpathSync } from "fs";
 import * as sacli from "sacli";
 import { Directory, Library } from "./library/model";

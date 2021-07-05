@@ -1,6 +1,6 @@
-import derivedComparator from "extlib/js/derivedComparator";
-import naturalOrdering from "extlib/js/naturalOrdering";
-import UnreachableError from "extlib/js/UnreachableError";
+import derivedComparator from "@xtjs/lib/js/derivedComparator";
+import naturalOrdering from "@xtjs/lib/js/naturalOrdering";
+import UnreachableError from "@xtjs/lib/js/UnreachableError";
 import { Audio, Directory, File, Photo, Video } from "../library/model";
 import { ClientError, Json } from "../server/response";
 import { ApiCtx } from "./_common";

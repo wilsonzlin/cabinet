@@ -1,5 +1,5 @@
-import classNames from "extlib/js/classNames";
-import last from "extlib/js/last";
+import classNames from "@xtjs/lib/js/classNames";
+import last from "@xtjs/lib/js/last";
 import React, { useState } from "react";
 import "./index.css";
 

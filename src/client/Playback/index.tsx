@@ -1,6 +1,6 @@
-import assertExists from "extlib/js/assertExists";
-import classNames from "extlib/js/classNames";
-import mapDefined from "extlib/js/mapDefined";
+import assertExists from "@xtjs/lib/js/assertExists";
+import classNames from "@xtjs/lib/js/classNames";
+import mapDefined from "@xtjs/lib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
