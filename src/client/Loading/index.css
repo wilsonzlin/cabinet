@@ -1,0 +1,17 @@
+.loading {
+  display: flex;
+  flex-wrap: nowrap;
+  height: 12px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.loading-tile {
+  animation-direction: normal;
+  animation-duration: 6000ms;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+  flex-shrink: 0;
+  height: 100%;
+  width: 1px;
+}

@@ -9,8 +9,9 @@ import {
   listFilesApi,
 } from "../../api/listFiles";
 import { apiGetPath } from "../_common/api";
-import "./index.css";
 import { fileThumbnailCss } from "../_common/ui";
+import Loading from "../Loading";
+import "./index.css";
 
 const File = ({
   file,
@@ -106,6 +107,7 @@ export default ({
     JsonApiOutput<typeof listFilesApi> | undefined
   >();
   useEffect(() => {
+    setEntries(undefined);
     fetch("/listFiles", {
       method: "POST",
       body: JSON.stringify({
@@ -131,6 +133,7 @@ export default ({
         reserveRightSpace && "explorer-reserve-right-space"
       )}
     >
+      {!entries && <Loading />}
       <div className="explorer-entries">
         <div className="explorer-folders">
           {folders.map((f) => (
