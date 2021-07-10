@@ -17,6 +17,31 @@
   object-fit: contain;
 }
 
+.media-montage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  /* Make room for back and playlist buttons. */
+  padding-top: 50px;
+
+  display: flex;
+  overflow: auto;
+}
+
+.media-montage-frame {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #ccc;
+  width: 200px;
+  margin: 5px 10px;
+}
+
+.media-montage-frame > img {
+  width: 100%;
+}
+
 .media-next {
   text-align: left;
   position: absolute;
@@ -26,6 +51,7 @@
   font-size: 14px;
 
   opacity: 0;
+  pointer-events: none;
   transition: 0.25s;
 
   border-radius: 6px 0 0 6px;
@@ -34,6 +60,7 @@
 
 .media-next-visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .media-next::before {

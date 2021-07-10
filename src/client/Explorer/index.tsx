@@ -1,6 +1,5 @@
 import classNames from "@xtjs/lib/js/classNames";
-import { Duration } from "luxon";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";
 import {
   ListedFolder,
@@ -9,7 +8,7 @@ import {
   listFilesApi,
 } from "../../api/listFiles";
 import { apiGetPath } from "../_common/api";
-import { fileThumbnailCss } from "../_common/ui";
+import { fileThumbnailCss, formatDur, useLazyLoad } from "../_common/ui";
 import Loading from "../Loading";
 import "./index.css";
 
@@ -21,43 +20,11 @@ const File = ({
   onClick: () => void;
 }) => {
   const [previewSrc, setPreviewSrc] = useState<string | undefined>(undefined);
-
-  const [visible, setVisible] = useState(false);
-  const visibleDelay = useRef<any>(undefined);
-  // Lazy load images as they appear, as some folders can have lots of files.
-  const observer = useRef(
-    new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        clearTimeout(visibleDelay.current);
-        if (e.isIntersecting) {
-          // We want to show the image, even if user is just scrolling/browsing.
-          // We should only not load if the user is scrolling rapidly to a specific position, as if it's really deep,
-          // a lot of images will be loaded unnecessarily.
-          visibleDelay.current = setTimeout(() => {
-            setTimeout(() => {
-              // Add some jitter so requests don't go all at once, which slows down both browser and server.
-              setVisible(true);
-            }, Math.random() * 300);
-          }, 50);
-        }
-      }
-    })
-  );
-
-  const [buttonElem, setButtonElem] = useState<HTMLButtonElement | undefined>(
-    undefined
-  );
-  useEffect(() => {
-    if (buttonElem) {
-      observer.current.observe(buttonElem);
-      return () => observer.current.unobserve(buttonElem);
-    }
-    return;
-  }, [buttonElem]);
+  const { visible, setLazyElem } = useLazyLoad();
 
   return (
     <button
-      ref={(elem) => setButtonElem(elem ?? undefined)}
+      ref={setLazyElem}
       className="shadowtext explorer-file"
       onClick={onClick}
       onMouseEnter={() =>
@@ -82,7 +49,7 @@ const File = ({
       )}
       {(file.type == "video" || file.type == "audio") && (
         <div className="acrylic acrylic-grey explorer-file-duration">
-          {Duration.fromMillis(file.duration * 1000).toFormat("m:ss")}
+          {formatDur(file.duration)}
         </div>
       )}
       <div className="acrylic acrylic-grey explorer-file-name">{file.name}</div>

@@ -7,7 +7,9 @@ import {
 import assertExists from "@xtjs/lib/js/assertExists";
 import exec from "@xtjs/lib/js/exec";
 import last from "@xtjs/lib/js/last";
+import map from "@xtjs/lib/js/map";
 import mapDefined from "@xtjs/lib/js/mapDefined";
+import numberGenerator from "@xtjs/lib/js/numberGenerator";
 import pathExtension from "@xtjs/lib/js/pathExtension";
 import splitString from "@xtjs/lib/js/splitString";
 import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
@@ -282,6 +284,25 @@ export class Audio extends Media {
 }
 
 export class Video extends Media {
+  readonly montage = [
+    ...map(numberGenerator(3, this.duration() - 2, 3), (time) => ({
+      file: new LazyP(() =>
+        computedFile(
+          join(this.dataDir(), `montage.${time}.jpg`),
+          async (output) => {
+            await ff.extractFrame({
+              input: this.absPath(),
+              output,
+              timestamp: time,
+              scaleWidth: PREVIEW_SCALED_WIDTH,
+            });
+          }
+        )
+      ),
+      time,
+    })),
+  ];
+
   readonly content = new LazyP<
     | ComputedFile
     | {

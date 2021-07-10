@@ -7,9 +7,39 @@ import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedMedia } from "../../api/listFiles";
 import { GaplessMetadata } from "../../util/media";
 import { apiGetPath } from "../_common/api";
+import { formatDur, useLazyLoad } from "../_common/ui";
 import "./index.css";
 
 const SHOW_NEXT_IN_LAST_N_SECS = 10;
+
+const MontageFrame = ({
+  filePath,
+  onClick,
+  time,
+}: {
+  filePath: string;
+  onClick: () => void;
+  time: number;
+}) => {
+  const { visible, setLazyElem } = useLazyLoad();
+
+  return (
+    <button ref={setLazyElem} className="media-montage-frame" onClick={onClick}>
+      {/* Use image for auto height. */}
+      <img
+        src={
+          !visible
+            ? undefined
+            : apiGetPath("getFile", {
+                path: filePath,
+                montageFrame: time,
+              })
+        }
+      />
+      <div>{formatDur(time)}</div>
+    </button>
+  );
+};
 
 export default ({
   file,
@@ -38,8 +68,12 @@ export default ({
     undefined
   );
 
+  const [montageFrames, setMontageFrames] = useState<number[]>([]);
+  const [showMontageFrames, setShowMontageFrames] = useState(false);
+
   const [videoSrc, setVideoSrc] = useState<string | undefined>(undefined);
   useEffect(() => {
+    setMontageFrames([]);
     if (file.type == "audio") {
       setVideoSrc(apiGetPath("getFile", { path: file.path }));
       return;
@@ -49,13 +83,17 @@ export default ({
       .then(
         ({
           type,
+          montageFrames,
           audio,
           video: segments,
         }: {
           type: string;
+          montageFrames: number[];
           audio: boolean;
           video: number[];
         }) => {
+          setMontageFrames(montageFrames);
+
           if (type == "src") {
             setVideoSrc(apiGetPath("getFile", { path: file.path }));
             return;
@@ -220,8 +258,26 @@ export default ({
           onTimeUpdate(time);
           onSeekOrTimeUpdate.current?.(time);
         }}
+        onClick={() => setShowMontageFrames((x) => !x)}
+        onContextMenu={(e) => e.preventDefault()}
         src={videoSrc}
       />
+      {showMontageFrames && (
+        <div className="acrylic media-montage">
+          {montageFrames.map((time) => (
+            <MontageFrame
+              key={[file.path, time].join("\0")}
+              filePath={file.path}
+              onClick={() => {
+                if (mediaRef.current) {
+                  mediaRef.current.currentTime = time;
+                }
+              }}
+              time={time}
+            />
+          ))}
+        </div>
+      )}
       {mapDefined(next, (next) => (
         <button
           // Have this always rendered to allow opacity transition in.

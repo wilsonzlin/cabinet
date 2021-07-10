@@ -4,7 +4,7 @@ import mapDefined from "@xtjs/lib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedAudio, ListedVideo } from "../../api/listFiles";
-import { fileThumbnailCss, useElemDimensions } from "../_common/ui";
+import { fileThumbnailCss, formatDur, useElemDimensions } from "../_common/ui";
 import "./index.css";
 
 const getRatio = (pageX: number, rect: DOMRect) =>
@@ -233,8 +233,8 @@ export default ({
             </div>
           </div>
           <div className="playback-progress-bottom">
-            <div>-{totalTime.minus(currentTime).toFormat("m:ss")}</div>
-            <div>{currentTime.toFormat("m:ss")}</div>
+            <div>-{formatDur(totalTime.minus(currentTime))}</div>
+            <div>{formatDur(currentTime)}</div>
           </div>
         </div>
         <div className="playback-end-table">

@@ -173,21 +173,32 @@ export const getFileApi = async (
       throw new ClientError(400, "Content manifests only available for videos");
     }
     const content = await file.content.compute();
+    const montageFrames = file.montage.map((m) => m.time);
     if ("absPath" in content) {
       return new Json({
         type: "src",
+        montageFrames,
       });
     }
     return new Json({
       type: "segments",
+      montageFrames,
       audio: !!content.audio,
       video: content.video.segments.map((s) => s.start),
     });
   }
 
-  if (montageFrame) {
-    // TODO UNIMPLEMENTED
-    throw new ClientError(404, "No frame available");
+  if (montageFrame != undefined) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Montage frames only available for videos");
+    }
+    const frame = await file.montage
+      .find((f) => f.time === montageFrame)
+      ?.file.compute();
+    if (!frame) {
+      throw new ClientError(404, "Frame not found");
+    }
+    return new StreamFile(frame.absPath, frame.size);
   }
 
   if (preview) {
