@@ -22,7 +22,11 @@ export default ({}: {}) => {
   const [mediaPlaylistPosition, setMediaPlaylistPosition] =
     useState<number>(-1);
   const [photo, setPhoto] = useState<ListedPhoto | undefined>(undefined);
-  const [path, setPath] = useState<Array<string>>([]);
+  const [path, setPath_callChangePathInstead] = useState<Array<string>>([]);
+  const changePath = (newPath: string[]) => {
+    setSearchValue("");
+    setPath_callChangePathInstead(newPath);
+  };
   const [playlistClosed, setPlaylistClosed] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
@@ -98,7 +102,7 @@ export default ({}: {}) => {
     >
       <Explorer
         filter={searchValue}
-        onClickFolder={(f) => setPath((p) => p.concat(f))}
+        onClickFolder={(f) => changePath(path.concat(f))}
         onClickMediaFile={(files, file) => {
           setMediaPlaylist(files);
           setMediaPlaylistPosition(files.indexOf(file));
@@ -124,7 +128,7 @@ export default ({}: {}) => {
       <Path
         components={path}
         onChangeSearchValue={setSearchValue}
-        onNavigate={(p) => setPath(p)}
+        onNavigate={changePath}
         onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         onRequestClose={() => {
           if (photo) {
