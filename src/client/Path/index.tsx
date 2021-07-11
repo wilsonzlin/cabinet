@@ -2,12 +2,15 @@ import classNames from "@xtjs/lib/js/classNames";
 import last from "@xtjs/lib/js/last";
 import React, { useState } from "react";
 import "./index.css";
+import { parseSearchFilter } from "../_common/search";
 
 export default ({
   components,
+  onChangeSearchValue,
   onNavigate,
   onRequestClose,
   onRequestOpenPlaylist,
+  searchValue,
   showCloseButtonInsteadOfUp,
   showComponents,
   showPlaylistToggle,
@@ -15,9 +18,11 @@ export default ({
   useMenu,
 }: {
   components: string[];
+  onChangeSearchValue: (val: string) => void;
   onNavigate: (path: string[]) => void;
   onRequestClose: () => void;
   onRequestOpenPlaylist: () => void;
+  searchValue: string;
   showCloseButtonInsteadOfUp: boolean;
   showComponents: boolean;
   showPlaylistToggle: boolean;
@@ -69,9 +74,21 @@ export default ({
         </div>
       )}
       {showSearch && (
-        <div className="path-search-container">
+        <div
+          className={classNames(
+            "path-search-container",
+            !!searchValue.trim() &&
+              !parseSearchFilter(searchValue).filter &&
+              "path-search-container-invalid"
+          )}
+        >
           <input
             className="path-search"
+            onChange={(e) => onChangeSearchValue(e.currentTarget.value)}
+            value={searchValue}
+            onBlur={(e) =>
+              onChangeSearchValue(e.currentTarget.value.trimLeft())
+            }
             placeholder={
               useMenu && components.length
                 ? `Search ${last(components)}`

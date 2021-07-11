@@ -31,8 +31,9 @@
   },
   "homepage": "https://github.com/wilsonzlin/cabinet#readme",
   "dependencies": {
-    "@xtjs/lib": "^0.19.1",
     "@wzlin/ff": "^0.14.1",
+    "@xtjs/lang": "^0.1.0",
+    "@xtjs/lib": "^0.19.1",
     "file-type": "^16.5.0",
     "luxon": "^1.27.0",
     "react": "^17.0.2",

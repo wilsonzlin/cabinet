@@ -91,6 +91,10 @@
   max-width: 250px;
 }
 
+.path-search-container-invalid {
+  border-color: red;
+}
+
 .path-search-container::before {
   content: "🔎︎";
   flex-shrink: 0;

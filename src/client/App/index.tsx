@@ -15,6 +15,8 @@ import "./index.css";
 const ZERO_DURATION = Duration.fromMillis(0);
 
 export default ({}: {}) => {
+  const [searchValue, setSearchValue] = useState("");
+
   const mediaRef = useRef<HTMLVideoElement | null>(null);
   const [mediaPlaylist, setMediaPlaylist] = useState<ListedMedia[]>([]);
   const [mediaPlaylistPosition, setMediaPlaylistPosition] =
@@ -95,6 +97,7 @@ export default ({}: {}) => {
       ref={(elem) => setAppElem(elem ?? undefined)}
     >
       <Explorer
+        filter={searchValue}
         onClickFolder={(f) => setPath((p) => p.concat(f))}
         onClickMediaFile={(files, file) => {
           setMediaPlaylist(files);
@@ -120,6 +123,7 @@ export default ({}: {}) => {
       {photo && <Image file={photo} />}
       <Path
         components={path}
+        onChangeSearchValue={setSearchValue}
         onNavigate={(p) => setPath(p)}
         onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         onRequestClose={() => {
@@ -129,6 +133,7 @@ export default ({}: {}) => {
             setMediaPlaylistPosition(-1);
           }
         }}
+        searchValue={searchValue}
         showCloseButtonInsteadOfUp={isViewing}
         showComponents={!isViewing}
         showPlaylistToggle={canShowPlaylistToggle && playlistClosed}

@@ -1,6 +1,7 @@
 import derivedComparator from "@xtjs/lib/js/derivedComparator";
 import naturalOrdering from "@xtjs/lib/js/naturalOrdering";
 import UnreachableError from "@xtjs/lib/js/UnreachableError";
+import { sep } from "path";
 import { Audio, Directory, File, Photo, Video } from "../library/model";
 import { ClientError, Json } from "../server/response";
 import { ApiCtx } from "./_common";
@@ -47,10 +48,16 @@ export type ListedVideo = BaseListedFile & {
 
 export type ListedMedia = ListedAudio | ListedVideo;
 
+type ResultsDirEntry = ListedFolder | ListedAudio | ListedPhoto | ListedVideo;
+
+type ResultsDir = { dir: string[]; entries: Array<ResultsDirEntry> };
+
 export const listFilesApi = async (
   ctx: ApiCtx,
   {
     path,
+    filter,
+    subdirectories,
   }: {
     path: string[];
     // Possible query parameters.
@@ -59,41 +66,51 @@ export const listFilesApi = async (
   }
 ): Promise<
   Json<{
-    approximateSize: number;
-    approximateDuration: number;
-    approximateCount: number;
-    results: Array<ListedFolder | ListedAudio | ListedPhoto | ListedVideo>;
+    results: ResultsDir[];
+    totalFiles: number;
+    totalDuration: number;
+    totalSize: number;
   }>
 > => {
   const dir = await ctx.library.getDirectory(path);
   if (!dir) {
     throw new ClientError(404, "Directory not found");
   }
-  // TODO Filter, subdirectories.
-  const entries = Object.values(await dir.entries.compute());
-  const files = entries.filter((f): f is File => f instanceof File);
-  const size = files.reduce((t, f) => t + f.size, 0);
-  const duration = files.reduce(
-    (t, f) => t + (f instanceof Video ? f.duration() : 0),
-    0
-  );
-  return new Json({
-    approximateSize: size,
-    approximateDuration: duration,
-    approximateCount: entries.length,
-    results: entries
-      .sort(derivedComparator((e) => e.fileName().replace(/[^A-Za-z0-9]/g, "").toLowerCase(), naturalOrdering))
-      .map((e) => {
-        if (e instanceof Directory) {
-          return {
+  const filterRegex =
+    filter &&
+    RegExp(
+      filter
+        .trim()
+        .replace(/[-[\]{}()*+?.,\\^$|#]/g, "\\$&")
+        .replace(/\s+/g, "\\s+"),
+      "i"
+    );
+  let totalDuration = 0;
+  let totalFiles = 0;
+  let totalSize = 0;
+  const results: ResultsDir[] = [];
+  const visitDir = async (dir: Directory) => {
+    const entries: ResultsDirEntry[] = [];
+    for (const e of Object.values(await dir.entries.compute())) {
+      if (e instanceof Directory) {
+        if (subdirectories) {
+          await visitDir(e);
+        } else if (!filterRegex || filterRegex.test(e.fileName())) {
+          entries.push({
             type: "dir",
             name: e.fileName(),
             itemCount: Object.keys(e.entries).length,
-          };
+          });
         }
-
+      } else if (e instanceof File) {
+        if (filterRegex && !filterRegex.test(e.fileName())) {
+          continue;
+        }
+        totalFiles++;
+        totalSize += e.size;
         if (e instanceof Audio) {
-          return {
+          totalDuration += e.duration();
+          entries.push({
             type: "audio",
             path: e.relPath,
             name: e.fileName(),
@@ -104,22 +121,19 @@ export const listFilesApi = async (
             album: e.metadata().album,
             genre: e.metadata().genre,
             track: e.metadata().track,
-          };
-        }
-
-        if (e instanceof Photo) {
-          return {
+          });
+        } else if (e instanceof Photo) {
+          entries.push({
             type: "photo",
             path: e.relPath,
             name: e.fileName(),
             size: e.size,
             width: e.width(),
             height: e.height(),
-          };
-        }
-
-        if (e instanceof Video) {
-          return {
+          });
+        } else if (e instanceof Video) {
+          totalDuration += e.duration();
+          entries.push({
             type: "video",
             path: e.relPath,
             name: e.fileName(),
@@ -132,10 +146,29 @@ export const listFilesApi = async (
             album: e.metadata().album,
             genre: e.metadata().genre,
             track: e.metadata().track,
-          };
+          });
+        } else {
+          throw new UnreachableError(e as any);
         }
-
+      } else {
         throw new UnreachableError(e as any);
-      }),
+      }
+    }
+    results.push({
+      dir: dir.relPath.split(sep),
+      entries: entries.sort(
+        derivedComparator(
+          (e) => e.name.replace(/[^A-Za-z0-9]/g, "").toLowerCase(),
+          naturalOrdering
+        )
+      ),
+    });
+  };
+  await visitDir(dir);
+  return new Json({
+    results,
+    totalDuration,
+    totalFiles,
+    totalSize,
   });
 };
