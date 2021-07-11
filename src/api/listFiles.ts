@@ -82,7 +82,7 @@ export const listFilesApi = async (
     approximateDuration: duration,
     approximateCount: entries.length,
     results: entries
-      .sort(derivedComparator((e) => e.fileName(), naturalOrdering))
+      .sort(derivedComparator((e) => e.fileName().replace(/[^A-Za-z0-9]/g, "").toLowerCase(), naturalOrdering))
       .map((e) => {
         if (e instanceof Directory) {
           return {
