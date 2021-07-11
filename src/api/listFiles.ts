@@ -154,15 +154,17 @@ export const listFilesApi = async (
         throw new UnreachableError(e as any);
       }
     }
-    results.push({
-      dir: dir.relPath.split(sep),
-      entries: entries.sort(
-        derivedComparator(
-          (e) => e.name.replace(/[^A-Za-z0-9]/g, "").toLowerCase(),
-          naturalOrdering
-        )
-      ),
-    });
+    if (entries.length) {
+      results.push({
+        dir: dir.relPath.split(sep),
+        entries: entries.sort(
+          derivedComparator(
+            (e) => e.name.replace(/[^A-Za-z0-9]/g, "").toLowerCase(),
+            naturalOrdering
+          )
+        ),
+      });
+    }
   };
   await visitDir(dir);
   return new Json({

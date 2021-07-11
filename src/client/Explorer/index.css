@@ -19,6 +19,11 @@
   padding-right: 332px;
 }
 
+.explorer-entries-dir {
+  display: block;
+  padding: 8px 0;
+}
+
 .explorer-folders,
 .explorer-files {
   display: grid;

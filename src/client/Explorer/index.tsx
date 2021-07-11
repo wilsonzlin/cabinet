@@ -120,7 +120,11 @@ export default ({
 
           return (
             <div className="explorer-entries" key={dir.join("\0")}>
-              {subdirectories && <strong>{dir}</strong>}
+              {subdirectories && (
+                <strong className="explorer-entries-dir">
+                  {dir.join("/")}
+                </strong>
+              )}
               <div className="explorer-folders">
                 {folders.map((f) => (
                   <button
