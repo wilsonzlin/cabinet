@@ -21,7 +21,11 @@
 
 .explorer-entries-dir {
   display: block;
-  padding: 8px 0;
+  padding: 20px 0 12px 0;
+}
+
+.explorer-entries:first-child .explorer-entries-dir {
+  padding-top: 0;
 }
 
 .explorer-folders,

@@ -507,6 +507,7 @@ export class Video extends Media {
                       end: nextTs,
                     },
                     video: {
+                      vsync: "vfr",
                       codec: "libx264",
                       preset: "veryfast",
                       crf: 18,
