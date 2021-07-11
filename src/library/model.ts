@@ -285,8 +285,8 @@ export class Audio extends Media {
 
 export class Video extends Media {
   readonly montage = [
-    // Use frames from every 3 minutes, except earlier or later than first/last minute. These are arbitrary values.
-    ...map(numberGenerator(60, this.duration() - 59, 180), (time) => ({
+    // Use frames from every 1m12s, except earlier than 20s or later than last 9s. These are arbitrary values.
+    ...map(numberGenerator(20, this.duration() - 9, 72), (time) => ({
       file: new LazyP(() =>
         computedFile(
           join(this.dataDir(), `montage.${time}.jpg`),
