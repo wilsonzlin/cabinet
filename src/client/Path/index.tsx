@@ -1,8 +1,8 @@
 import classNames from "@xtjs/lib/js/classNames";
 import last from "@xtjs/lib/js/last";
 import React, { useState } from "react";
-import "./index.css";
 import { parseSearchFilter } from "../_common/search";
+import "./index.css";
 
 export default ({
   components,

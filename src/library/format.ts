@@ -80,14 +80,15 @@ export const BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS = new Map<
       videoCodecs: new Set(),
     },
   ],
-  [
-    "matroska,webm",
-    {
-      argValue: "webm",
-      audioCodecs: new Set(["opus", "vorbis"]),
-      videoCodecs: new Set(["av1", "vp8", "vp9"]),
-    },
-  ],
+  // TODO Enable only when detected browser is supported.
+  // [
+  //   "matroska,webm",
+  //   {
+  //     argValue: "webm",
+  //     audioCodecs: new Set(["opus", "vorbis"]),
+  //     videoCodecs: new Set(["av1", "vp8", "vp9"]),
+  //   },
+  // ],
   [
     "mov,mp4,m4a,3gp,3g2,mj2",
     {
@@ -106,13 +107,14 @@ export const BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS = new Map<
       videoCodecs: new Set(),
     },
   ],
-  [
-    "ogg",
-    {
-      audioCodecs: new Set(["opus", "vorbis"]),
-      videoCodecs: new Set(["theora"]),
-    },
-  ],
+  // TODO Enable only when detected browser is supported.
+  // [
+  //   "ogg",
+  //   {
+  //     audioCodecs: new Set(["opus", "vorbis"]),
+  //     videoCodecs: new Set(["theora"]),
+  //   },
+  // ],
   [
     "wav",
     {

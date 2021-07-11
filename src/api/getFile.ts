@@ -1,4 +1,5 @@
 import assertExists from "@xtjs/lib/js/assertExists";
+import mapDefined from "@xtjs/lib/js/mapDefined";
 import maybeFileStats from "@xtjs/lib/js/maybeFileStats";
 import { mkdir } from "fs/promises";
 import { dirname, join } from "path";
@@ -134,6 +135,7 @@ export const getFileApi = async (
     preview,
     segment,
     segmentGaplessMetadata,
+    stream,
     thumbnail,
     capture,
   }: {
@@ -143,6 +145,7 @@ export const getFileApi = async (
     preview?: true;
     segment?: { index: number; stream: "audio" | "video" };
     segmentGaplessMetadata?: number;
+    stream?: "audio" | "video";
     thumbnail?: true;
     capture?: {
       start?: number;
@@ -159,7 +162,7 @@ export const getFileApi = async (
 
   if (capture) {
     if (!(file instanceof Video)) {
-      throw new ClientError(400, "Capturing only supported on videos");
+      throw new ClientError(400, "Capturing is only supported on videos");
     }
     return await streamVideoCapture({
       ctx,
@@ -170,7 +173,10 @@ export const getFileApi = async (
 
   if (contentManifest) {
     if (!(file instanceof Video)) {
-      throw new ClientError(400, "Content manifests only available for videos");
+      throw new ClientError(
+        400,
+        "Content manifests are only available for videos"
+      );
     }
     const content = await file.content.compute();
     const montageFrames = file.montage.map((m) => m.time);
@@ -181,16 +187,20 @@ export const getFileApi = async (
       });
     }
     return new Json({
-      type: "segments",
+      type: "mse",
       montageFrames,
-      audio: !!content.audio,
-      video: content.video.segments.map((s) => s.start),
+      audio: mapDefined(content.audio, (a) => (a.file ? "file" : "segments")),
+      video: content.video.file ? "file" : "segments",
+      segments: content.segments,
     });
   }
 
   if (montageFrame != undefined) {
     if (!(file instanceof Video)) {
-      throw new ClientError(400, "Montage frames only available for videos");
+      throw new ClientError(
+        400,
+        "Montage frames are only available for videos"
+      );
     }
     const frame = await file.montage
       .find((f) => f.time === montageFrame)
@@ -221,7 +231,7 @@ export const getFileApi = async (
       throw new ClientError(404, "Video does not have segments");
     }
     const stream = content[segment.stream];
-    const s = stream?.segments[segment.index];
+    const s = stream?.segments?.[segment.index];
     if (!s) {
       throw new ClientError(404, "Segment not found");
     }
@@ -237,7 +247,7 @@ export const getFileApi = async (
     if ("absPath" in content) {
       throw new ClientError(404, "Video does not have segments");
     }
-    const s = content.audio?.segments[segmentGaplessMetadata];
+    const s = content.audio?.segments?.[segmentGaplessMetadata];
     if (!s) {
       throw new ClientError(404, "Segment not found");
     }
@@ -245,6 +255,21 @@ export const getFileApi = async (
     return new Json({
       gaplessMetadata: f.gaplessMetadata,
     });
+  }
+
+  if (stream) {
+    if (!(file instanceof Video)) {
+      throw new ClientError(400, "Segments only available for videos");
+    }
+    const content = await file.content.compute();
+    if ("absPath" in content) {
+      throw new ClientError(404, "Video does not have separate streams");
+    }
+    const s = await content[stream]?.file?.compute();
+    if (!s) {
+      throw new ClientError(404, "Stream not available");
+    }
+    return new StreamFile(s.absPath, s.size, `${stream}/mp4`);
   }
 
   if (thumbnail) {

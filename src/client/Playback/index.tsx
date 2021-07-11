@@ -91,10 +91,14 @@ export default ({
       }
     };
     const EVENTS = ["mousemove", "touchmove"] as const;
-    for (const e of EVENTS) document.addEventListener(e, listener, true);
+    for (const e of EVENTS) {
+      document.addEventListener(e, listener, true);
+    }
     return () => {
       clearTimeout(scrubbingDebounce.current);
-      for (const e of EVENTS) document.removeEventListener(e, listener, true);
+      for (const e of EVENTS) {
+        document.removeEventListener(e, listener, true);
+      }
     };
   }, [scrubbingOffset, element]);
 

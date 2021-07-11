@@ -1,6 +1,6 @@
 import { Ff } from "@wzlin/ff";
-import { execFile, spawn } from "child_process";
 import PromiseQueue from "@xtjs/lib/js/PromiseQueue";
+import { execFile, spawn } from "child_process";
 import os from "os";
 
 // Leave 1 virtual core:
