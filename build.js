@@ -22,27 +22,28 @@ const build = (module.exports.build = (debug) => {
     legalComments: "none",
     minify: !debug,
     outdir: "dist",
+    target: "es2020",
     write: false,
   });
   const js = outputFiles.find((f) => f.path.endsWith("index.js")).text;
   const css = outputFiles.find((f) => f.path.endsWith("index.css")).text;
   const html = htmlTemplate.replace(
     "</body>",
-    `
+    // Special JS .replace markers (e.g. $&) in a replacement string still work even with a literal string (not regex) search value. Use a function instead to bypass this behaviour.
+    () => `
   <style>${css}</style>
   <script>${js}</script>
 </body>
 `
   );
+  const htmlMin = minifyHtml.minify(html, minifyCfg).toString();
   esbuild.buildSync({
     bundle: true,
     define: {
       "process.env.NODE_ENV": JSON.stringify(
         debug ? "development" : "production"
       ),
-      CLIENT_HTML: JSON.stringify(
-        minifyHtml.minify(html, minifyCfg).toString()
-      ),
+      CLIENT_HTML: JSON.stringify(htmlMin),
     },
     entryPoints: ["src/main.ts"],
     external: Object.keys(require("./package.json").dependencies),

@@ -9,7 +9,7 @@ chokidar.watch(join(__dirname, "src")).on("all", (event, path) => {
   proc?.kill();
   console.log(event, path);
   try {
-    build(true);
+    build(process.argv[2] === "debug");
   } catch (e) {
     return console.error(e);
   }

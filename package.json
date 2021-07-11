@@ -12,6 +12,7 @@
     "build": "node build.js",
     "clean": "rm -rf dist",
     "dev": "node watch.js",
+    "dev-debug": "node watch.js debug",
     "format": "prettier --write '*.{js,json}' 'src/**/*.{css,html,ts,tsx}'",
     "prepublishOnly": "npm run build",
     "ts-check": "tsc"
