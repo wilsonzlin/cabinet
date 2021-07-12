@@ -285,8 +285,8 @@ export class Audio extends Media {
 
 export class Video extends Media {
   readonly montage = [
-    // Use frames from every 1m12s, except earlier than 20s or later than last 9s. These are arbitrary values.
-    ...map(numberGenerator(20, this.duration() - 9, 72), (time) => ({
+    // Use frames from every 1m13s, except earlier or later than first/last 2s. These are arbitrary values.
+    ...map(numberGenerator(2, this.duration() - 1, 73), (time) => ({
       file: new LazyP(() =>
         computedFile(
           join(this.dataDir(), `montage.${time}.jpg`),
@@ -346,6 +346,7 @@ export class Video extends Media {
           convertedWholeFilePath,
           (incompleteAbsPath) =>
             ff.convert({
+              threads: 1,
               input: {
                 file: this.absPath(),
               },
@@ -368,6 +369,7 @@ export class Video extends Media {
         convertedWholeFilePath,
         (incompleteAbsPath) =>
           ff.convert({
+            threads: 1,
             input: {
               file: this.absPath(),
             },
@@ -423,6 +425,7 @@ export class Video extends Media {
                   join(this.dataDir(), `converted.audio`),
                   (output) =>
                     ff.convert({
+                      threads: 1,
                       input: {
                         file: this.absPath(),
                       },
@@ -465,6 +468,7 @@ export class Video extends Media {
                       join(this.dataDir(), `converted.audio.segment.${i}.raw`),
                       (out) =>
                         ff.convert({
+                          threads: 1,
                           input: {
                             file: this.absPath(),
                             start: ts,
@@ -519,6 +523,7 @@ export class Video extends Media {
                       join(this.dataDir(), `converted.audio.segment.${i}`),
                       (out) =>
                         ff.convert({
+                          threads: 1,
                           input: {
                             file: fdkFile.absPath,
                           },
@@ -546,6 +551,7 @@ export class Video extends Media {
             file: new LazyP(() =>
               computedFile(join(this.dataDir(), `converted.video`), (output) =>
                 ff.convert({
+                  threads: 1,
                   input: {
                     file: this.absPath(),
                   },
@@ -572,6 +578,7 @@ export class Video extends Media {
                     join(this.dataDir(), `converted.video.segment.${i}`),
                     async (segmentAbsPath) => {
                       await ff.convert({
+                        threads: 1,
                         input: {
                           file: this.absPath(),
                           start: ts,
@@ -626,6 +633,7 @@ export class Video extends Media {
       const PARTS = 8;
       if (this.duration() < PART_SEC * (PARTS + 2)) {
         await ff.convert({
+          threads: 1,
           input: {
             file: this.absPath(),
           },
@@ -653,6 +661,7 @@ export class Video extends Media {
         promises.push(
           computedFile(partFile, (output) =>
             ff.convert({
+              threads: 1,
               input: {
                 file: this.absPath(),
                 start,
