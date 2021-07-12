@@ -12,7 +12,14 @@ import mapDefined from "@xtjs/lib/js/mapDefined";
 import numberGenerator from "@xtjs/lib/js/numberGenerator";
 import pathExtension from "@xtjs/lib/js/pathExtension";
 import splitString from "@xtjs/lib/js/splitString";
-import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  stat,
+  writeFile,
+} from "fs/promises";
 import { DateTime } from "luxon";
 import { EOL } from "os";
 import { basename, dirname, join, sep } from "path";
@@ -32,6 +39,7 @@ import {
   MSE_SUPPORTED_VIDEO_CODECS,
   PHOTO_EXTENSIONS,
 } from "./format";
+import { FsSearch } from "./search";
 
 // Consider:
 // - HiDPI displays and zoomed-in viewports e.g. logical 180px is physical 360px.
@@ -57,12 +65,28 @@ export abstract class DirEntry {
     return join(this.rootAbsPath, this.relPath);
   }
 
+  dirRelPath() {
+    return dirname(this.relPath);
+  }
+
   fileName() {
     return basename(this.relPath);
   }
 }
 
 export class Directory extends DirEntry {
+  constructor(
+    rootAbsPath: string,
+    relPath: string,
+    private readonly fsSearch: FsSearch
+  ) {
+    super(rootAbsPath, relPath);
+  }
+
+  async search(query: string, subdirs: boolean = false) {
+    return this.fsSearch.query(this.relPath.split(sep), query, subdirs);
+  }
+
   entries = new LazyP(async () => {
     const names = await readdir(this.absPath());
     const entries: { [name: string]: DirEntry } = Object.create(null);
@@ -76,7 +100,7 @@ export class Directory extends DirEntry {
         let entry: DirEntry;
         const stats = await stat(abs);
         if (stats.isDirectory()) {
-          entry = new Directory(this.rootAbsPath, rel);
+          entry = new Directory(this.rootAbsPath, rel, this.fsSearch);
         } else if (stats.isFile()) {
           const modified = DateTime.fromMillis(stats.mtimeMs);
           const ext = pathExtension(f) ?? "";
@@ -160,6 +184,9 @@ export class Directory extends DirEntry {
           }
         } else {
           return;
+        }
+        if (entry instanceof File) {
+          await this.fsSearch.add(entry.relPath.split(sep));
         }
         entries[f] = entry;
       })
@@ -722,7 +749,17 @@ export class Video extends Media {
 }
 
 export class Library {
-  constructor(private readonly root: Directory) {}
+  private constructor(
+    private readonly root: Directory,
+    private readonly fsSearch: FsSearch
+  ) {}
+
+  static async init(rootRaw: string) {
+    const root = await realpath(rootRaw);
+    const search = await FsSearch.new();
+    const rootDir = new Directory(root, "", search);
+    return new Library(rootDir, search);
+  }
 
   async getDirectory(path: string[]): Promise<Directory | undefined> {
     let cur: Directory = this.root;
@@ -743,5 +780,9 @@ export class Library {
     const entries = await dir?.entries.compute();
     const entry = entries?.[last(pathComponents)];
     return entry instanceof File ? entry : undefined;
+  }
+
+  async search(relDir: string[], query: string, subdirs: boolean = false) {
+    return this.fsSearch.query(relDir, query, subdirs);
   }
 }

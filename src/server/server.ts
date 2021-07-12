@@ -38,7 +38,7 @@ export const startServer = ({
     dhParameters?: Buffer;
   };
 }) =>
-  new Promise<number>((onServerListening) => {
+  new Promise<number>(async (onServerListening) => {
     const ctx: ApiCtx = {
       library,
       scratch,

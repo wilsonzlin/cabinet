@@ -1,8 +1,18 @@
+import assertExists from "@xtjs/lib/js/assertExists";
 import derivedComparator from "@xtjs/lib/js/derivedComparator";
+import Dict from "@xtjs/lib/js/Dict";
 import naturalOrdering from "@xtjs/lib/js/naturalOrdering";
+import propertyComparator from "@xtjs/lib/js/propertyComparator";
 import UnreachableError from "@xtjs/lib/js/UnreachableError";
 import { sep } from "path";
-import { Audio, Directory, File, Photo, Video } from "../library/model";
+import {
+  Audio,
+  Directory,
+  DirEntry,
+  File,
+  Photo,
+  Video,
+} from "../library/model";
 import { ClientError, Json } from "../server/response";
 import { ApiCtx } from "./_common";
 
@@ -72,6 +82,7 @@ export const listFilesApi = async (
     path: string[];
     // Possible query parameters.
     filter?: string;
+    // Only valid when filter is also provided.
     subdirectories: boolean;
   }
 ): Promise<
@@ -86,111 +97,117 @@ export const listFilesApi = async (
   if (!dir) {
     throw new ClientError(404, "Directory not found");
   }
-  const filterRegex =
-    filter &&
-    RegExp(
-      filter
-        .trim()
-        .replace(/[-[\]{}()*+?.,\\^$|#]/g, "\\$&")
-        .replace(/\s+/g, "\\s+"),
-      "i"
-    );
+
   let totalDuration = 0;
   let totalFiles = 0;
   let totalSize = 0;
-  const results: ResultsDir[] = [];
-  const visitDir = async (dir: Directory) => {
-    const entries: ResultsDirEntry[] = [];
-    for (const e of Object.values(await dir.entries.compute())) {
-      if (e instanceof Directory) {
-        if (subdirectories) {
-          await visitDir(e);
-        } else if (!filterRegex || filterRegex.test(e.fileName())) {
-          entries.push({
-            type: "dir",
-            name: e.fileName(),
-            itemCount: Object.keys(e.entries).length,
-          });
-        }
-      } else if (e instanceof File) {
-        if (filterRegex && !filterRegex.test(e.fileName())) {
-          continue;
-        }
-        totalFiles++;
-        totalSize += e.size;
-        if (e instanceof Audio) {
-          totalDuration += e.duration();
-          entries.push({
-            type: "audio",
-            path: e.relPath,
-            name: e.fileName(),
-            size: e.size,
-            modifiedMs: e.modified.toMillis(),
-            duration: e.duration(),
-            author: e.metadata().artist,
-            title: e.metadata().title,
-            album: e.metadata().album,
-            genre: e.metadata().genre,
-            track: e.metadata().track,
-          });
-        } else if (e instanceof Photo) {
-          entries.push({
-            type: "photo",
-            path: e.relPath,
-            name: e.fileName(),
-            size: e.size,
-            modifiedMs: e.modified.toMillis(),
-            width: e.metadata.width,
-            height: e.metadata.height,
-            dpi: e.metadata.dpi,
-            channels: e.metadata.channels,
-            chromaSubsampling: e.metadata.chromaSubsampling,
-            colourSpace: e.metadata.colourSpace,
-            format: e.metadata.format,
-            orientation: e.metadata.orientation,
-            isProgressive: e.metadata.isProgressive,
-            hasIccProfile: e.metadata.hasIccProfile,
-            hasAlphaChannel: e.metadata.hasAlphaChannel,
-          });
-        } else if (e instanceof Video) {
-          totalDuration += e.duration();
-          entries.push({
-            type: "video",
-            path: e.relPath,
-            name: e.fileName(),
-            size: e.size,
-            modifiedMs: e.modified.toMillis(),
-            width: e.width(),
-            height: e.height(),
-            duration: e.duration(),
-            author: e.metadata().artist,
-            title: e.metadata().title,
-            album: e.metadata().album,
-            genre: e.metadata().genre,
-            track: e.metadata().track,
-          });
-        } else {
-          throw new UnreachableError(e as any);
-        }
+  const resultsByDir = new Dict<string, ResultsDirEntry[]>();
+  const visitDirEntry = async (e: DirEntry) => {
+    const entries = resultsByDir.computeIfAbsent(e.dirRelPath(), () => []);
+    if (e instanceof Directory) {
+      if (!subdirectories) {
+        entries.push({
+          type: "dir",
+          name: e.fileName(),
+          itemCount: Object.keys(e.entries).length,
+        });
+      }
+    } else if (e instanceof File) {
+      totalFiles++;
+      totalSize += e.size;
+      if (e instanceof Audio) {
+        totalDuration += e.duration();
+        entries.push({
+          type: "audio",
+          path: e.relPath,
+          name: e.fileName(),
+          size: e.size,
+          modifiedMs: e.modified.toMillis(),
+          duration: e.duration(),
+          author: e.metadata().artist,
+          title: e.metadata().title,
+          album: e.metadata().album,
+          genre: e.metadata().genre,
+          track: e.metadata().track,
+        });
+      } else if (e instanceof Photo) {
+        entries.push({
+          type: "photo",
+          path: e.relPath,
+          name: e.fileName(),
+          size: e.size,
+          modifiedMs: e.modified.toMillis(),
+          width: e.metadata.width,
+          height: e.metadata.height,
+          dpi: e.metadata.dpi,
+          channels: e.metadata.channels,
+          chromaSubsampling: e.metadata.chromaSubsampling,
+          colourSpace: e.metadata.colourSpace,
+          format: e.metadata.format,
+          orientation: e.metadata.orientation,
+          isProgressive: e.metadata.isProgressive,
+          hasIccProfile: e.metadata.hasIccProfile,
+          hasAlphaChannel: e.metadata.hasAlphaChannel,
+        });
+      } else if (e instanceof Video) {
+        totalDuration += e.duration();
+        entries.push({
+          type: "video",
+          path: e.relPath,
+          name: e.fileName(),
+          size: e.size,
+          modifiedMs: e.modified.toMillis(),
+          width: e.width(),
+          height: e.height(),
+          duration: e.duration(),
+          author: e.metadata().artist,
+          title: e.metadata().title,
+          album: e.metadata().album,
+          genre: e.metadata().genre,
+          track: e.metadata().track,
+        });
       } else {
         throw new UnreachableError(e as any);
       }
+    } else {
+      throw new UnreachableError(e as any);
     }
-    if (entries.length) {
-      results.push({
-        dir: dir.relPath.split(sep),
+  };
+
+  if (filter) {
+    if (subdirectories) {
+      const ensureDirLoaded = async (dir: Directory) => {
+        for (const e of Object.values(await dir.entries.compute())) {
+          if (e instanceof Directory) {
+            await ensureDirLoaded(e);
+          }
+        }
+      };
+      await ensureDirLoaded(dir);
+    }
+    for (const relPath of await dir.search(filter, subdirectories)) {
+      await visitDirEntry(
+        assertExists(await ctx.library.getFile(relPath.join(sep)))
+      );
+    }
+  } else {
+    for (const e of Object.values(await dir.entries.compute())) {
+      await visitDirEntry(e);
+    }
+  }
+
+  return new Json({
+    results: [...resultsByDir]
+      .map(([dir, entries]) => ({
+        dir: dir.split(sep),
         entries: entries.sort(
           derivedComparator(
             (e) => e.name.replace(/[^A-Za-z0-9]/g, "").toLowerCase(),
             naturalOrdering
           )
         ),
-      });
-    }
-  };
-  await visitDir(dir);
-  return new Json({
-    results,
+      }))
+      .sort(propertyComparator("dir")),
     totalDuration,
     totalFiles,
     totalSize,

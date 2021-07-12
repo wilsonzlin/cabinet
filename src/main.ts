@@ -3,7 +3,7 @@
 import mapDefined from "@xtjs/lib/js/mapDefined";
 import { promises as fs, realpathSync } from "fs";
 import * as sacli from "sacli";
-import { Directory, Library } from "./library/model";
+import { Library } from "./library/model";
 import { startServer } from "./server/server";
 
 const rp = (p: string): string => realpathSync(p);
@@ -25,7 +25,7 @@ const cli = sacli.Command.new()
       sslkey,
     }) => {
       const serverPort = await startServer({
-        library: new Library(new Directory(rp(library), "")),
+        library: await Library.init(library),
         port,
         scratch: mapDefined(scratch, rp),
         ssl:

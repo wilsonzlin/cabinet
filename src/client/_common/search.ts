@@ -5,7 +5,8 @@ export const parseSearchFilter = (raw: string) => {
     subdirectories = true;
     raw = raw.slice(1).trim();
   }
-  if (raw.length <= 1) {
+  // SQLite3 FTS5 trigram search requires at least 3 characters.
+  if (raw.length <= 2) {
     return { filter: undefined, subdirectories: false };
   }
   return { filter: raw, subdirectories };
