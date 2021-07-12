@@ -1,4 +1,5 @@
 import { Ff } from "@wzlin/ff";
+import exec from "@xtjs/lib/js/exec";
 import PromiseQueue from "@xtjs/lib/js/PromiseQueue";
 import { execFile, spawn } from "child_process";
 import os from "os";
@@ -101,4 +102,57 @@ export const parseGaplessMetadata = (
     duration: realSamples / sampleRate,
     end: endPadding / sampleRate,
   };
+};
+
+export const getMp4CodecString = async (absPath: string) => {
+  const out: {
+    // Won't be set if invalid file.
+    file?: {
+      major_brand: string;
+      minor_version: number;
+      compatible_brands: Array<string>;
+      fast_start: boolean;
+    };
+    // Won't have any properties if invalid file.
+    movie: {
+      duration_ms?: number;
+      duration?: number;
+      time_scale?: number;
+      fragments?: boolean;
+    };
+    // Won't be set if invalid file.
+    tracks?: Array<{
+      flags: number;
+      flag_names: Array<string>;
+      id: number;
+      type: string;
+      duration_ms: number;
+      language: string;
+      media: {
+        sample_count: number;
+        timescale: number;
+        duration: number;
+        duration_ms: number;
+      };
+      sample_descriptions: Array<{
+        coding: string;
+        coding_name: string;
+        codecs_string: string;
+        stream_type: number;
+        stream_type_name: string;
+        object_type: number;
+        object_type_name: string;
+        max_bitrate: number;
+        average_bitrate: number;
+        buffer_size: number;
+        decoder_info: string;
+        sample_rate: number;
+        sample_size: number;
+        channels: number;
+      }>;
+    }>;
+  } = await exec("mp4info", "--format", "json", "--fast", absPath)
+    .output()
+    .then((r) => JSON.parse(r));
+  return out.tracks?.[0].sample_descriptions[0].codecs_string;
 };

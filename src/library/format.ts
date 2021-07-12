@@ -139,19 +139,22 @@ export const findSuitableContainer = (
   return undefined;
 };
 
-export const BROWSER_SUPPORTED_VIDEO_CODECS = new Set([
-  "av1",
-  "h264",
-  "hevc",
-  "theora",
-  "vp8",
-  "vp9",
+// Map of MSE supported video codec to container.
+export const MSE_SUPPORTED_VIDEO_CODECS = new Map([
+  ["h264", { container: "mp4", mime: "video/mp4" }],
+  // TODO Enable only if detected browser supports these.
+  // "vp8",
+  // "vp9",
 ]);
 
-export const BROWSER_SUPPORTED_AUDIO_CODECS = new Set([
-  "aac",
-  "flac",
-  "mp3",
-  ...PCM_CODECS,
-  "vorbis",
+// Map of MSE supported audio codec to container.
+export const MSE_SUPPORTED_AUDIO_CODECS = new Map([
+  // Browsers don't support AAC directly or in ALAC container for MSE.
+  ["aac", { container: "mp4", mime: "audio/mp4" }],
+  // TODO Enable only if detected browser supports these.
+  // Most browsers don't support audio/mp4 with MP3.
+  // Firefox doesn't support audio/mpeg but Chrome does.
+  // ["mp3", {container: "mp3", mime: "audio/mpeg"}],
+  // "opus",
+  // "vorbis",
 ]);

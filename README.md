@@ -11,8 +11,9 @@ with a single command and zero configuration.
 ## Requirements
 
 - [Node.js](https://nodejs.org)
-- [ffmpeg](https://ffmpeg.org)
+- [Bento4](https://www.bento4.com)
 - [fdkaac](https://github.com/nu774/fdkaac)
+- [ffmpeg](https://ffmpeg.org)
 - Any modern browser
 
 ## Quick start

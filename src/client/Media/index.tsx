@@ -89,17 +89,21 @@ export default ({
     let videoObjectSrc: string | undefined;
     (async () => {
       const {
-        type,
+        audio,
+        audioCodecString,
         montageFrames,
         segments,
-        audio,
+        type,
         video,
+        videoCodecString,
       }: {
-        type: "src" | "mse";
+        audio: "file" | "segments" | undefined;
+        audioCodecString: string | undefined;
         montageFrames: number[];
         segments: number[];
-        audio: "file" | "segments" | undefined;
+        type: "src" | "mse";
         video: "file" | "segments";
+        videoCodecString: string;
       } = await fetch(
         apiGetPath("getFile", { path: file.path, contentManifest: true })
       ).then((r) => r.json());
@@ -127,7 +131,7 @@ export default ({
           // Example values:
           // - video/webm; codecs="vp9, opus"
           // - video/mp4; codecs="avc1.64001F, mp4a.40.2"
-          'video/mp4; codecs="avc1.64001F"'
+          `video/mp4; codecs="${videoCodecString}"`
         );
         videoSrcBuf.mode = "segments";
         console.debug("[MSE] Added video SourceBuffer");
@@ -145,7 +149,10 @@ export default ({
         }
 
         if (audio) {
-          audioSrcBuf = src.addSourceBuffer('audio/mp4; codecs="mp4a.40.2"');
+          audioSrcBuf = src.addSourceBuffer(
+            `audio/mp4; codecs="${audioCodecString}"`
+          );
+          audioSrcBuf.mode = "segments";
           console.debug("[MSE] Added audio SourceBuffer");
           if (audio === "file") {
             console.debug("[MSE] Audio is not segmented");
@@ -243,12 +250,10 @@ export default ({
           for (const { segment, data, stream, gaplessMetadata } of fetched) {
             const offset = segments[segment];
             if (gaplessMetadata) {
-              // Is audio.
-              // Avoid floating point problems.
-              // If we don't do this, we'll get out of range errors like
-              // "expected (0, 6.006] but got 6.006".
-              stream.appendWindowStart = Math.max(0, offset - 0.001);
+              // This is audio.
+              // Set appendWindowEnd first to avoid precision issues and to allow seeking outside current range: https://github.com/dalecurtis/llama-demo/issues/2.
               stream.appendWindowEnd = segments[segment + 1] ?? file.duration;
+              stream.appendWindowStart = offset;
               stream.timestampOffset = offset - gaplessMetadata.start;
             } else {
               stream.timestampOffset = offset;

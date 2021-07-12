@@ -25,11 +25,11 @@ import {
   queue,
 } from "../util/media";
 import {
-  BROWSER_SUPPORTED_AUDIO_CODECS,
   BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS,
-  BROWSER_SUPPORTED_VIDEO_CODECS,
   findSuitableContainer,
   MEDIA_EXTENSIONS,
+  MSE_SUPPORTED_AUDIO_CODECS,
+  MSE_SUPPORTED_VIDEO_CODECS,
   PHOTO_EXTENSIONS,
 } from "./format";
 
@@ -333,46 +333,37 @@ export class Video extends Media {
     const audioCodec = this.audioStream?.codec_name;
     const containerConfig =
       BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS.get(container);
-    const containerSupported = !!containerConfig;
-    const videoSupported = BROWSER_SUPPORTED_VIDEO_CODECS.has(videoCodec);
-    const audioSupported =
-      mapDefined(audioCodec, (c) => BROWSER_SUPPORTED_AUDIO_CODECS.has(c)) ??
-      true;
-    const containerSupportsAV =
-      containerConfig?.videoCodecs.has(videoCodec) &&
-      (audioCodec == undefined || containerConfig?.audioCodecs.has(audioCodec));
-    if (
-      containerSupported &&
-      videoSupported &&
-      audioSupported &&
-      containerSupportsAV
-    ) {
+    // True if specific audio and video codec combination in container supported by browser.
+    const containerAndAVSupported =
+      !!containerConfig?.videoCodecs.has(videoCodec) &&
+      (audioCodec == undefined ||
+        !!containerConfig?.audioCodecs.has(audioCodec));
+    if (containerAndAVSupported) {
       return { absPath: this.absPath(), size: this.size };
     }
 
-    if (videoSupported && audioSupported) {
-      const convertedContainer = findSuitableContainer(videoCodec, audioCodec);
-      // If no suitable container found for existing video and audio codec, we can only transcode.
-      if (convertedContainer != undefined) {
-        return await computedFile(
-          convertedWholeFilePath,
-          (incompleteAbsPath) =>
-            ff.convert({
-              threads: 1,
-              input: {
-                file: this.absPath(),
-              },
-              metadata: false,
-              audio: true,
-              video: true,
-              output: {
-                file: incompleteAbsPath,
-                format: convertedContainer,
-              },
-            }),
-          "Failed to convert video to different container"
-        );
-      }
+    // If we can find another container that the browser will support with this audio and video codec combination, we can quickly transmux instead of having to do complex, intensive, and lossy transcoding and segmenting with Media Source Extensions.
+    const convertedContainer = findSuitableContainer(videoCodec, audioCodec);
+    // If no suitable container found for existing video and audio codec, we can only transcode.
+    if (convertedContainer != undefined) {
+      return await computedFile(
+        convertedWholeFilePath,
+        (incompleteAbsPath) =>
+          ff.convert({
+            threads: 1,
+            input: {
+              file: this.absPath(),
+            },
+            metadata: false,
+            audio: true,
+            video: true,
+            output: {
+              file: incompleteAbsPath,
+              format: convertedContainer,
+            },
+          }),
+        "Failed to convert video to different container"
+      );
     }
 
     // If a video is relatively short, just convert entire video directly.
@@ -404,14 +395,12 @@ export class Video extends Media {
       );
     }
 
-    const mp4SupportedCodecs = assertExists(
-      BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS.get("mov,mp4,m4a,3gp,3g2,mj2")
+    // If we can convert an entire stream as a whole, we can quickly transmux and avoid complex segmenting.
+    const mseAudioContainer = mapDefined(audioCodec, (c) =>
+      MSE_SUPPORTED_AUDIO_CODECS.get(c)
     );
-    const audioSupportedByMp4 = mapDefined(audioCodec, (c) =>
-      mp4SupportedCodecs.audioCodecs.has(c)
-    );
-    const videoSupportedByMp4 = mapDefined(videoCodec, (c) =>
-      mp4SupportedCodecs.videoCodecs.has(c)
+    const mseVideoContainer = mapDefined(videoCodec, (c) =>
+      MSE_SUPPORTED_VIDEO_CODECS.get(c)
     );
 
     // Don't probe and use keyframes:
@@ -429,8 +418,8 @@ export class Video extends Media {
     }
     return {
       segments,
-      audio: mapDefined(audioSupportedByMp4, (audioSupportedByMp4) =>
-        audioSupportedByMp4
+      audio: mapDefined(audioCodec, () =>
+        mseAudioContainer
           ? {
               file: new LazyP(() =>
                 computedFile(
@@ -446,7 +435,7 @@ export class Video extends Media {
                       audio: true,
                       output: {
                         file: output,
-                        format: "mp4",
+                        format: mseAudioContainer.container,
                         // See video segment code for more info.
                         movflags: [
                           "default_base_moof",
@@ -558,7 +547,7 @@ export class Video extends Media {
               }),
             }
       ),
-      video: videoSupportedByMp4
+      video: mseVideoContainer
         ? {
             file: new LazyP(() =>
               computedFile(join(this.dataDir(), `converted.video`), (output) =>
@@ -572,7 +561,7 @@ export class Video extends Media {
                   audio: false,
                   output: {
                     file: output,
-                    format: "mp4",
+                    format: mseVideoContainer.container,
                     // See video segment code for more info.
                     movflags: ["default_base_moof", "empty_moov", "faststart"],
                   },

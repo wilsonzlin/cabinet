@@ -1,3 +1,4 @@
+import mapValue from "@xtjs/lib/js/mapValue";
 import assertExists from "@xtjs/lib/js/assertExists";
 import mapDefined from "@xtjs/lib/js/mapDefined";
 import maybeFileStats from "@xtjs/lib/js/maybeFileStats";
@@ -186,12 +187,28 @@ export const getFileApi = async (
         montageFrames,
       });
     }
+
+    // Yes, these will start computation immediately and delay response, but this is OK given that getting the file/first segment is the immediate next request by the client anyway.
+    const [audioCodecString, videoCodecString] = await Promise.all([
+      mapDefined(content.audio, (a) =>
+        (a.file ? a.file : a.segments[0].file)
+          .compute()
+          .then((f) => f?.mp4CodecString)
+      ),
+      mapValue(content.video, (v) =>
+        (v.file ? v.file : v.segments[0].file)
+          .compute()
+          .then((f) => f?.mp4CodecString)
+      ),
+    ]);
     return new Json({
       type: "mse",
       montageFrames,
       audio: mapDefined(content.audio, (a) => (a.file ? "file" : "segments")),
-      video: content.video.file ? "file" : "segments",
+      audioCodecString,
       segments: content.segments,
+      video: content.video.file ? "file" : "segments",
+      videoCodecString,
     });
   }
 
@@ -282,7 +299,7 @@ export const getFileApi = async (
 
   if (file instanceof Video) {
     const content = await file.content.compute();
-    if (!("absPath" in content)) {
+    if (!content.absPath) {
       throw new ClientError(404, "Video must be accessed via segments");
     }
     return new StreamFile(content.absPath, content.size);
