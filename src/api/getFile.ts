@@ -6,7 +6,7 @@ import { mkdir } from "fs/promises";
 import { dirname, join } from "path";
 import { Video } from "../library/model";
 import { ClientError, Json, StreamFile } from "../server/response";
-import { ff } from "../util/media";
+import { ff, getMp4CodecString } from "../util/media";
 import { ApiCtx } from "./_common";
 
 const streamVideoCapture = async ({
@@ -193,12 +193,12 @@ export const getFileApi = async (
       mapDefined(content.audio, (a) =>
         (a.file ? a.file : a.segments[0].file)
           .compute()
-          .then((f) => f?.mp4CodecString)
+          .then((f) => mapDefined(f, (f) => getMp4CodecString(f.absPath)))
       ),
       mapValue(content.video, (v) =>
         (v.file ? v.file : v.segments[0].file)
           .compute()
-          .then((f) => f?.mp4CodecString)
+          .then((f) => mapDefined(f, (f) => getMp4CodecString(f.absPath)))
       ),
     ]);
     return new Json({
@@ -299,7 +299,7 @@ export const getFileApi = async (
 
   if (file instanceof Video) {
     const content = await file.content.compute();
-    if (!content.absPath) {
+    if (!("absPath" in content)) {
       throw new ClientError(404, "Video must be accessed via segments");
     }
     return new StreamFile(content.absPath, content.size);

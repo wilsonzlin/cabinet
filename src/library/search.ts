@@ -60,8 +60,8 @@ export class FsSearch {
       where.push(`name match ?`);
       params.push(query);
       if (subdirs) {
-        where.push(`dir LIKE ?`);
-        params.push(join(...dir, "%"));
+        where.push(`dir LIKE ? ESCAPE '*'`);
+        params.push(join(...dir).replace(/[*%_]/g, "*$&") + sep + "%");
       } else {
         where.push(`dir = ?`);
         params.push(join(...dir));

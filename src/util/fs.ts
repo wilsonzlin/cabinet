@@ -1,7 +1,6 @@
 import maybeFileStats from "@xtjs/lib/js/maybeFileStats";
 import { rename, writeFile } from "fs/promises";
 import { basename, dirname, join } from "path";
-import { getMp4CodecString } from "./media";
 
 const winattr = require("winattr");
 
@@ -48,16 +47,13 @@ export class LazyP<T> {
 export type ComputedFile = {
   absPath: string;
   size: number;
-  mp4CodecString: string | undefined;
 };
 
 export const getFileMetadata = async (absPath: string) => {
   const stats = await maybeFileStats(absPath);
   if (stats?.size > 0) {
-    const mp4CodecString = await getMp4CodecString(absPath);
     return {
       size: stats.size,
-      mp4CodecString,
     };
   }
   return undefined;
@@ -107,7 +103,6 @@ export async function computedFile(
   }
   return {
     absPath,
-    mp4CodecString: meta.mp4CodecString,
     size: meta.size,
   };
 }
