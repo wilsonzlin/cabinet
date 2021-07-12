@@ -89,9 +89,10 @@
   opacity: 1;
 }
 
-.explorer-file-duration,
-.explorer-file-name {
+.explorer-file-label {
+  background: rgba(255, 255, 255, 0.7);
   border-radius: 3px;
+  color: #111;
   padding: 3px;
   position: absolute;
 }

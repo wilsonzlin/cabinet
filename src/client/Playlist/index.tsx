@@ -50,7 +50,7 @@ export default ({
           </button>
         ))}
       </div>
-      <div className="playlist-menu">
+      <div className="acrylic floating playlist-menu">
         <button className="playlist-picker">Now playing</button>
         {showCloseButton && (
           <button className="playlist-close" onClick={onRequestClose}>
@@ -58,7 +58,7 @@ export default ({
           </button>
         )}
       </div>
-      <div className="playlist-controls">
+      <div className="acrylic floating playlist-controls">
         <button onClick={() => onChangePosition(position - 1)}>⏮</button>
         <button
           onClick={() =>

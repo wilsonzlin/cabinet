@@ -3,7 +3,7 @@ import mapDefined from "@xtjs/lib/js/mapDefined";
 import { Duration } from "luxon";
 import React, { useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
-import { useElemDimensions } from "../_common/ui";
+import { isIos, useElemDimensions } from "../_common/ui";
 import Explorer from "../Explorer";
 import Image from "../Image";
 import Media from "../Media";
@@ -96,7 +96,10 @@ export default ({}: {}) => {
         isViewing && "app-dark",
         `app-pt-${pointerType}`,
         (width < 500 || height < 450) && "app-tucked",
-        isCurrentlyImmersed && "app-immersed"
+        isCurrentlyImmersed && "app-immersed",
+        // iOS Safari has poor performance with lots of GPU-accelerated styles,
+        // which often cause OOM crashes and app-wide poor responsiveness.
+        isIos() && "app-ios"
       )}
       ref={(elem) => setAppElem(elem ?? undefined)}
     >

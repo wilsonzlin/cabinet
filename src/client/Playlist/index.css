@@ -68,22 +68,11 @@
 
 .playlist-menu,
 .playlist-controls {
-  -webkit-backdrop-filter: blur(30px) saturate(125%);
-  backdrop-filter: blur(30px) saturate(125%);
-  box-shadow: 0 0 #0000, 0 0 #0000, 0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  background: rgba(252, 252, 252, 0.96);
   border-radius: 4px;
   font-size: 13px;
   left: 10px;
   position: absolute;
   right: 10px;
-}
-
-.app-dark .playlist-menu,
-.app-dark .playlist-controls {
-  background: rgba(0, 0, 0, 0.6);
-  color: #f2f2f2;
 }
 
 .playlist-menu {

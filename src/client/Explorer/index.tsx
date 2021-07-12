@@ -27,7 +27,7 @@ const File = ({
   return (
     <button
       ref={setLazyElem}
-      className="shadowtext explorer-file"
+      className="explorer-file"
       onClick={onClick}
       onMouseEnter={() =>
         setPreviewSrc(
@@ -50,11 +50,11 @@ const File = ({
         />
       )}
       {(file.type == "video" || file.type == "audio") && (
-        <div className="acrylic acrylic-grey explorer-file-duration">
+        <div className="explorer-file-label explorer-file-duration">
           {formatDur(file.duration)}
         </div>
       )}
-      <div className="acrylic acrylic-grey explorer-file-name">{file.name}</div>
+      <div className="explorer-file-label explorer-file-name">{file.name}</div>
     </button>
   );
 };

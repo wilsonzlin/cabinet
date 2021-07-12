@@ -105,3 +105,16 @@ export const formatDur = (seconds: number | Duration) => {
     : Duration.fromMillis(seconds * 1000);
   return dur.toFormat(dur.as("hours") >= 1 ? "h:mm:ss" : "m:ss");
 };
+
+// https://stackoverflow.com/a/9039885/6249022.
+export const isIos = () =>
+  [
+    "iPad Simulator",
+    "iPhone Simulator",
+    "iPod Simulator",
+    "iPad",
+    "iPhone",
+    "iPod",
+  ].includes(navigator.platform) ||
+  // iPad on iOS 13 detection
+  (navigator.userAgent.includes("Mac") && "ontouchend" in document);
