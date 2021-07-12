@@ -15,15 +15,15 @@ export class FsSearch {
 
         console.debug("[FsSearch] Database opened");
         db.exec(
-        `
-          create virtual table fs using fts5
-          (
-            path,
-            dir,
-            name,
-            tokenize="trigram"
-          )
-        `,
+          `
+            create virtual table fs using fts5
+            (
+              path,
+              dir,
+              name,
+              tokenize="trigram"
+            )
+          `,
           (err) => {
             if (err) {
               reject(err);
@@ -38,10 +38,10 @@ export class FsSearch {
   add = (relPath: string[]) =>
     new Promise<void>((resolve, reject) => {
       this.db.run(
-      `
-        insert into fs
-        values (?, ?, ?)
-      `,
+        `
+          insert into fs
+          values (?, ?, ?)
+        `,
         [join(...relPath), join(...relPath.slice(0, -1)), last(relPath)],
         (err) => {
           if (err) {
