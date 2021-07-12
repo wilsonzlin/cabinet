@@ -422,7 +422,7 @@ export default ({
                   }%`,
                 }}
               />
-              <div className="media-next-title">{next.title}</div>
+              <div className="media-next-title">{next.title || next.name}</div>
               <div className="media-next-author">{next.author}</div>
             </>
           )}
