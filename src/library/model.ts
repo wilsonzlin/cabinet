@@ -13,6 +13,7 @@ import numberGenerator from "@xtjs/lib/js/numberGenerator";
 import pathExtension from "@xtjs/lib/js/pathExtension";
 import splitString from "@xtjs/lib/js/splitString";
 import { mkdir, readdir, readFile, stat, writeFile } from "fs/promises";
+import { DateTime } from "luxon";
 import { EOL } from "os";
 import { basename, dirname, join, sep } from "path";
 import sharp from "sharp";
@@ -77,6 +78,7 @@ export class Directory extends DirEntry {
         if (stats.isDirectory()) {
           entry = new Directory(this.rootAbsPath, rel);
         } else if (stats.isFile()) {
+          const modified = DateTime.fromMillis(stats.mtimeMs);
           const ext = pathExtension(f) ?? "";
           if (MEDIA_EXTENSIONS.has(ext)) {
             let probeDataPath = join(
@@ -107,6 +109,7 @@ export class Directory extends DirEntry {
                 this.rootAbsPath,
                 rel,
                 stats.size,
+                modified,
                 probe.format,
                 video,
                 audio
@@ -116,6 +119,7 @@ export class Directory extends DirEntry {
                 this.rootAbsPath,
                 rel,
                 stats.size,
+                modified,
                 probe.format,
                 audio
               );
@@ -138,9 +142,17 @@ export class Directory extends DirEntry {
             ) {
               return;
             }
-            entry = new Photo(this.rootAbsPath, rel, stats.size, {
+            entry = new Photo(this.rootAbsPath, rel, stats.size, modified, {
+              hasAlphaChannel: metadata.hasAlpha,
+              channels: metadata.channels,
+              chromaSubsampling: metadata.chromaSubsampling,
+              colourSpace: metadata.space,
+              dpi: metadata.density,
               format,
+              hasIccProfile: metadata.hasProfile,
               height,
+              isProgressive: metadata.isProgressive,
+              orientation: metadata.orientation,
               width,
             });
           } else {
@@ -162,7 +174,8 @@ export abstract class File extends DirEntry {
   protected constructor(
     rootAbsPath: string,
     relPath: string,
-    readonly size: number
+    readonly size: number,
+    readonly modified: DateTime
   ) {
     super(rootAbsPath, relPath);
   }
@@ -194,25 +207,22 @@ export class Photo extends File {
     rootAbsPath: string,
     relPath: string,
     size: number,
-    private readonly metadata: {
+    modified: DateTime,
+    readonly metadata: {
+      channels?: number;
+      chromaSubsampling: string;
+      colourSpace?: string;
+      dpi?: number;
       format: string;
+      hasAlphaChannel?: boolean;
+      hasIccProfile?: boolean;
       height: number;
+      isProgressive?: boolean;
+      orientation?: number;
       width: number;
     }
   ) {
-    super(rootAbsPath, relPath, size);
-  }
-
-  height() {
-    return this.metadata.height;
-  }
-
-  width() {
-    return this.metadata.width;
-  }
-
-  format() {
-    return this.metadata.format;
+    super(rootAbsPath, relPath, size, modified);
   }
 }
 
@@ -221,9 +231,10 @@ export abstract class Media extends File {
     rootAbsPath: string,
     relPath: string,
     size: number,
+    modified: DateTime,
     protected readonly format: ffprobeFormat
   ) {
-    super(rootAbsPath, relPath, size);
+    super(rootAbsPath, relPath, size, modified);
   }
 
   duration() {
@@ -272,10 +283,11 @@ export class Audio extends Media {
     rootAbsPath: string,
     relPath: string,
     size: number,
+    modified: DateTime,
     format: ffprobeFormat,
     private readonly audioStream: ffprobeAudioStream
   ) {
-    super(rootAbsPath, relPath, size, format);
+    super(rootAbsPath, relPath, size, modified, format);
   }
 
   channels() {
@@ -692,11 +704,12 @@ export class Video extends Media {
     rootAbsPath: string,
     relPath: string,
     size: number,
+    modified: DateTime,
     format: ffprobeFormat,
     private readonly videoStream: ffprobeVideoStream,
     private readonly audioStream?: ffprobeAudioStream
   ) {
-    super(rootAbsPath, relPath, size, format);
+    super(rootAbsPath, relPath, size, modified, format);
   }
 
   fps() {

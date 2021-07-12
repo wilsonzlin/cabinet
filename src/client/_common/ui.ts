@@ -118,3 +118,26 @@ export const isIos = () =>
   ].includes(navigator.platform) ||
   // iPad on iOS 13 detection
   (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+
+const round = (n: number, places: number) =>
+  Math.round(n * 10 ** places) / 10 ** places;
+
+export const formatSize = (s: number) => {
+  if (s < 900) {
+    return `${s} B`;
+  }
+  s /= 1024;
+  if (s < 900) {
+    return `${round(s, 2)} KB`;
+  }
+  s /= 1024;
+  if (s < 900) {
+    return `${round(s, 2)} MB`;
+  }
+  s /= 1024;
+  if (s < 900) {
+    return `${round(s, 2)} GB`;
+  }
+  s /= 1024;
+  return `${round(s, 2)} TB`;
+};

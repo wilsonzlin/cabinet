@@ -202,6 +202,29 @@
   flex-grow: 1;
 }
 
+.playback-photo-metadata {
+  /* For compact layout. */
+  max-width: 100%;
+  flex-grow: 1;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+}
+
+.playback-photo-metadata > div {
+  padding: 8px;
+}
+
+.playback-photo-metadata dt {
+  color: gray;
+  font-size: 12px;
+}
+
+.playback-photo-metadata dd {
+  margin: 0;
+  font-size: 12px;
+}
+
 .playback-controls {
   display: flex;
   align-items: center;

@@ -16,17 +16,18 @@ const ZERO_DURATION = Duration.fromMillis(0);
 
 export default ({}: {}) => {
   const [searchValue, setSearchValue] = useState("");
-
-  const mediaRef = useRef<HTMLVideoElement | null>(null);
-  const [mediaPlaylist, setMediaPlaylist] = useState<ListedMedia[]>([]);
-  const [mediaPlaylistPosition, setMediaPlaylistPosition] =
-    useState<number>(-1);
-  const [photo, setPhoto] = useState<ListedPhoto | undefined>(undefined);
   const [path, setPath_callChangePathInstead] = useState<Array<string>>([]);
   const changePath = (newPath: string[]) => {
     setSearchValue("");
     setPath_callChangePathInstead(newPath);
   };
+
+  const [photo, setPhoto] = useState<ListedPhoto | undefined>(undefined);
+
+  const mediaRef = useRef<HTMLVideoElement | null>(null);
+  const [mediaPlaylist, setMediaPlaylist] = useState<ListedMedia[]>([]);
+  const [mediaPlaylistPosition, setMediaPlaylistPosition] =
+    useState<number>(-1);
   const [playlistClosed, setPlaylistClosed] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
@@ -156,11 +157,11 @@ export default ({}: {}) => {
         position={mediaPlaylistPosition}
         showCloseButton={canShowPlaylistToggle}
       />
-      {isPlayingMedia && (
+      {(isViewing || isPlayingMedia) && (
         <Playback
           canShowCard={!isCurrentlyImmersed}
           currentTime={currentTime}
-          file={media}
+          file={media ?? photo}
           mediaRef={mediaRef}
           // When the details button isn't showing, pressing the details
           // shows the extended details card.

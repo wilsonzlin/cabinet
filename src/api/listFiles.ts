@@ -16,12 +16,13 @@ type BaseListedFile = {
   path: string;
   name: string;
   size: number;
+  modifiedMs: number;
 };
 
 export type ListedAudio = BaseListedFile & {
   type: "audio";
   duration: number;
-  title: string;
+  title?: string;
   author?: string;
   album?: string;
   genre?: string;
@@ -32,6 +33,15 @@ export type ListedPhoto = BaseListedFile & {
   type: "photo";
   width: number;
   height: number;
+  channels?: number;
+  chromaSubsampling: string;
+  colourSpace?: string;
+  dpi?: number;
+  format: string;
+  orientation?: number;
+  hasIccProfile?: boolean;
+  isProgressive?: boolean;
+  hasAlphaChannel?: boolean;
 };
 
 export type ListedVideo = BaseListedFile & {
@@ -39,7 +49,7 @@ export type ListedVideo = BaseListedFile & {
   width: number;
   height: number;
   duration: number;
-  title: string;
+  title?: string;
   author?: string;
   album?: string;
   genre?: string;
@@ -115,9 +125,10 @@ export const listFilesApi = async (
             path: e.relPath,
             name: e.fileName(),
             size: e.size,
+            modifiedMs: e.modified.toMillis(),
             duration: e.duration(),
             author: e.metadata().artist,
-            title: e.metadata().title ?? e.fileName(),
+            title: e.metadata().title,
             album: e.metadata().album,
             genre: e.metadata().genre,
             track: e.metadata().track,
@@ -128,8 +139,18 @@ export const listFilesApi = async (
             path: e.relPath,
             name: e.fileName(),
             size: e.size,
-            width: e.width(),
-            height: e.height(),
+            modifiedMs: e.modified.toMillis(),
+            width: e.metadata.width,
+            height: e.metadata.height,
+            dpi: e.metadata.dpi,
+            channels: e.metadata.channels,
+            chromaSubsampling: e.metadata.chromaSubsampling,
+            colourSpace: e.metadata.colourSpace,
+            format: e.metadata.format,
+            orientation: e.metadata.orientation,
+            isProgressive: e.metadata.isProgressive,
+            hasIccProfile: e.metadata.hasIccProfile,
+            hasAlphaChannel: e.metadata.hasAlphaChannel,
           });
         } else if (e instanceof Video) {
           totalDuration += e.duration();
@@ -138,11 +159,12 @@ export const listFilesApi = async (
             path: e.relPath,
             name: e.fileName(),
             size: e.size,
+            modifiedMs: e.modified.toMillis(),
             width: e.width(),
             height: e.height(),
             duration: e.duration(),
             author: e.metadata().artist,
-            title: e.metadata().title ?? e.fileName(),
+            title: e.metadata().title,
             album: e.metadata().album,
             genre: e.metadata().genre,
             track: e.metadata().track,

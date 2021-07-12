@@ -1,10 +1,15 @@
 import assertExists from "@xtjs/lib/js/assertExists";
 import classNames from "@xtjs/lib/js/classNames";
 import mapDefined from "@xtjs/lib/js/mapDefined";
-import { Duration } from "luxon";
+import { DateTime, Duration } from "luxon";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
-import { ListedAudio, ListedVideo } from "../../api/listFiles";
-import { fileThumbnailCss, formatDur, useElemDimensions } from "../_common/ui";
+import { ListedAudio, ListedPhoto, ListedVideo } from "../../api/listFiles";
+import {
+  fileThumbnailCss,
+  formatDur,
+  formatSize,
+  useElemDimensions,
+} from "../_common/ui";
 import "./index.css";
 
 const getRatio = (pageX: number, rect: DOMRect) =>
@@ -14,7 +19,7 @@ export default ({
   canShowCard,
   currentTime,
   file,
-  mediaRef: { current: element },
+  mediaRef: { current: mediaElem },
   onDetailsButtonVisibilityChange,
   onTogglePlaylistPanel,
   playing,
@@ -23,7 +28,7 @@ export default ({
 }: {
   canShowCard: boolean;
   currentTime: Duration;
-  file: ListedAudio | ListedVideo;
+  file: ListedAudio | ListedPhoto | ListedVideo;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   onDetailsButtonVisibilityChange: (isDetailsButtonShowing: boolean) => void;
   onTogglePlaylistPanel: () => void;
@@ -58,8 +63,7 @@ export default ({
   const [scrubbingOverride, setScrubbingOverride] = useState<
     number | undefined
   >(undefined);
-  // Avoid using pointer* events, there are still lots of browser and platform
-  // inconsistencies and bugs.
+  // Avoid using pointer* events, there are still lots of browser and platform inconsistencies and bugs.
   useEffect(() => {
     const listener = () => {
       setScrubbingOffset(undefined);
@@ -78,14 +82,14 @@ export default ({
   useEffect(() => {
     const listener = (e: MouseEvent | TouchEvent) => {
       const pageX = "touches" in e ? e.touches[0].pageX : e.pageX;
-      if (scrubbingOffset != undefined && element) {
+      if (scrubbingOffset != undefined && mediaElem) {
         const ratio = getRatio(pageX, assertExists(scrubbingRect));
         setScrubbingOverride(ratio * 100);
         clearTimeout(scrubbingDebounce.current);
         scrubbingDebounce.current = setTimeout(() => {
-          if (element) {
+          if (mediaElem) {
             // Don't use element.totalTime as end segment might not have loaded yet.
-            element.currentTime = totalTime.as("seconds") * ratio;
+            mediaElem.currentTime = totalTime.as("seconds") * ratio;
           }
         }, 33);
       }
@@ -96,11 +100,12 @@ export default ({
     }
     return () => {
       clearTimeout(scrubbingDebounce.current);
+      setScrubbingOverride(undefined);
       for (const e of EVENTS) {
         document.removeEventListener(e, listener, true);
       }
     };
-  }, [scrubbingOffset, element]);
+  }, [scrubbingOffset, mediaElem]);
 
   return (
     <div
@@ -123,25 +128,36 @@ export default ({
       >
         <div className="playback-card-details">
           <div className="playback-card-path">{file.path}</div>
-          <div className="playback-card-title">{file.title}</div>
-          {mapDefined(file.author, (author) => (
-            <div className="playback-card-iconed">
-              <span>👤</span>
-              <span>{author}</span>
-            </div>
-          ))}
-          {mapDefined(file.album, (album) => (
-            <div className="playback-card-iconed">
-              <span>💿</span>
-              <span>{album}</span>
-            </div>
-          ))}
-          {mapDefined(file.genre, (genre) => (
-            <div className="playback-card-iconed">
-              <span>𝄞</span>
-              <span>{genre}</span>
-            </div>
-          ))}
+          <div className="playback-card-size">{formatSize(file.size)}</div>
+          <div className="playback-card-modified">
+            Modified{" "}
+            {DateTime.fromMillis(file.modifiedMs).toLocaleString(
+              DateTime.DATETIME_MED_WITH_WEEKDAY
+            )}
+          </div>
+          {file.type != "photo" && (
+            <>
+              <div className="playback-card-title">{file.title}</div>
+              {mapDefined(file.author, (author) => (
+                <div className="playback-card-iconed">
+                  <span>👤</span>
+                  <span>{author}</span>
+                </div>
+              ))}
+              {mapDefined(file.album, (album) => (
+                <div className="playback-card-iconed">
+                  <span>💿</span>
+                  <span>{album}</span>
+                </div>
+              ))}
+              {mapDefined(file.genre, (genre) => (
+                <div className="playback-card-iconed">
+                  <span>𝄞</span>
+                  <span>{genre}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
         <div className="playback-card-rating">
           <button>👍</button>
@@ -151,20 +167,22 @@ export default ({
       <div className="acrylic floating playback-main">
         <div className="playback-thumbnail" style={fileThumbnailCss(file)} />
         <div className="playback-details">
-          {/* TODO HACK This is not a button as overflow doesn't cause ellipsis. */}
+          {/* TODO HACK This is not a button as overflow with button doesn't cause ellipsis. */}
           <div
             className="playback-details-text"
             onClick={() =>
               showDetailsButton
-                ? onTogglePlaylistPanel()
+                ? file.type != "photo" && onTogglePlaylistPanel()
                 : setShowCard((s) => !s)
             }
           >
             <div className="playback-path" title={file.path}>
               {file.path}
             </div>
-            <div className="playback-title">{file.title}</div>
-            <div>{file.author ?? ""}</div>
+            <div className="playback-title">
+              {(file as any).title || file.name}
+            </div>
+            {file.type != "photo" && <div>{file.author}</div>}
           </div>
           {showDetailsButton && (
             <button
@@ -175,76 +193,147 @@ export default ({
             </button>
           )}
         </div>
-        <div className="playback-controls">
-          <button
-            className="playback-rewind"
-            onClick={() => {
-              if (element) {
-                element.currentTime -= 10;
-              }
-            }}
-          >
-            ↺
-          </button>
-          {!playing && (
-            <button className="playback-play" onClick={() => element?.play()}>
-              ▶
-            </button>
-          )}
-          {playing && (
-            <button className="playback-play" onClick={() => element?.pause()}>
-              ⏸
-            </button>
-          )}
-          <button
-            className="playback-forward"
-            onClick={() => {
-              if (element) {
-                element.currentTime += 10;
-              }
-            }}
-          >
-            ↻
-          </button>
-        </div>
-        <div className="playback-progress">
-          <div className="playback-progress-top">
-            <div>&nbsp;</div>
-          </div>
-          <div
-            className="playback-slider"
-            onPointerDown={(e) => {
-              setScrubbingOffset(e.clientX);
-              const rect = e.currentTarget.getBoundingClientRect();
-              setScrubbingRect(rect);
-              const ratio = getRatio(e.pageX, rect);
-              if (element) {
-                // Don't use element.totalTime as end segment might not have loaded yet.
-                element.currentTime = totalTime.as("seconds") * ratio;
-              }
-            }}
-          >
-            <div className="playback-slider-tube">
-              <div
-                className="playback-slider-fill"
-                style={{
-                  width: `${
-                    scrubbingOverride ??
-                    (currentTime.toMillis() / totalTime.toMillis()) * 100
-                  }%`,
-                }}
-              />
+        {file.type == "photo" ? (
+          <dl className="playback-photo-metadata">
+            {mapDefined(file.hasAlphaChannel, (h) => (
+              <div>
+                <dt>Alpha</dt>
+                <dd>{h.toString()}</dd>
+              </div>
+            ))}
+            {mapDefined(file.channels, (channels) => (
+              <div>
+                <dt>Channels</dt>
+                <dd>{channels}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>Chroma subsampling</dt>
+              <dd>{file.chromaSubsampling}</dd>
             </div>
-          </div>
-          <div className="playback-progress-bottom">
-            <div>-{formatDur(totalTime.minus(currentTime))}</div>
-            <div>{formatDur(currentTime)}</div>
-          </div>
-        </div>
-        <div className="playback-end-table">
-          <button className="playback-fullscreen">⛶</button>
-          <button className="playback-volume">🔊</button>
-        </div>
+            {mapDefined(file.colourSpace, (cs) => (
+              <div>
+                <dt>Colour space</dt>
+                <dd>{cs}</dd>
+              </div>
+            ))}
+            {mapDefined(file.dpi, (dpi) => (
+              <div>
+                <dt>DPI</dt>
+                <dd>{dpi}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>Format</dt>
+              <dd>{file.format}</dd>
+            </div>
+            <div>
+              <dt>Height</dt>
+              <dd>{file.height}</dd>
+            </div>
+            {mapDefined(file.hasIccProfile, (h) => (
+              <div>
+                <dt>ICC profile</dt>
+                <dd>{h.toString()}</dd>
+              </div>
+            ))}
+            {mapDefined(file.orientation, (o) => (
+              <div>
+                <dt>Orientation</dt>
+                <dd>{o}</dd>
+              </div>
+            ))}
+            {mapDefined(file.isProgressive, (h) => (
+              <div>
+                <dt>Progressive</dt>
+                <dd>{h.toString()}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>Width</dt>
+              <dd>{file.width}</dd>
+            </div>
+          </dl>
+        ) : (
+          <>
+            <div className="playback-controls">
+              <button
+                className="playback-rewind"
+                onClick={() => {
+                  if (mediaElem) {
+                    mediaElem.currentTime -= 10;
+                  }
+                }}
+              >
+                ↺
+              </button>
+              {!playing && (
+                <button
+                  className="playback-play"
+                  onClick={() => mediaElem?.play()}
+                >
+                  ▶
+                </button>
+              )}
+              {playing && (
+                <button
+                  className="playback-play"
+                  onClick={() => mediaElem?.pause()}
+                >
+                  ⏸
+                </button>
+              )}
+              <button
+                className="playback-forward"
+                onClick={() => {
+                  if (mediaElem) {
+                    mediaElem.currentTime += 10;
+                  }
+                }}
+              >
+                ↻
+              </button>
+            </div>
+            <div className="playback-progress">
+              <div className="playback-progress-top">
+                <div>&nbsp;</div>
+              </div>
+              <div
+                className="playback-slider"
+                onPointerDown={(e) => {
+                  setScrubbingOffset(e.clientX);
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setScrubbingRect(rect);
+                  const ratio = getRatio(e.pageX, rect);
+                  if (mediaElem) {
+                    // Don't use element.totalTime as end segment might not have loaded yet.
+                    mediaElem.currentTime = totalTime.as("seconds") * ratio;
+                  }
+                }}
+              >
+                <div className="playback-slider-tube">
+                  <div
+                    className="playback-slider-fill"
+                    style={{
+                      width: `${
+                        scrubbingOverride ??
+                        (currentTime.toMillis() / totalTime.toMillis()) * 100
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="playback-progress-bottom">
+                <div>-{formatDur(totalTime.minus(currentTime))}</div>
+                <div>{formatDur(currentTime)}</div>
+              </div>
+            </div>
+            <div className="playback-end-table">
+              <button className="playback-fullscreen">⛶</button>
+              <button className="playback-volume">🔊</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

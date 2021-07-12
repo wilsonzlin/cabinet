@@ -46,7 +46,7 @@ export default ({
             {i == position && (
               <div className="playlist-item-current">Current</div>
             )}
-            <div className="playlist-item-title">{f.title}</div>
+            <div className="playlist-item-title">{f.title || f.name}</div>
           </button>
         ))}
       </div>
