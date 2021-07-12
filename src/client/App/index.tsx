@@ -123,6 +123,7 @@ export default ({}: {}) => {
           onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
           onPlaybackChange={(playing) => setPlaying(playing)}
           onRequestNext={() => setMediaPlaylistPosition((p) => p + 1)}
+          onRequestPrev={() => setMediaPlaylistPosition((p) => p - 1)}
           onTimeUpdate={(currentTime) =>
             setCurrentPlaybackTime(Duration.fromMillis(currentTime * 1000))
           }

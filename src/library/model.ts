@@ -435,7 +435,7 @@ export class Video extends Media {
                       audio: true,
                       output: {
                         file: output,
-                        format: mseAudioContainer.container,
+                        format: mseAudioContainer.format,
                         // See video segment code for more info.
                         movflags: [
                           "default_base_moof",
@@ -561,7 +561,7 @@ export class Video extends Media {
                   audio: false,
                   output: {
                     file: output,
-                    format: mseVideoContainer.container,
+                    format: mseVideoContainer.format,
                     // See video segment code for more info.
                     movflags: ["default_base_moof", "empty_moov", "faststart"],
                   },

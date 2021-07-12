@@ -96,7 +96,8 @@ export const BROWSER_SUPPORTED_MEDIA_CONTAINER_FORMATS = new Map<
       // - https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers#mpeg-4_mp4
       // - https://www.w3.org/2008/WebVideo/Fragments/wiki/State_of_the_Art/Containers
       argValue: "mp4",
-      audioCodecs: new Set(["aac", "alac", "flac", "mp3", "opus", "vorbis"]),
+      // flac, opus, vorbis in mp4 support is experimental by ffmpeg but technically supported by browser.
+      audioCodecs: new Set(["aac", "alac", "mp3"]),
       videoCodecs: new Set(["av1", "h264", "vp9"]),
     },
   ],
@@ -141,7 +142,7 @@ export const findSuitableContainer = (
 
 // Map of MSE supported video codec to container.
 export const MSE_SUPPORTED_VIDEO_CODECS = new Map([
-  ["h264", { container: "mp4", mime: "video/mp4" }],
+  ["h264", { format: "mp4", mime: "video/mp4" }],
   // TODO Enable only if detected browser supports these.
   // "vp8",
   // "vp9",
@@ -150,7 +151,7 @@ export const MSE_SUPPORTED_VIDEO_CODECS = new Map([
 // Map of MSE supported audio codec to container.
 export const MSE_SUPPORTED_AUDIO_CODECS = new Map([
   // Browsers don't support AAC directly or in ALAC container for MSE.
-  ["aac", { container: "mp4", mime: "audio/mp4" }],
+  ["aac", { format: "mp4", mime: "audio/mp4" }],
   // TODO Enable only if detected browser supports these.
   // Most browsers don't support audio/mp4 with MP3.
   // Firefox doesn't support audio/mpeg but Chrome does.
