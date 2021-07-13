@@ -64,22 +64,24 @@ export const useLazyLoad = () => {
   const visibleDelay = useRef<any>(undefined);
   // Lazy load images as they appear, as some folders can have lots of files.
   const observer = useRef(
-    new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        clearTimeout(visibleDelay.current);
-        if (e.isIntersecting) {
-          // We want to show the image, even if user is just scrolling/browsing.
-          // We should only not load if the user is scrolling rapidly to a specific position, as if it's really deep,
-          // a lot of images will be loaded unnecessarily.
-          visibleDelay.current = setTimeout(() => {
-            setTimeout(() => {
-              // Add some jitter so requests don't go all at once, which slows down both browser and server.
+    new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          clearTimeout(visibleDelay.current);
+          if (e.isIntersecting) {
+            // We want to show the image, even if user is just scrolling/browsing.
+            // We should only not load if the user is scrolling rapidly to a specific position, as if it's really deep,
+            // a lot of images will be loaded unnecessarily.
+            visibleDelay.current = setTimeout(() => {
               setVisible(true);
-            }, Math.random() * 300);
-          }, 50);
+            }, 100);
+          }
         }
+      },
+      {
+        threshold: 0.2,
       }
-    })
+    )
   );
 
   // We need to use useState instead of useRef in order for observer to activate/deactivate
