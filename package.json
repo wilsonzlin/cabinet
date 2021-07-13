@@ -1,6 +1,6 @@
 {
   "name": "@wzlin/cabinet",
-  "version": "0.2.26",
+  "version": "0.2.27",
   "description": "Zero-configuration video + photo server and app",
   "main": "dist/main.js",
   "bin": {
