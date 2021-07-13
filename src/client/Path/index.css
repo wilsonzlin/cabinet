@@ -48,7 +48,7 @@
 .path-use-menu .path-components {
   border-radius: 3px;
   flex-direction: column;
-  left: 0;
+  left: 6px;
   position: absolute;
   top: calc(100% + 6px);
   width: 220px;

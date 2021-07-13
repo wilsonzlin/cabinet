@@ -3,7 +3,6 @@ import derivedComparator from "@xtjs/lib/js/derivedComparator";
 import Dict from "@xtjs/lib/js/Dict";
 import naturalOrdering from "@xtjs/lib/js/naturalOrdering";
 import propertyComparator from "@xtjs/lib/js/propertyComparator";
-import UnreachableError from "@xtjs/lib/js/UnreachableError";
 import { sep } from "path";
 import {
   Audio,
@@ -77,20 +76,19 @@ export const listFilesApi = async (
   {
     path,
     filter,
+    types,
     subdirectories,
   }: {
     path: string[];
     // Possible query parameters.
     filter?: string;
+    types: ("audio" | "photo" | "video")[];
     // Only valid when filter is also provided.
     subdirectories: boolean;
   }
 ): Promise<
   Json<{
     results: ResultsDir[];
-    totalFiles: number;
-    totalDuration: number;
-    totalSize: number;
   }>
 > => {
   const dir = await ctx.library.getDirectory(path);
@@ -98,25 +96,17 @@ export const listFilesApi = async (
     throw new ClientError(404, "Directory not found");
   }
 
-  let totalDuration = 0;
-  let totalFiles = 0;
-  let totalSize = 0;
   const resultsByDir = new Dict<string, ResultsDirEntry[]>();
   const visitDirEntry = async (e: DirEntry) => {
     const entries = resultsByDir.computeIfAbsent(e.dirRelPath(), () => []);
-    if (e instanceof Directory) {
-      if (!subdirectories) {
-        entries.push({
-          type: "dir",
-          name: e.fileName(),
-          itemCount: Object.keys(e.entries).length,
-        });
-      }
+    if (e instanceof Directory && !subdirectories) {
+      entries.push({
+        type: "dir",
+        name: e.fileName(),
+        itemCount: Object.keys(e.entries).length,
+      });
     } else if (e instanceof File) {
-      totalFiles++;
-      totalSize += e.size;
-      if (e instanceof Audio) {
-        totalDuration += e.duration();
+      if (e instanceof Audio && types.includes("audio")) {
         entries.push({
           type: "audio",
           path: e.relPath,
@@ -130,7 +120,7 @@ export const listFilesApi = async (
           genre: e.metadata().genre,
           track: e.metadata().track,
         });
-      } else if (e instanceof Photo) {
+      } else if (e instanceof Photo && types.includes("photo")) {
         entries.push({
           type: "photo",
           path: e.relPath,
@@ -149,8 +139,7 @@ export const listFilesApi = async (
           hasIccProfile: e.metadata.hasIccProfile,
           hasAlphaChannel: e.metadata.hasAlphaChannel,
         });
-      } else if (e instanceof Video) {
-        totalDuration += e.duration();
+      } else if (e instanceof Video && types.includes("video")) {
         entries.push({
           type: "video",
           path: e.relPath,
@@ -166,11 +155,7 @@ export const listFilesApi = async (
           genre: e.metadata().genre,
           track: e.metadata().track,
         });
-      } else {
-        throw new UnreachableError(e as any);
       }
-    } else {
-      throw new UnreachableError(e as any);
     }
   };
 
@@ -208,8 +193,5 @@ export const listFilesApi = async (
         ),
       }))
       .sort(propertyComparator("dir")),
-    totalDuration,
-    totalFiles,
-    totalSize,
   });
 };

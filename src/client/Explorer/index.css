@@ -1,6 +1,6 @@
 .explorer {
   height: 100%;
-  padding: 76px 20px 150px 20px;
+  padding: 66px 20px 150px 20px;
   overflow: auto;
   transition: 0.4s;
 }
@@ -19,6 +19,55 @@
   padding-right: 332px;
 }
 
+.explorer-toolbar {
+  align-items: center;
+  display: flex;
+  font-size: 20px;
+  justify-content: space-between;
+  padding-bottom: 16px;
+}
+
+.app-tucked .explorer-toolbar {
+  font-size: 16px;
+}
+
+.app-tucked .explorer-toolbar-modes {
+  display: none;
+}
+
+.explorer-toolbar-types {
+  text-align: right;
+}
+
+.explorer-toolbar > :not(:last-child) {
+  margin-right: 4px;
+}
+
+.explorer-stats {
+  font-size: 13px;
+  color: #666;
+}
+
+.explorer-toolbar button {
+  padding: 4px;
+  border-width: 0 0 2px 0;
+  border-style: solid;
+  border-color: transparent;
+}
+
+.explorer-toolbar button:not(:last-child) {
+  margin-right: 8px;
+}
+
+.app-tucked .explorer-toolbar button:not(:last-child) {
+  margin-right: 4px;
+}
+
+.explorer-toolbar .explorer-toolbar-button-active {
+  border-color: currentColor;
+  color: deepskyblue;
+}
+
 .explorer-entries-dir {
   display: block;
   padding: 20px 0 12px 0;
@@ -26,6 +75,42 @@
 
 .explorer-entries:first-child .explorer-entries-dir {
   padding-top: 0;
+}
+
+.explorer-entries-list-container {
+  overflow: auto;
+}
+
+.explorer-entries-list {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.explorer-entries-list tbody tr {
+  transition: 0.4s;
+}
+
+.explorer-entries-list tbody tr:hover {
+  background-color: rgba(240, 240, 240, 0.5);
+  cursor: pointer;
+}
+
+.explorer-entries-list th {
+  text-align: left;
+}
+
+.explorer-entries-list th:not(:first-child),
+.explorer-entries-list td:not(:first-child) {
+  overflow: hidden;
+  padding: 8px 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-entries-list th:first-child,
+.explorer-entries-list td:first-child {
+  width: 1%;
 }
 
 .explorer-folders,
