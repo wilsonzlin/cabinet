@@ -1,7 +1,11 @@
+import assertState from "@xtjs/lib/js/assertState";
 import last from "@xtjs/lib/js/last";
 import splitString from "@xtjs/lib/js/splitString";
-import { join, sep } from "path";
+import { sep } from "path";
 import sqlite3 from "sqlite3";
+
+// We use [].join(sep) instead of path.join(...[]) as path.join can cause "./".
+// We use sep instead of "/" as a platform could allow "/" in paths.
 
 export class FsSearch {
   private constructor(readonly db: sqlite3.Database) {}
@@ -37,12 +41,13 @@ export class FsSearch {
 
   add = (relPath: string[]) =>
     new Promise<void>((resolve, reject) => {
+      assertState(relPath.length >= 1);
       this.db.run(
         `
           insert into fs
           values (?, ?, ?)
         `,
-        [join(...relPath), join(...relPath.slice(0, -1)), last(relPath)],
+        [relPath.join(sep), relPath.slice(0, -1).join(sep), last(relPath)],
         (err) => {
           if (err) {
             reject(err);
@@ -61,10 +66,16 @@ export class FsSearch {
       params.push(query);
       if (subdirs) {
         where.push(`dir LIKE ? ESCAPE '*'`);
-        params.push(join(...dir).replace(/[*%_]/g, "*$&") + sep + "%");
+        // Use [...dir, ""].join(sep) instead of dir.join(sep) + sep in case sep needs to be escaped.
+        // If dir.length == 0, [...dir, ""].join(sep) will result in "/" which is not what we want.
+        params.push(
+          dir.length
+            ? "%"
+            : [...dir, ""].join(sep).replace(/[*%_]/g, "*$&") + "%"
+        );
       } else {
         where.push(`dir = ?`);
-        params.push(join(...dir));
+        params.push(dir.join(sep));
       }
       this.db.all(
         `
