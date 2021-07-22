@@ -65,14 +65,12 @@ export class FsSearch {
       where.push(`name match ?`);
       params.push(query);
       if (subdirs) {
-        where.push(`dir LIKE ? ESCAPE '*'`);
-        // Use [...dir, ""].join(sep) instead of dir.join(sep) + sep in case sep needs to be escaped.
-        // If dir.length == 0, [...dir, ""].join(sep) will result in "/" which is not what we want.
-        params.push(
-          dir.length
-            ? "%"
-            : [...dir, ""].join(sep).replace(/[*%_]/g, "*$&") + "%"
-        );
+        if (dir.length) {
+          where.push(`dir LIKE ? ESCAPE '*'`);
+          // Use [...dir, ""].join(sep) instead of dir.join(sep) + sep in case sep needs to be escaped.
+          // If dir.length == 0, [...dir, ""].join(sep) will result in "/" which is not what we want.
+          params.push([...dir, ""].join(sep).replace(/[*%_]/g, "*$&") + "%");
+        }
       } else {
         where.push(`dir = ?`);
         params.push(dir.join(sep));
