@@ -1,8 +1,8 @@
 import assertExists from "@xtjs/lib/js/assertExists";
-import derivedComparator from "@xtjs/lib/js/derivedComparator";
 import Dict from "@xtjs/lib/js/Dict";
 import naturalOrdering from "@xtjs/lib/js/naturalOrdering";
 import propertyComparator from "@xtjs/lib/js/propertyComparator";
+import tokeniseForNaturalOrdering from "@xtjs/lib/js/tokeniseForNaturalOrdering";
 import { sep } from "path";
 import {
   Audio,
@@ -185,12 +185,13 @@ export const listFilesApi = async (
     results: [...resultsByDir]
       .map(([dir, entries]) => ({
         dir: dir.split(sep),
-        entries: entries.sort(
-          derivedComparator(
-            (e) => e.name.replace(/[^A-Za-z0-9]/g, "").toLowerCase(),
-            naturalOrdering
-          )
-        ),
+        entries: entries
+          .map((entry) => ({
+            entry,
+            tokens: tokeniseForNaturalOrdering(entry.name),
+          }))
+          .sort(propertyComparator("tokens", naturalOrdering))
+          .map(({ entry }) => entry),
       }))
       .sort(propertyComparator("dir")),
   });

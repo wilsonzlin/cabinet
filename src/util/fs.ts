@@ -51,7 +51,7 @@ export type ComputedFile = {
 
 export const getFileMetadata = async (absPath: string) => {
   const stats = await maybeFileStats(absPath);
-  if (stats?.size > 0) {
+  if (stats && stats.size > 0) {
     return {
       size: stats.size,
     };
