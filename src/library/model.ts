@@ -84,7 +84,8 @@ export class Directory extends DirEntry {
   }
 
   async search(query: string, subdirs: boolean = false) {
-    return this.fsSearch.query(this.relPath.split(sep), query, subdirs);
+    // Use splitString so that empty string results in an empty array, not `[""]`.
+    return this.fsSearch.query(splitString(this.relPath, sep), query, subdirs);
   }
 
   entries = new LazyP(async () => {

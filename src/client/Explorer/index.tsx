@@ -208,6 +208,7 @@ export default ({
                 ] as const
               ).map(([t, l]) => (
                 <button
+                  key={t}
                   className={classNames(
                     types.includes(t) && "explorer-toolbar-button-active"
                   )}

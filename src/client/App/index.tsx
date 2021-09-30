@@ -48,6 +48,7 @@ export default ({}: {}) => {
   const playlistMaximised = width < 860;
   const pathUseMenu = width < 1024;
   const [canShowPlaylistToggle, setCanShowPlaylistToggle] = useState(false);
+  const [showMontageFrames, setShowMontageFrames] = useState(false);
 
   const [pointerType, setPointerType] = useState("mouse");
   useEffect(() => {
@@ -68,15 +69,39 @@ export default ({}: {}) => {
   const [isIdle, setIsIdle] = useState(false);
   const isIdleTimeout = useRef<any | undefined>(undefined);
   useEffect(() => {
-    setIsIdle(false);
+    // For touch devices: tap without moving to toggle idleness.
+    // For mouse devices: idle after timeout TODO: except when mouse is hovering over Playback.
+    let pointerType = "";
+    let pointerMoved = false;
     // mousemove/pointermove don't seem to trigger continuously for touch.
-    const EVENTS = ["pointerdown", "pointermove", "touchmove"];
-    const listener = () => {
-      setIsIdle(false);
+    const EVENTS = [
+      "pointerdown",
+      "pointermove",
+      "touchmove",
+      "pointerup",
+    ] as const;
+    const listener = (e: PointerEvent | TouchEvent) => {
       clearTimeout(isIdleTimeout.current);
-      isIdleTimeout.current = setTimeout(() => setIsIdle(true), 1500);
+      switch (e.type) {
+        case "pointerdown":
+          pointerType = (e as PointerEvent).pointerType;
+          pointerMoved = false;
+          break;
+        case "pointermove":
+        case "touchmove":
+          pointerMoved = true;
+          if (pointerType !== "touch") {
+            setIsIdle(false);
+            isIdleTimeout.current = setTimeout(() => setIsIdle(true), 1500);
+          }
+          break;
+        case "pointerup":
+          if (!pointerMoved && pointerType === "touch") {
+            setIsIdle((idle) => !idle);
+          }
+          break;
+      }
     };
-    listener();
     for (const e of EVENTS) {
       document.addEventListener(e, listener, true);
     }
@@ -127,6 +152,7 @@ export default ({}: {}) => {
           onTimeUpdate={(currentTime) =>
             setCurrentPlaybackTime(Duration.fromMillis(currentTime * 1000))
           }
+          showMontageFrames={showMontageFrames}
         />
       )}
       {photo && <Image file={photo} />}
@@ -134,6 +160,7 @@ export default ({}: {}) => {
         components={path}
         onChangeSearchValue={setSearchValue}
         onNavigate={changePath}
+        onRequestToggleMontage={() => setShowMontageFrames((x) => !x)}
         onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         onRequestClose={() => {
           if (photo) {
@@ -145,7 +172,10 @@ export default ({}: {}) => {
         searchValue={searchValue}
         showCloseButtonInsteadOfUp={isViewing}
         showComponents={!isViewing}
-        showPlaylistToggle={canShowPlaylistToggle && playlistClosed}
+        showPlaylistToggle={
+          canShowPlaylistToggle && playlistClosed && !showMontageFrames
+        }
+        showMontageToggle={isPlayingVideo && playlistClosed}
         showSearch={!isViewing}
         useMenu={pathUseMenu}
       />

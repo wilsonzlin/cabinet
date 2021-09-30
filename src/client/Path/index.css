@@ -61,7 +61,7 @@
 .path-up,
 .path-components button,
 .path-search-container,
-.path-playlist-toggle {
+.path-toggle-button {
   /* To align with .path-search. */
   border: 1px solid transparent;
   border-radius: 3px;
@@ -112,6 +112,6 @@
   flex-grow: 1;
 }
 
-.path-playlist-toggle {
+.path-toggle-button {
   margin-left: 8px;
 }

@@ -33,6 +33,7 @@ const MontageFrame = ({
     <button ref={setLazyElem} className="media-montage-frame" onClick={onClick}>
       {/* Use image for auto height. */}
       <img
+        className="floating"
         src={
           !visible
             ? undefined
@@ -42,7 +43,7 @@ const MontageFrame = ({
               })
         }
       />
-      <div>{formatDur(time)}</div>
+      <div className="acrylic">{formatDur(time)}</div>
     </button>
   );
 };
@@ -56,6 +57,7 @@ export default ({
   onRequestPrev,
   onRequestNext,
   onTimeUpdate,
+  showMontageFrames,
 }: {
   file: ListedMedia;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
@@ -65,6 +67,7 @@ export default ({
   onRequestPrev: () => void;
   onRequestNext: () => void;
   onTimeUpdate: (currentTime: number) => void;
+  showMontageFrames: boolean;
 }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
@@ -77,7 +80,6 @@ export default ({
   );
 
   const [montageFrames, setMontageFrames] = useState<number[]>([]);
-  const [showMontageFrames, setShowMontageFrames] = useState(false);
 
   useEffect(() => {
     if ("mediaSession" in navigator) {
@@ -381,7 +383,6 @@ export default ({
           onTimeUpdate(time);
           onSeekOrTimeUpdate.current?.(time);
         }}
-        onClick={() => setShowMontageFrames((x) => !x)}
         onContextMenu={(e) => e.preventDefault()}
         src={videoSrc}
       />
