@@ -33,6 +33,7 @@ export default ({}: {}) => {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
     Duration | undefined
   >(undefined);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const media: ListedMedia | undefined = mediaPlaylist[mediaPlaylistPosition];
   const currentTime = currentPlaybackTime ?? ZERO_DURATION;
   const totalTime =
@@ -143,10 +144,11 @@ export default ({}: {}) => {
       {isPlayingMedia && (
         <Media
           mediaRef={mediaRef}
-          next={mediaPlaylist[mediaPlaylistPosition + 1]}
           file={media}
+          next={mediaPlaylist[mediaPlaylistPosition + 1]}
           onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
           onPlaybackChange={(playing) => setPlaying(playing)}
+          onPlaybackRateChange={(rate) => setPlaybackRate(rate)}
           onRequestNext={() => setMediaPlaylistPosition((p) => p + 1)}
           onRequestPrev={() => setMediaPlaylistPosition((p) => p - 1)}
           onTimeUpdate={(currentTime) =>
@@ -203,6 +205,13 @@ export default ({}: {}) => {
           onDetailsButtonVisibilityChange={(showing) =>
             setCanShowPlaylistToggle(!showing)
           }
+          playbackRate={playbackRate}
+          onRequestPlaybackRateChange={(rate) => {
+            const elem = mediaRef.current;
+            if (elem) {
+              elem.playbackRate = rate;
+            }
+          }}
           onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
           playing={playing}
           reserveRightSpace={!playlistClosed && !playlistMaximised}

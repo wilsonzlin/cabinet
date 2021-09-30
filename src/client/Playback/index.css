@@ -312,11 +312,12 @@
   height: 100%;
   margin-left: 20px;
   display: flex;
+  align-items: center;
   flex-direction: column;
   justify-content: center;
 }
 
-.playback-end-table button {
+.playback-end-table > button {
   border-radius: 100%;
   border: 0;
   padding: 8px;
@@ -328,4 +329,20 @@
 
 .playback-690 .playback-end-table {
   display: none;
+}
+
+.playback-rate {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  font-size: 13px;
+  /* Increase touch target, and keep vertically symmetric with other buttons. */
+  padding: 8px 0;
+  text-align: center;
+}
+
+.playback-rate > * {
+  color: initial;
+  text-shadow: initial;
 }

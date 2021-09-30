@@ -54,8 +54,9 @@ export default ({
   next,
   onEnded,
   onPlaybackChange,
-  onRequestPrev,
+  onPlaybackRateChange,
   onRequestNext,
+  onRequestPrev,
   onTimeUpdate,
   showMontageFrames,
 }: {
@@ -64,8 +65,9 @@ export default ({
   next?: ListedMedia;
   onEnded: () => void;
   onPlaybackChange: (playing: boolean) => void;
-  onRequestPrev: () => void;
+  onPlaybackRateChange: (rate: number) => void;
   onRequestNext: () => void;
+  onRequestPrev: () => void;
   onTimeUpdate: (currentTime: number) => void;
   showMontageFrames: boolean;
 }) => {
@@ -370,10 +372,11 @@ export default ({
         ref={mediaRef}
         autoPlay={true}
         controls={false}
-        onEnded={onEnded}
         onDurationChange={(e) => setTotalTime(e.currentTarget.duration)}
-        onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
+        onEnded={onEnded}
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}
+        onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
+        onRateChange={(e) => onPlaybackRateChange(e.currentTarget.playbackRate)}
         onSeeking={(event) =>
           onSeekOrTimeUpdate.current?.(event.currentTarget.currentTime)
         }

@@ -1,5 +1,6 @@
 import assertExists from "@xtjs/lib/js/assertExists";
 import classNames from "@xtjs/lib/js/classNames";
+import nativeOrdering from "@xtjs/lib/js/nativeOrdering";
 import mapDefined from "@xtjs/lib/js/mapDefined";
 import { DateTime, Duration } from "luxon";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
@@ -21,7 +22,9 @@ export default ({
   file,
   mediaRef: { current: mediaElem },
   onDetailsButtonVisibilityChange,
+  onRequestPlaybackRateChange,
   onTogglePlaylistPanel,
+  playbackRate,
   playing,
   reserveRightSpace,
   totalTime,
@@ -31,7 +34,9 @@ export default ({
   file: ListedAudio | ListedPhoto | ListedVideo;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   onDetailsButtonVisibilityChange: (isDetailsButtonShowing: boolean) => void;
+  onRequestPlaybackRateChange: (rate: number) => void;
   onTogglePlaylistPanel: () => void;
+  playbackRate: number;
   playing: boolean;
   reserveRightSpace: boolean;
   totalTime: Duration;
@@ -329,7 +334,23 @@ export default ({
               </div>
             </div>
             <div className="playback-end-table">
-              <button className="playback-fullscreen">⛶</button>
+              <select
+                className="playback-rate"
+                value={playbackRate}
+                onChange={(e) =>
+                  onRequestPlaybackRateChange(+e.currentTarget.value)
+                }
+              >
+                {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, playbackRate]
+                  .sort(nativeOrdering)
+                  .map((v, i, a) =>
+                    v === a[i - 1] ? null : (
+                      <option key={v} value={v}>
+                        {v}x
+                      </option>
+                    )
+                  )}
+              </select>
               <button className="playback-volume">🔊</button>
             </div>
           </>
