@@ -23,7 +23,9 @@ export default ({
   mediaRef: { current: mediaElem },
   onDetailsButtonVisibilityChange,
   onRequestPlaybackRateChange,
+  onTogglePin,
   onTogglePlaylistPanel,
+  pinned,
   playbackRate,
   playing,
   reserveRightSpace,
@@ -35,7 +37,9 @@ export default ({
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   onDetailsButtonVisibilityChange: (isDetailsButtonShowing: boolean) => void;
   onRequestPlaybackRateChange: (rate: number) => void;
+  onTogglePin: () => void;
   onTogglePlaylistPanel: () => void;
+  pinned: boolean;
   playbackRate: number;
   playing: boolean;
   reserveRightSpace: boolean;
@@ -351,7 +355,15 @@ export default ({
                     )
                   )}
               </select>
-              <button className="playback-volume">🔊</button>
+              <button
+                className={classNames(
+                  "playback-pin",
+                  pinned && "playback-pinned"
+                )}
+                onClick={onTogglePin}
+              >
+                📌
+              </button>
             </div>
           </>
         )}

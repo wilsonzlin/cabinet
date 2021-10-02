@@ -55,6 +55,7 @@ export default ({
   onEnded,
   onPlaybackChange,
   onPlaybackRateChange,
+  onRequestCloseMontageFrames,
   onRequestNext,
   onRequestPrev,
   onTimeUpdate,
@@ -66,6 +67,7 @@ export default ({
   onEnded: () => void;
   onPlaybackChange: (playing: boolean) => void;
   onPlaybackRateChange: (rate: number) => void;
+  onRequestCloseMontageFrames: () => void;
   onRequestNext: () => void;
   onRequestPrev: () => void;
   onTimeUpdate: (currentTime: number) => void;
@@ -399,6 +401,7 @@ export default ({
                 if (mediaRef.current) {
                   mediaRef.current.currentTime = time;
                 }
+                onRequestCloseMontageFrames();
               }}
               time={time}
             />

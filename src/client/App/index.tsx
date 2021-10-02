@@ -68,12 +68,9 @@ export default ({}: {}) => {
   }, []);
 
   const [isIdle, setIsIdle] = useState(false);
+  const [playbackPinned, setPlaybackPinned] = useState(false);
   const isIdleTimeout = useRef<any | undefined>(undefined);
   useEffect(() => {
-    // For touch devices: tap without moving to toggle idleness.
-    // For mouse devices: idle after timeout TODO: except when mouse is hovering over Playback.
-    let pointerType = "";
-    let pointerMoved = false;
     // mousemove/pointermove don't seem to trigger continuously for touch.
     const EVENTS = [
       "pointerdown",
@@ -81,28 +78,12 @@ export default ({}: {}) => {
       "touchmove",
       "pointerup",
     ] as const;
-    const listener = (e: PointerEvent | TouchEvent) => {
+    const listener = () => {
+      setIsIdle(false);
       clearTimeout(isIdleTimeout.current);
-      switch (e.type) {
-        case "pointerdown":
-          pointerType = (e as PointerEvent).pointerType;
-          pointerMoved = false;
-          break;
-        case "pointermove":
-        case "touchmove":
-          pointerMoved = true;
-          if (pointerType !== "touch") {
-            setIsIdle(false);
-            isIdleTimeout.current = setTimeout(() => setIsIdle(true), 1500);
-          }
-          break;
-        case "pointerup":
-          if (!pointerMoved && pointerType === "touch") {
-            setIsIdle((idle) => !idle);
-          }
-          break;
-      }
+      isIdleTimeout.current = setTimeout(() => setIsIdle(true), 1500);
     };
+    listener();
     for (const e of EVENTS) {
       document.addEventListener(e, listener, true);
     }
@@ -114,7 +95,10 @@ export default ({}: {}) => {
     };
   }, []);
   const isCurrentlyImmersed =
-    isViewing && isIdle && (playlistClosed || !playlistMaximised);
+    isViewing &&
+    isIdle &&
+    !playbackPinned &&
+    (playlistClosed || !playlistMaximised);
 
   return (
     <div
@@ -149,6 +133,7 @@ export default ({}: {}) => {
           onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
           onPlaybackChange={(playing) => setPlaying(playing)}
           onPlaybackRateChange={(rate) => setPlaybackRate(rate)}
+          onRequestCloseMontageFrames={() => setShowMontageFrames(false)}
           onRequestNext={() => setMediaPlaylistPosition((p) => p + 1)}
           onRequestPrev={() => setMediaPlaylistPosition((p) => p - 1)}
           onTimeUpdate={(currentTime) =>
@@ -212,7 +197,9 @@ export default ({}: {}) => {
               elem.playbackRate = rate;
             }
           }}
+          onTogglePin={() => setPlaybackPinned((p) => !p)}
           onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
+          pinned={playbackPinned}
           playing={playing}
           reserveRightSpace={!playlistClosed && !playlistMaximised}
           totalTime={totalTime}
