@@ -59,48 +59,6 @@ export const fileThumbnailCss = (file: ListedMedia | ListedPhoto) => ({
   backgroundPosition: "center",
 });
 
-export const useLazyLoad = () => {
-  const [visible, setVisible] = useState(false);
-  const visibleDelay = useRef<any>(undefined);
-  // Lazy load images as they appear, as some folders can have lots of files.
-  const observer = useRef(
-    new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          clearTimeout(visibleDelay.current);
-          if (e.isIntersecting) {
-            // We want to show the image, even if user is just scrolling/browsing.
-            // We should only not load if the user is scrolling rapidly to a specific position, as if it's really deep,
-            // a lot of images will be loaded unnecessarily.
-            visibleDelay.current = setTimeout(() => {
-              setVisible(true);
-            }, 100);
-          }
-        }
-      },
-      {
-        threshold: 0.2,
-      }
-    )
-  );
-
-  // We need to use useState instead of useRef in order for observer to activate/deactivate
-  // when node is attached/detached.
-  const [elem, setElem] = useState<HTMLElement | undefined>(undefined);
-  useEffect(() => {
-    if (elem) {
-      observer.current.observe(elem);
-      return () => observer.current.unobserve(elem);
-    }
-    return;
-  }, [elem]);
-
-  return {
-    visible,
-    setLazyElem: (elem: HTMLElement | null) => setElem(elem ?? undefined),
-  };
-};
-
 export const formatDur = (seconds: number | Duration) => {
   const dur = Duration.isDuration(seconds)
     ? seconds

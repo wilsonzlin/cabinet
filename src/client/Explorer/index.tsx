@@ -11,41 +11,33 @@ import {
 } from "../../api/listFiles";
 import { apiGetPath } from "../_common/api";
 import { parseSearchFilter } from "../_common/search";
-import {
-  fileThumbnailCss,
-  formatDur,
-  formatSize,
-  useLazyLoad,
-} from "../_common/ui";
+import { formatDur, formatSize } from "../_common/ui";
 import Loading from "../Loading";
 import "./index.css";
 
 const DirEnt = ({
-  content,
+  children,
   onClick,
   onMouseEnter,
   onMouseLeave,
   corner,
   name,
 }: {
-  content: ({ visible }: { visible: boolean }) => ReactNode | ReactNode[];
+  children: ReactNode | ReactNode[];
   onClick: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   name: string;
   corner: string | number;
 }) => {
-  const { visible, setLazyElem } = useLazyLoad();
-
   return (
     <button
-      ref={setLazyElem}
       className="explorer-dirent"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {content({ visible })}
+      {children}
       {corner && (
         <div className="explorer-file-label explorer-file-duration">
           {corner}
@@ -90,34 +82,36 @@ const Folder = ({
       }
     });
     return () => req.cancel();
-  }, [path]);
+  }, [path.join("\0")]);
 
   const ents = firstEntries?.results[0]?.entries ?? [];
 
   return (
     <DirEnt
-      content={({ visible }) =>
-        !visible ? null : (
-          <div className="explorer-folder-collage">
-            {ents.map((r) =>
-              r.type == "dir" ? null : (
-                <div
-                  key={r.path}
-                  style={{
-                    ...fileThumbnailCss(r),
-                    height: ents.length > 6 ? "33.33%" : "50%",
-                    width: ents.length > 6 ? "25%" : "33.33%",
-                  }}
-                />
-              )
-            )}
-          </div>
-        )
-      }
       corner={`${itemCount} item${itemCount == 1 ? "" : "s"}`}
       name={name}
       onClick={onClick}
-    />
+    >
+      <div className="explorer-folder-collage">
+        {ents.map((r) =>
+          r.type == "dir" ? null : (
+            <img
+              key={r.path}
+              className="explorer-thumbnail"
+              loading="lazy"
+              src={apiGetPath("getFile", {
+                path: r.path,
+                thumbnail: true,
+              })}
+              style={{
+                height: ents.length > 6 ? "33.33%" : "50%",
+                width: ents.length > 6 ? "25%" : "33.33%",
+              }}
+            />
+          )
+        )}
+      </div>
+    </DirEnt>
   );
 };
 
@@ -132,23 +126,6 @@ const File = ({
 
   return (
     <DirEnt
-      content={({ visible }) => (
-        <>
-          <div
-            className="explorer-file-thumbnail"
-            style={!visible ? undefined : fileThumbnailCss(file)}
-          />
-          {file.type == "video" && (
-            <video
-              src={previewSrc}
-              className="explorer-file-video-preview"
-              autoPlay={true}
-              controls={false}
-              muted={true}
-            />
-          )}
-        </>
-      )}
       corner={
         file.type == "video" || file.type == "audio"
           ? formatDur(file.duration)
@@ -165,7 +142,25 @@ const File = ({
         )
       }
       onMouseLeave={() => setPreviewSrc(undefined)}
-    />
+    >
+      <img
+        className="explorer-file-thumbnail explorer-thumbnail"
+        loading="lazy"
+        src={apiGetPath("getFile", {
+          path: file.path,
+          thumbnail: true,
+        })}
+      />
+      {file.type == "video" && (
+        <video
+          src={previewSrc}
+          className="explorer-file-video-preview"
+          autoPlay={true}
+          controls={false}
+          muted={true}
+        />
+      )}
+    </DirEnt>
   );
 };
 
@@ -418,7 +413,7 @@ export default ({
                       <div className="explorer-files">
                         {files.map((f) => (
                           <File
-                            key={f.path}
+                            key={f.name}
                             file={f}
                             onClick={() => handleFileClick(files, f)}
                           />

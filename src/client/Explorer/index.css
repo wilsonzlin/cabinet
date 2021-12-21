@@ -154,6 +154,11 @@
   word-wrap: break-word;
 }
 
+.explorer-thumbnail {
+  object-fit: cover;
+  object-position: center;
+}
+
 .explorer-file-thumbnail {
   height: 100%;
   width: 100%;

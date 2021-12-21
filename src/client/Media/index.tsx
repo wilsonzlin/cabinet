@@ -6,7 +6,7 @@ import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { ListedMedia } from "../../api/listFiles";
 import { GaplessMetadata } from "../../util/media";
 import { apiGetPath } from "../_common/api";
-import { formatDur, useLazyLoad } from "../_common/ui";
+import { formatDur } from "../_common/ui";
 import "./index.css";
 
 const SHOW_NEXT_IN_LAST_N_SECS = 10;
@@ -27,21 +27,16 @@ const MontageFrame = ({
   onClick: () => void;
   time: number;
 }) => {
-  const { visible, setLazyElem } = useLazyLoad();
-
   return (
-    <button ref={setLazyElem} className="media-montage-frame" onClick={onClick}>
+    <button className="media-montage-frame" onClick={onClick}>
       {/* Use image for auto height. */}
       <img
         className="floating"
-        src={
-          !visible
-            ? undefined
-            : apiGetPath("getFile", {
-                path: filePath,
-                montageFrame: time,
-              })
-        }
+        loading="lazy"
+        src={apiGetPath("getFile", {
+          path: filePath,
+          montageFrame: time,
+        })}
       />
       <div className="acrylic">{formatDur(time)}</div>
     </button>
