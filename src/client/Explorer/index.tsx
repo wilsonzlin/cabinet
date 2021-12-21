@@ -92,7 +92,7 @@ const Folder = ({
     return () => req.cancel();
   }, [path]);
 
-  const ents = firstEntries?.results[0].entries ?? [];
+  const ents = firstEntries?.results[0]?.entries ?? [];
 
   return (
     <DirEnt
