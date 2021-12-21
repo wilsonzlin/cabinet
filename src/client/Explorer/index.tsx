@@ -1,7 +1,7 @@
 import mapDefined from "@xtjs/lib/js/mapDefined";
 import { cancellable, CancelledError } from "@xtjs/lang/js/cancellable";
 import classNames from "@xtjs/lib/js/classNames";
-import React, { useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";
 import {
   ListedFolder,
@@ -20,6 +20,107 @@ import {
 import Loading from "../Loading";
 import "./index.css";
 
+const DirEnt = ({
+  content,
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+  corner,
+  name,
+}: {
+  content: ({ visible }: { visible: boolean }) => ReactNode | ReactNode[];
+  onClick: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  name: string;
+  corner: string | number;
+}) => {
+  const { visible, setLazyElem } = useLazyLoad();
+
+  return (
+    <button
+      ref={setLazyElem}
+      className="explorer-dirent"
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {content({ visible })}
+      {corner && (
+        <div className="explorer-file-label explorer-file-duration">
+          {corner}
+        </div>
+      )}
+      <div className="explorer-file-label explorer-file-name">{name}</div>
+    </button>
+  );
+};
+
+const Folder = ({
+  path,
+  name,
+  itemCount,
+  onClick,
+}: {
+  path: string[];
+  name: string;
+  itemCount: number;
+  onClick: () => void;
+}) => {
+  const [firstEntries, setFirstEntries] = useState<
+    JsonApiOutput<typeof listFilesApi> | undefined
+  >();
+  useEffect(() => {
+    setFirstEntries(undefined);
+    const req = cancellable(function* () {
+      const res = yield fetch("/listFiles", {
+        method: "POST",
+        body: JSON.stringify({
+          path,
+          limit: 12,
+          subdirectories: false,
+          types: ["audio", "photo", "video"],
+        }),
+      });
+      setFirstEntries(yield res.json());
+    });
+    req.catch((e) => {
+      if (!(e instanceof CancelledError)) {
+        throw e;
+      }
+    });
+    return () => req.cancel();
+  }, [path]);
+
+  const ents = firstEntries?.results[0].entries ?? [];
+
+  return (
+    <DirEnt
+      content={({ visible }) =>
+        !visible ? null : (
+          <div className="explorer-folder-collage">
+            {ents.map((r) =>
+              r.type == "dir" ? null : (
+                <div
+                  key={r.path}
+                  style={{
+                    ...fileThumbnailCss(r),
+                    height: ents.length > 6 ? "33.33%" : "50%",
+                    width: ents.length > 6 ? "25%" : "33.33%",
+                  }}
+                />
+              )
+            )}
+          </div>
+        )
+      }
+      corner={`${itemCount} item${itemCount == 1 ? "" : "s"}`}
+      name={name}
+      onClick={onClick}
+    />
+  );
+};
+
 const File = ({
   file,
   onClick,
@@ -28,12 +129,32 @@ const File = ({
   onClick: () => void;
 }) => {
   const [previewSrc, setPreviewSrc] = useState<string | undefined>(undefined);
-  const { visible, setLazyElem } = useLazyLoad();
 
   return (
-    <button
-      ref={setLazyElem}
-      className="explorer-file"
+    <DirEnt
+      content={({ visible }) => (
+        <>
+          <div
+            className="explorer-file-thumbnail"
+            style={!visible ? undefined : fileThumbnailCss(file)}
+          />
+          {file.type == "video" && (
+            <video
+              src={previewSrc}
+              className="explorer-file-video-preview"
+              autoPlay={true}
+              controls={false}
+              muted={true}
+            />
+          )}
+        </>
+      )}
+      corner={
+        file.type == "video" || file.type == "audio"
+          ? formatDur(file.duration)
+          : ""
+      }
+      name={file.name}
       onClick={onClick}
       onMouseEnter={() =>
         setPreviewSrc(
@@ -44,24 +165,7 @@ const File = ({
         )
       }
       onMouseLeave={() => setPreviewSrc(undefined)}
-      style={!visible ? undefined : fileThumbnailCss(file)}
-    >
-      {file.type == "video" && (
-        <video
-          src={previewSrc}
-          className="explorer-file-video-preview"
-          autoPlay={true}
-          controls={false}
-          muted={true}
-        />
-      )}
-      {(file.type == "video" || file.type == "audio") && (
-        <div className="explorer-file-label explorer-file-duration">
-          {formatDur(file.duration)}
-        </div>
-      )}
-      <div className="explorer-file-label explorer-file-name">{file.name}</div>
-    </button>
+    />
   );
 };
 
@@ -302,13 +406,13 @@ export default ({
                     <>
                       <div className="explorer-folders">
                         {folders.map((f) => (
-                          <button
+                          <Folder
                             key={f.name}
-                            className="explorer-folder"
+                            path={[...dir, f.name]}
+                            name={f.name}
+                            itemCount={f.itemCount}
                             onClick={() => onClickFolder(f.name)}
-                          >
-                            {f.name}
-                          </button>
+                          />
                         ))}
                       </div>
                       <div className="explorer-files">

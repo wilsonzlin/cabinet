@@ -46,7 +46,7 @@
     "winattr": "^3.0.0"
   },
   "devDependencies": {
-    "@minify-html/core": "^0.4.11",
+    "@minify-html/core": "^0.8.0",
     "@types/luxon": "^1.27.0",
     "@types/node": "^15.12.4",
     "@types/react": "^17.0.11",

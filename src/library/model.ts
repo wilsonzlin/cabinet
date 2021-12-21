@@ -6,6 +6,7 @@ import {
 } from "@wzlin/ff";
 import assertExists from "@xtjs/lib/js/assertExists";
 import exec from "@xtjs/lib/js/exec";
+import filterValue from "@xtjs/lib/js/filterValue";
 import last from "@xtjs/lib/js/last";
 import map from "@xtjs/lib/js/map";
 import mapDefined from "@xtjs/lib/js/mapDefined";
@@ -66,7 +67,7 @@ export abstract class DirEntry {
   }
 
   dirRelPath() {
-    return dirname(this.relPath);
+    return filterValue(dirname(this.relPath), (p) => p != ".") ?? "";
   }
 
   fileName() {
@@ -639,7 +640,7 @@ export class Video extends Media {
   });
 
   readonly thumbnail = new LazyP(() =>
-    computedFile(join(this.dataDir(), "thumbnail.jpg"), (thumbnailPath) =>
+    computedFile(join(this.dataDir(), "thumbnail.webp"), (thumbnailPath) =>
       ff.extractFrame({
         input: this.absPath(),
         output: thumbnailPath,

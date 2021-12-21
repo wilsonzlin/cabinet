@@ -116,7 +116,8 @@
 .explorer-folders,
 .explorer-files {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-auto-rows: 200px;
   gap: 20px;
 }
 
@@ -129,30 +130,21 @@
   margin-bottom: 100px;
 }
 
-.explorer-files {
-  grid-auto-rows: 150px;
-}
-
-.explorer-folder,
-.explorer-file {
+.explorer-dirent {
   width: 100%;
 }
 
-.explorer-folder {
-  font-size: 14px;
-  padding: 8px;
+.explorer-folder-collage {
+  display: flex;
+  flex-wrap: wrap;
+  height: 100%;
+  width: 100%;
 }
 
-.explorer-folder {
-  border-radius: 3px;
+.explorer-dirent {
   border: 1px solid #ddd;
-  text-align: left;
-  word-wrap: break-word;
-}
-
-.explorer-file {
-  border: 1px solid #ddd;
-  border-radius: 3px;
+  border-radius: 6px;
+  overflow: hidden;
 
   position: relative;
 
@@ -161,7 +153,15 @@
   word-wrap: break-word;
 }
 
+.explorer-file-thumbnail {
+  height: 100%;
+  width: 100%;
+}
+
 .explorer-file-video-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
   opacity: 0;
   height: 100%;
   width: 100%;
