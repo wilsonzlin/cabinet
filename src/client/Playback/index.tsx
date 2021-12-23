@@ -227,7 +227,6 @@ export default ({
           (isPhoto || !ready) && "playback-slider-unavailable"
         )}
         onPointerDown={(e) => {
-          console.log(e.clientX);
           setScrubbingOffset(e.clientX);
           const rect = e.currentTarget.getBoundingClientRect();
           setScrubbingRect(rect);

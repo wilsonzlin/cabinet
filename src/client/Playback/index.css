@@ -11,8 +11,6 @@
   right: 0;
   bottom: 0;
   transition: 0.4s;
-  /* .playback-card takes up invisible space. */
-  pointer-events: none;
 
   padding: 12px;
 }
@@ -23,6 +21,8 @@
 }
 
 .playback-card {
+  /* .playback-card takes up invisible space. */
+  pointer-events: none;
   word-wrap: break-word;
 
   width: 300px;
@@ -95,7 +95,9 @@
 
 .playback-slider {
   cursor: pointer;
-  height: 4px;
+  /* Transparently increase touch target size. */
+  padding: 6px 0;
+  height: 16px;
   width: 100%;
   transition: 0.3s;
 }
@@ -117,8 +119,6 @@
 }
 
 .playback-main {
-  pointer-events: auto;
-
   display: flex;
   align-items: center;
 }
