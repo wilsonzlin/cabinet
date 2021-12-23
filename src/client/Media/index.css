@@ -35,6 +35,12 @@
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 40px;
   overflow: auto;
+
+  transition: 0.3s;
+}
+
+.media-montage-playlist-open {
+  padding-right: 350px;
 }
 
 .media-montage-frame {

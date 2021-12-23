@@ -8,17 +8,13 @@ export default ({
   files,
   maximised,
   onChangePosition,
-  onRequestClose,
   position,
-  showCloseButton,
 }: {
   closed: boolean;
   files: ListedMedia[];
   maximised: boolean;
   onChangePosition: (pos: number) => void;
-  onRequestClose: () => void;
   position: number;
-  showCloseButton: boolean;
 }) => {
   const listItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   useEffect(() => {
@@ -52,11 +48,6 @@ export default ({
       </div>
       <div className="acrylic floating playlist-menu">
         <button className="playlist-picker">Now playing</button>
-        {showCloseButton && (
-          <button className="playlist-close" onClick={onRequestClose}>
-            ━
-          </button>
-        )}
       </div>
       <div className="acrylic floating playlist-controls">
         <button onClick={() => onChangePosition(position - 1)}>⏮</button>

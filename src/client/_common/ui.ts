@@ -1,7 +1,5 @@
 import { Duration } from "luxon";
 import { useEffect, useRef, useState } from "react";
-import { ListedMedia, ListedPhoto } from "../../api/listFiles";
-import { apiGetPath } from "./api";
 
 export const useScreenDimensions = () => {
   const [height, setHeight] = useState(0);
@@ -48,16 +46,6 @@ export const useElemDimensions = (elem: HTMLElement | null | undefined) => {
   }, [elem]);
   return { height, width };
 };
-
-export const fileThumbnailCss = (file: ListedMedia | ListedPhoto) => ({
-  backgroundImage: `url(${apiGetPath("getFile", {
-    path: file.path,
-    thumbnail: true,
-  })})`,
-  backgroundSize: file.type == "audio" ? "contain" : "cover",
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "center",
-});
 
 export const formatDur = (seconds: number | Duration) => {
   const dur = Duration.isDuration(seconds)

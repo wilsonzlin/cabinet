@@ -7,26 +7,14 @@
   z-index: 3;
 
   position: absolute;
-  left: 40px;
-  right: 40px;
-  bottom: 30px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   transition: 0.4s;
   /* .playback-card takes up invisible space. */
   pointer-events: none;
-}
 
-.playback-reserve-right-space {
-  right: 375px;
-}
-
-.app-tucked .playback {
-  bottom: 6px;
-  left: 6px;
-  right: 6px;
-}
-
-.app-tucked .playback-reserve-right-space {
-  right: 367px;
+  padding: 12px;
 }
 
 .app-immersed .playback {
@@ -34,35 +22,17 @@
   pointer-events: none;
 }
 
-.playback button {
-  transition: 0.3s;
-}
-
-.app:not(.app-pt-touch) .playback button:hover {
-  background: rgba(240, 240, 240, 0.5);
-}
-
 .playback-card {
   word-wrap: break-word;
 
-  margin-left: 120px;
   width: 300px;
   border-radius: 8px;
   overflow: hidden;
 
-  margin-bottom: -15px;
+  margin: 0 auto -15px auto;
   opacity: 0;
 
   transition: 0.25s;
-}
-
-.playback-940 .playback-card {
-  margin-left: 12px;
-}
-
-.playback-480 .playback-card {
-  margin-left: 0;
-  width: 100%;
 }
 
 .playback-card-open {
@@ -100,108 +70,6 @@
   width: calc(100% - 24px);
 }
 
-.playback-card-rating {
-  display: flex;
-}
-
-.playback-card-rating > button {
-  flex: 1 0 0;
-  padding: 12px;
-}
-
-.playback-main {
-  border-radius: 10px;
-  padding: 0 12px;
-  height: 100px;
-  pointer-events: auto;
-
-  display: flex;
-  align-items: center;
-}
-
-.playback-690 .playback-main {
-  /* For two level layout. */
-  flex-wrap: wrap;
-  height: auto;
-  padding: 12px;
-}
-
-.playback-main > * {
-  flex-shrink: 0;
-}
-
-.playback-thumbnail {
-  border: 1px solid #ddd;
-  height: calc(100% - 24px);
-  margin-right: 16px;
-  width: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-}
-
-.playback-940 .playback-thumbnail {
-  display: none;
-}
-
-.playback-details {
-  /* Maximise touch target. */
-  height: 100%;
-  display: flex;
-  align-items: stretch;
-  width: 160px;
-}
-
-.playback-780 .playback-details {
-  width: 120px;
-}
-
-.playback-690 .playback-details {
-  font-size: 14px;
-  height: auto;
-  width: 100%;
-}
-
-.playback-details-text {
-  /* TODO HACK This element is not a button (see index.tsx). */
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.playback-details-text > * {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.playback-details-button {
-  flex-shrink: 0;
-  padding: 0 8px;
-}
-
-.playback-path {
-  direction: rtl;
-  text-align: left;
-  color: #888;
-  font-size: 11px;
-}
-
-.playback-title {
-  font-weight: bold;
-}
-
-.playback-780 .playback-path {
-  display: none;
-}
-
-.playback-690 .playback-details-text {
-  flex-grow: 1;
-}
-
 .playback-photo-metadata {
   /* For compact layout. */
   max-width: 100%;
@@ -225,110 +93,69 @@
   font-size: 12px;
 }
 
-.playback-controls {
-  display: flex;
-  align-items: center;
-}
-
-.playback-controls > * {
-  border-radius: 100%;
-  border: 1px solid #eaeaea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.playback-rewind,
-.playback-forward {
-  width: 36px;
-  height: 36px;
-  margin: 0 20px;
-}
-
-.playback-play {
-  width: 58px;
-  height: 58px;
-}
-
-.playback-780 .playback-rewind,
-.playback-780 .playback-forward {
-  margin: 0 12px;
-}
-
-.playback-780 .playback-play {
-  width: 36px;
-  height: 36px;
-}
-
-.playback-690 .playback-rewind {
-  margin-left: 0;
-}
-
-.playback-progress {
-  flex-grow: 1;
-}
-
-.playback-560 .playback-rewind,
-.playback-560 .playback-forward {
-  display: none;
-}
-
-.playback-560 .playback-play {
-  margin-right: 12px;
-}
-
-.playback-progress-top,
-.playback-progress-bottom {
-  display: flex;
-  flex-direction: row-reverse;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #aaa;
-}
-
 .playback-slider {
   cursor: pointer;
-  height: 24px;
-  /* Use padding instead of margin to increase touch target. */
-  padding: 8px 0;
+  height: 4px;
   width: 100%;
+  transition: 0.3s;
+}
+
+.playback-slider-unavailable {
+  height: 0px;
 }
 
 .playback-slider-tube {
-  background: #efefef;
-  border-radius: 3px;
-  border: 1px solid #d0d0d0;
+  background: rgba(255, 255, 255, 0.33);
   height: 100%;
   overflow: hidden;
   width: 100%;
 }
 
 .playback-slider-fill {
-  background: #767676;
+  background: white;
   height: 100%;
 }
 
-.playback-end-table {
-  height: 100%;
-  margin-left: 20px;
+.playback-main {
+  pointer-events: auto;
+
   display: flex;
   align-items: center;
+}
+
+.playback-main > * {
+  flex-shrink: 0;
+}
+
+.playback-spacer {
+  flex-grow: 1;
+}
+
+.playback-timestamp {
+  padding: 6px;
+}
+
+.playback-title {
+  /* TODO HACK This element is not a button (see index.tsx). */
+  cursor: pointer;
+  display: flex;
   flex-direction: column;
+  font-weight: bold;
   justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.playback-end-table > button {
-  border-radius: 100%;
-  border: 0;
-  padding: 8px;
+.playback-main {
+  color: white;
+  display: flex;
+  align-items: center;
 }
 
-.playback-780 .playback-end-table {
-  margin-left: 10px;
-}
-
-.playback-690 .playback-end-table {
-  display: none;
+.playback-main > button {
+  font-size: 26px;
+  padding: 12px;
 }
 
 .playback-rate {
@@ -336,17 +163,10 @@
   -moz-appearance: none;
   appearance: none;
   cursor: pointer;
-  font-size: 13px;
-  /* Increase touch target, and keep vertically symmetric with other buttons. */
-  padding: 8px 0;
   text-align: center;
 }
 
 .playback-rate > * {
   color: initial;
   text-shadow: initial;
-}
-
-.playback-pinned {
-  background: rgba(240, 240, 240, 0.35);
 }

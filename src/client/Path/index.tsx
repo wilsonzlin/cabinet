@@ -9,13 +9,9 @@ export default ({
   onChangeSearchValue,
   onNavigate,
   onRequestClose,
-  onRequestOpenPlaylist,
-  onRequestToggleMontage,
   searchValue,
   showCloseButtonInsteadOfUp,
   showComponents,
-  showMontageToggle,
-  showPlaylistToggle,
   showSearch,
   useMenu,
 }: {
@@ -23,13 +19,9 @@ export default ({
   onChangeSearchValue: (val: string) => void;
   onNavigate: (path: string[]) => void;
   onRequestClose: () => void;
-  onRequestOpenPlaylist: () => void;
-  onRequestToggleMontage: () => void;
   searchValue: string;
   showCloseButtonInsteadOfUp: boolean;
   showComponents: boolean;
-  showMontageToggle: boolean;
-  showPlaylistToggle: boolean;
   showSearch: boolean;
   useMenu: boolean;
 }) => {
@@ -100,17 +92,6 @@ export default ({
             }
           />
         </div>
-      )}
-      <div className="path-spacer" />
-      {showMontageToggle && (
-        <button className="path-toggle-button" onClick={onRequestToggleMontage}>
-          🎞️
-        </button>
-      )}
-      {showPlaylistToggle && (
-        <button className="path-toggle-button" onClick={onRequestOpenPlaylist}>
-          ☰
-        </button>
       )}
     </div>
   );

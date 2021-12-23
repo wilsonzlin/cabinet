@@ -30,6 +30,7 @@ export default ({}: {}) => {
     useState<number>(-1);
   const [playlistClosed, setPlaylistClosed] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [mediaReady, setMediaReady] = useState(false);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
     Duration | undefined
   >(undefined);
@@ -48,7 +49,6 @@ export default ({}: {}) => {
   const { width, height } = useElemDimensions(appElem);
   const playlistMaximised = width < 860;
   const pathUseMenu = width < 1024;
-  const [canShowPlaylistToggle, setCanShowPlaylistToggle] = useState(false);
   const [showMontageFrames, setShowMontageFrames] = useState(false);
 
   const [pointerType, setPointerType] = useState("mouse");
@@ -68,7 +68,6 @@ export default ({}: {}) => {
   }, []);
 
   const [isIdle, setIsIdle] = useState(false);
-  const [playbackPinned, setPlaybackPinned] = useState(false);
   const isIdleTimeout = useRef<any | undefined>(undefined);
   useEffect(() => {
     // mousemove/pointermove don't seem to trigger continuously for touch.
@@ -81,7 +80,7 @@ export default ({}: {}) => {
     const listener = () => {
       setIsIdle(false);
       clearTimeout(isIdleTimeout.current);
-      isIdleTimeout.current = setTimeout(() => setIsIdle(true), 1500);
+      isIdleTimeout.current = setTimeout(() => setIsIdle(true), 3500);
     };
     listener();
     for (const e of EVENTS) {
@@ -95,10 +94,7 @@ export default ({}: {}) => {
     };
   }, []);
   const isCurrentlyImmersed =
-    isViewing &&
-    isIdle &&
-    !playbackPinned &&
-    (playlistClosed || !playlistMaximised);
+    isViewing && isIdle && (playlistClosed || !playlistMaximised);
 
   return (
     <div
@@ -127,10 +123,13 @@ export default ({}: {}) => {
       />
       {isPlayingMedia && (
         <Media
-          mediaRef={mediaRef}
           file={media}
+          isPlaylistOpen={!playlistClosed}
+          mediaRef={mediaRef}
           next={mediaPlaylist[mediaPlaylistPosition + 1]}
+          onEmptied={() => setMediaReady(false)}
           onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
+          onLoadedMetadata={() => setMediaReady(true)}
           onPlaybackChange={(playing) => setPlaying(playing)}
           onPlaybackRateChange={(rate) => setPlaybackRate(rate)}
           onRequestCloseMontageFrames={() => setShowMontageFrames(false)}
@@ -147,8 +146,6 @@ export default ({}: {}) => {
         components={path}
         onChangeSearchValue={setSearchValue}
         onNavigate={changePath}
-        onRequestToggleMontage={() => setShowMontageFrames((x) => !x)}
-        onRequestOpenPlaylist={() => setPlaylistClosed(false)}
         onRequestClose={() => {
           if (photo) {
             setPhoto(undefined);
@@ -159,10 +156,6 @@ export default ({}: {}) => {
         searchValue={searchValue}
         showCloseButtonInsteadOfUp={isViewing}
         showComponents={!isViewing}
-        showPlaylistToggle={
-          canShowPlaylistToggle && playlistClosed && !showMontageFrames
-        }
-        showMontageToggle={isPlayingVideo && playlistClosed}
         showSearch={!isViewing}
         useMenu={pathUseMenu}
       />
@@ -171,9 +164,7 @@ export default ({}: {}) => {
         files={mediaPlaylist}
         maximised={playlistMaximised}
         onChangePosition={setMediaPlaylistPosition}
-        onRequestClose={() => setPlaylistClosed(true)}
         position={mediaPlaylistPosition}
-        showCloseButton={canShowPlaylistToggle}
       />
       {(isViewing || isPlayingMedia) && (
         <Playback
@@ -181,27 +172,18 @@ export default ({}: {}) => {
           currentTime={currentTime}
           file={media ?? photo}
           mediaRef={mediaRef}
-          // When the details button isn't showing, pressing the details
-          // shows the extended details card.
-          // When the details button is showing, pressing the details
-          // toggles the playlist instead.
-          // When Playback is hidden (i.e. no playback started), this will
-          // always be true.
-          onDetailsButtonVisibilityChange={(showing) =>
-            setCanShowPlaylistToggle(!showing)
-          }
-          playbackRate={playbackRate}
+          showMontageToggle={isPlayingVideo}
           onRequestPlaybackRateChange={(rate) => {
             const elem = mediaRef.current;
             if (elem) {
               elem.playbackRate = rate;
             }
           }}
-          onTogglePin={() => setPlaybackPinned((p) => !p)}
+          onRequestToggleMontage={() => setShowMontageFrames((x) => !x)}
           onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
-          pinned={playbackPinned}
+          playbackRate={playbackRate}
           playing={playing}
-          reserveRightSpace={!playlistClosed && !playlistMaximised}
+          ready={mediaReady}
           totalTime={totalTime}
         />
       )}

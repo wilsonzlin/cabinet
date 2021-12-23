@@ -45,9 +45,12 @@ const MontageFrame = ({
 
 export default ({
   file,
+  isPlaylistOpen,
   mediaRef,
   next,
+  onEmptied,
   onEnded,
+  onLoadedMetadata,
   onPlaybackChange,
   onPlaybackRateChange,
   onRequestCloseMontageFrames,
@@ -57,9 +60,12 @@ export default ({
   showMontageFrames,
 }: {
   file: ListedMedia;
+  isPlaylistOpen: boolean;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   next?: ListedMedia;
+  onEmptied: () => void;
   onEnded: () => void;
+  onLoadedMetadata: () => void;
   onPlaybackChange: (playing: boolean) => void;
   onPlaybackRateChange: (rate: number) => void;
   onRequestCloseMontageFrames: () => void;
@@ -370,7 +376,9 @@ export default ({
         autoPlay={true}
         controls={false}
         onDurationChange={(e) => setTotalTime(e.currentTarget.duration)}
+        onEmptied={onEmptied}
         onEnded={onEnded}
+        onLoadedMetadata={onLoadedMetadata}
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onRateChange={(e) => onPlaybackRateChange(e.currentTarget.playbackRate)}
@@ -387,7 +395,13 @@ export default ({
         src={videoSrc}
       />
       {showMontageFrames && (
-        <div className="acrylic media-montage">
+        <div
+          className={classNames(
+            "acrylic",
+            "media-montage",
+            isPlaylistOpen && "media-montage-playlist-open"
+          )}
+        >
           {montageFrames.map((time) => (
             <MontageFrame
               key={[file.path, time].join("\0")}
