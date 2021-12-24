@@ -70,7 +70,7 @@ export default ({
         </div>
       )}
       {showSearch && (
-        <div
+        <label
           className={classNames(
             "path-search-container",
             !!searchValue.trim() &&
@@ -91,7 +91,7 @@ export default ({
                 : undefined
             }
           />
-        </div>
+        </label>
       )}
     </div>
   );

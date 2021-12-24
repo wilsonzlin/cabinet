@@ -2,7 +2,13 @@ import classNames from "@xtjs/lib/js/classNames";
 import defined from "@xtjs/lib/js/defined";
 import filterValue from "@xtjs/lib/js/filterValue";
 import mapDefined from "@xtjs/lib/js/mapDefined";
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import React, {
+  MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { ListedMedia } from "../../api/listFiles";
 import { GaplessMetadata } from "../../util/media";
 import { apiGetPath } from "../_common/api";
@@ -48,11 +54,11 @@ export default ({
   isPlaylistOpen,
   mediaRef,
   next,
-  onEmptied,
   onEnded,
-  onLoadedMetadata,
+  onNetworkStateChange,
   onPlaybackChange,
   onPlaybackRateChange,
+  onReadyStateChange,
   onRequestCloseMontageFrames,
   onRequestNext,
   onRequestPrev,
@@ -63,11 +69,11 @@ export default ({
   isPlaylistOpen: boolean;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   next?: ListedMedia;
-  onEmptied: () => void;
   onEnded: () => void;
-  onLoadedMetadata: () => void;
+  onNetworkStateChange: (state: number) => void;
   onPlaybackChange: (playing: boolean) => void;
   onPlaybackRateChange: (rate: number) => void;
+  onReadyStateChange: (state: number) => void;
   onRequestCloseMontageFrames: () => void;
   onRequestNext: () => void;
   onRequestPrev: () => void;
@@ -369,28 +375,45 @@ export default ({
     };
   }, [file]);
 
+  const updateNetworkAndReadyStates = useCallback(() => {
+    onNetworkStateChange(mediaRef.current?.networkState ?? 0);
+    onReadyStateChange(mediaRef.current?.readyState ?? 0);
+  }, []);
+
   return (
     <div className={`media-${file.type}`}>
       <video
         ref={mediaRef}
         autoPlay={true}
         controls={false}
+        onAbort={updateNetworkAndReadyStates}
+        onCanPlay={updateNetworkAndReadyStates}
+        onCanPlayThrough={updateNetworkAndReadyStates}
         onDurationChange={(e) => setTotalTime(e.currentTarget.duration)}
-        onEmptied={onEmptied}
-        onEnded={onEnded}
-        onLoadedMetadata={onLoadedMetadata}
+        onEmptied={updateNetworkAndReadyStates}
+        onEnded={() => {
+          updateNetworkAndReadyStates();
+          onEnded();
+        }}
+        onError={updateNetworkAndReadyStates}
+        onLoadedMetadata={updateNetworkAndReadyStates}
+        onLoadStart={updateNetworkAndReadyStates}
         onPause={(event) => onPlaybackChange(!event.currentTarget.paused)}
         onPlay={(event) => onPlaybackChange(!event.currentTarget.paused)}
+        onProgress={updateNetworkAndReadyStates}
         onRateChange={(e) => onPlaybackRateChange(e.currentTarget.playbackRate)}
         onSeeking={(event) =>
           onSeekOrTimeUpdate.current?.(event.currentTarget.currentTime)
         }
+        onStalled={updateNetworkAndReadyStates}
+        onSuspend={updateNetworkAndReadyStates}
         onTimeUpdate={(event) => {
           const time = event.currentTarget.currentTime;
           setCurrentTime(time);
           onTimeUpdate(time);
           onSeekOrTimeUpdate.current?.(time);
         }}
+        onWaiting={updateNetworkAndReadyStates}
         onContextMenu={(e) => e.preventDefault()}
         src={videoSrc}
       />

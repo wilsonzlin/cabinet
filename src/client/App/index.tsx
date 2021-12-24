@@ -30,7 +30,8 @@ export default ({}: {}) => {
     useState<number>(-1);
   const [playlistClosed, setPlaylistClosed] = useState(true);
   const [playing, setPlaying] = useState(false);
-  const [mediaReady, setMediaReady] = useState(false);
+  const [mediaNetworkState, setMediaNetworkState] = useState(0);
+  const [mediaReadyState, setMediaReadyState] = useState(0);
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
     Duration | undefined
   >(undefined);
@@ -80,7 +81,7 @@ export default ({}: {}) => {
     const listener = () => {
       setIsIdle(false);
       clearTimeout(isIdleTimeout.current);
-      isIdleTimeout.current = setTimeout(() => setIsIdle(true), 3500);
+      isIdleTimeout.current = setTimeout(() => setIsIdle(true), 7000);
     };
     listener();
     for (const e of EVENTS) {
@@ -127,11 +128,11 @@ export default ({}: {}) => {
           isPlaylistOpen={!playlistClosed}
           mediaRef={mediaRef}
           next={mediaPlaylist[mediaPlaylistPosition + 1]}
-          onEmptied={() => setMediaReady(false)}
           onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
-          onLoadedMetadata={() => setMediaReady(true)}
+          onNetworkStateChange={setMediaNetworkState}
           onPlaybackChange={(playing) => setPlaying(playing)}
           onPlaybackRateChange={(rate) => setPlaybackRate(rate)}
+          onReadyStateChange={setMediaReadyState}
           onRequestCloseMontageFrames={() => setShowMontageFrames(false)}
           onRequestNext={() => setMediaPlaylistPosition((p) => p + 1)}
           onRequestPrev={() => setMediaPlaylistPosition((p) => p - 1)}
@@ -171,8 +172,8 @@ export default ({}: {}) => {
           canShowCard={!isCurrentlyImmersed}
           currentTime={currentTime}
           file={media ?? photo}
+          loading={mediaNetworkState == HTMLMediaElement.NETWORK_LOADING}
           mediaRef={mediaRef}
-          showMontageToggle={isPlayingVideo}
           onRequestPlaybackRateChange={(rate) => {
             const elem = mediaRef.current;
             if (elem) {
@@ -183,7 +184,8 @@ export default ({}: {}) => {
           onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
           playbackRate={playbackRate}
           playing={playing}
-          ready={mediaReady}
+          ready={mediaReadyState >= HTMLMediaElement.HAVE_METADATA}
+          showMontageToggle={isPlayingVideo}
           totalTime={totalTime}
         />
       )}

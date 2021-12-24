@@ -117,7 +117,6 @@
 .explorer-files {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  grid-auto-rows: 200px;
   gap: 20px;
 }
 
@@ -131,7 +130,19 @@
 }
 
 .explorer-dirent {
+  display: flex;
+  flex-direction: column;
   width: 100%;
+}
+
+.explorer-dirent-icon {
+  height: 200px;
+
+  position: relative;
+
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .explorer-folder-collage {
@@ -140,18 +151,6 @@
   flex-wrap: wrap;
   height: 100%;
   width: 100%;
-}
-
-.explorer-dirent {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  overflow: hidden;
-
-  position: relative;
-
-  text-align: left;
-  font-size: 12px;
-  word-wrap: break-word;
 }
 
 .explorer-thumbnail {
@@ -180,21 +179,33 @@
   opacity: 1;
 }
 
-.explorer-file-label {
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 3px;
+.explorer-dirent-label {
+  flex-shrink: 0;
+
+  padding: 4px;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.explorer-dirent-label-name {
+  text-align: left;
+  flex-grow: 1;
+
   color: #111;
-  padding: 3px;
-  position: absolute;
+  font-weight: 600;
+  padding-right: 12px;
+  font-size: 13px;
+  word-wrap: break-word;
 }
 
-.explorer-file-duration {
-  top: 6px;
-  right: 6px;
-}
+.explorer-dirent-label-corner {
+  flex-shrink: 0;
 
-.explorer-file-name {
-  bottom: 6px;
-  left: 6px;
-  right: 6px;
+  font-size: 11px;
+  padding: 4px;
+  border-radius: 6px;
+  background: #111;
+  color: white;
 }

@@ -37,13 +37,11 @@ const DirEnt = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {children}
-      {corner && (
-        <div className="explorer-file-label explorer-file-duration">
-          {corner}
-        </div>
-      )}
-      <div className="explorer-file-label explorer-file-name">{name}</div>
+      <div className="explorer-dirent-icon">{children}</div>
+      <div className="explorer-dirent-label">
+        <div className="explorer-dirent-label-name">{name}</div>
+        {corner && <div className="explorer-dirent-label-corner">{corner}</div>}
+      </div>
     </button>
   );
 };

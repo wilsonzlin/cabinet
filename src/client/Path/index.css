@@ -13,8 +13,6 @@
   left: 0;
   right: 0;
 
-  padding: 12px;
-
   background: rgba(252, 252, 252, 0.92);
   border-bottom: 1px solid #eaeaea;
 
@@ -58,15 +56,18 @@
   display: none;
 }
 
-.path-up,
 .path-components button,
-.path-search-container,
-.path-toggle-button {
+.path-search-container {
   /* To align with .path-search. */
   border: 1px solid transparent;
   border-radius: 3px;
   padding: 6px 8px;
   font-size: 14px;
+}
+
+.path-up {
+  font-size: 22px;
+  padding: 8px;
 }
 
 .path-use-menu .path-components button {
@@ -87,6 +88,7 @@
   border-color: #eaeaea;
   margin-left: 8px;
   display: flex;
+  align-items: center;
   flex-grow: 1;
   max-width: 250px;
 }
@@ -106,8 +108,4 @@
   padding: 0;
   border: 0;
   outline: 0;
-}
-
-.path-toggle-button {
-  margin-left: 8px;
 }

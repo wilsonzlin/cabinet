@@ -3,7 +3,7 @@ import classNames from "@xtjs/lib/js/classNames";
 import nativeOrdering from "@xtjs/lib/js/nativeOrdering";
 import mapDefined from "@xtjs/lib/js/mapDefined";
 import { DateTime, Duration } from "luxon";
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import React, { MutableRefObject, useEffect, useState } from "react";
 import { ListedAudio, ListedPhoto, ListedVideo } from "../../api/listFiles";
 import { formatDur, formatSize } from "../_common/ui";
 import "./index.css";
@@ -120,6 +120,7 @@ export default ({
   canShowCard,
   currentTime,
   file,
+  loading,
   mediaRef: { current: mediaElem },
   onRequestPlaybackRateChange,
   onRequestToggleMontage,
@@ -133,6 +134,7 @@ export default ({
   canShowCard: boolean;
   currentTime: Duration;
   file: ListedAudio | ListedPhoto | ListedVideo;
+  loading: boolean;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   onRequestPlaybackRateChange: (rate: number) => void;
   onRequestToggleMontage: () => void;
@@ -160,16 +162,10 @@ export default ({
   const [scrubbingRect, setScrubbingRect] = useState<DOMRect | undefined>(
     undefined
   );
-  const scrubbingDebounce = useRef<any>();
-  // Use a fake fill percentage when scrubbing to have perceived smooth scrubbing while still using a debounce.
-  const [scrubbingOverride, setScrubbingOverride] = useState<
-    number | undefined
-  >(undefined);
   // Avoid using pointer* events, there are still lots of browser and platform inconsistencies and bugs.
   useEffect(() => {
     const listener = () => {
       setScrubbingOffset(undefined);
-      setScrubbingOverride(undefined);
     };
     const EVENTS = ["mouseup", "touchend", "touchcancel"];
     for (const e of EVENTS) {
@@ -184,16 +180,13 @@ export default ({
   useEffect(() => {
     const listener = (e: MouseEvent | TouchEvent) => {
       const pageX = "touches" in e ? e.touches[0].pageX : e.pageX;
+      // Don't use a debounce, as it makes scrubbing feel laggy.
       if (scrubbingOffset != undefined && mediaElem) {
         const ratio = getRatio(pageX, assertExists(scrubbingRect));
-        setScrubbingOverride(ratio * 100);
-        clearTimeout(scrubbingDebounce.current);
-        scrubbingDebounce.current = setTimeout(() => {
-          if (mediaElem) {
-            // Don't use element.totalTime as end segment might not have loaded yet.
-            mediaElem.currentTime = totalTime.as("seconds") * ratio;
-          }
-        }, 33);
+        if (mediaElem) {
+          // Don't use element.totalTime as end segment might not have loaded yet.
+          mediaElem.currentTime = totalTime.as("seconds") * ratio;
+        }
       }
     };
     const EVENTS = ["mousemove", "touchmove"] as const;
@@ -201,8 +194,6 @@ export default ({
       document.addEventListener(e, listener, true);
     }
     return () => {
-      clearTimeout(scrubbingDebounce.current);
-      setScrubbingOverride(undefined);
       for (const e of EVENTS) {
         document.removeEventListener(e, listener, true);
       }
@@ -242,7 +233,6 @@ export default ({
             className="playback-slider-fill"
             style={{
               width: `${
-                scrubbingOverride ??
                 (currentTime.toMillis() / totalTime.toMillis()) * 100
               }%`,
             }}
@@ -250,7 +240,6 @@ export default ({
         </div>
       </div>
       <div className="playback-main">
-        {!isPhoto && !ready && <RippleLoader size={40} />}
         {!isPhoto && ready && !playing && (
           <button onClick={() => mediaElem?.play()}>▶</button>
         )}
@@ -284,6 +273,7 @@ export default ({
             {formatDur(currentTime)} / {formatDur(totalTime)}
           </div>
         )}
+        {!isPhoto && loading && <RippleLoader size={40} />}
 
         <div className="playback-spacer" />
 
