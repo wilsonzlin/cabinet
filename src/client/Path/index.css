@@ -32,10 +32,6 @@
   border: 0;
 }
 
-.app-tucked .path {
-  padding: 6px;
-}
-
 .path-components {
   overflow: hidden;
   white-space: nowrap;
@@ -61,13 +57,13 @@
   /* To align with .path-search. */
   border: 1px solid transparent;
   border-radius: 3px;
-  padding: 6px 8px;
+  padding: 6px 10px;
   font-size: 14px;
 }
 
 .path-up {
   font-size: 22px;
-  padding: 8px;
+  padding: 8px 12px 8px 16px;
 }
 
 .path-use-menu .path-components button {
