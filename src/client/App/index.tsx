@@ -33,7 +33,7 @@ export default ({}: {}) => {
   const [mediaNetworkState, setMediaNetworkState] = useState(0);
   const [mediaReadyState, setMediaReadyState] = useState(0);
   const mediaLoading =
-    mediaReadyState <= HTMLMediaElement.HAVE_METADATA &&
+    mediaReadyState <= HTMLMediaElement.HAVE_CURRENT_DATA &&
     mediaNetworkState == HTMLMediaElement.NETWORK_LOADING;
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
     Duration | undefined
