@@ -32,6 +32,9 @@ export default ({}: {}) => {
   const [playing, setPlaying] = useState(false);
   const [mediaNetworkState, setMediaNetworkState] = useState(0);
   const [mediaReadyState, setMediaReadyState] = useState(0);
+  const mediaLoading =
+    mediaReadyState <= HTMLMediaElement.HAVE_METADATA &&
+    mediaNetworkState == HTMLMediaElement.NETWORK_LOADING;
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<
     Duration | undefined
   >(undefined);
@@ -95,7 +98,10 @@ export default ({}: {}) => {
     };
   }, []);
   const isCurrentlyImmersed =
-    isViewing && isIdle && (playlistClosed || !playlistMaximised);
+    isViewing &&
+    isIdle &&
+    !mediaLoading &&
+    (playlistClosed || !playlistMaximised);
 
   return (
     <div
@@ -172,7 +178,7 @@ export default ({}: {}) => {
           canShowCard={!isCurrentlyImmersed}
           currentTime={currentTime}
           file={media ?? photo}
-          loading={mediaNetworkState == HTMLMediaElement.NETWORK_LOADING}
+          loading={mediaLoading}
           mediaRef={mediaRef}
           onRequestPlaybackRateChange={(rate) => {
             const elem = mediaRef.current;

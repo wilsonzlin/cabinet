@@ -191,6 +191,8 @@
 
 .explorer-dirent-label-name {
   text-align: left;
+  /* To allow word-wrap: break-word. */
+  min-width: 0;
   flex-grow: 1;
 
   color: #111;

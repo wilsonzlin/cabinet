@@ -273,10 +273,10 @@ export default ({
             {formatDur(currentTime)} / {formatDur(totalTime)}
           </div>
         )}
-        {!isPhoto && loading && <RippleLoader size={40} />}
 
         <div className="playback-spacer" />
 
+        {!isPhoto && loading && <RippleLoader size={40} />}
         {/* TODO HACK This is not a button as overflow with button doesn't cause ellipsis. */}
         <div
           className="playback-title"
