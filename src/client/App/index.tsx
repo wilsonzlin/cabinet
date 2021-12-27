@@ -117,85 +117,92 @@ export default ({}: {}) => {
       )}
       ref={(elem) => setAppElem(elem ?? undefined)}
     >
-      <Explorer
-        filter={searchValue}
-        onClickFolder={(f) => changePath(path.concat(f))}
-        onClickMediaFile={(files, file) => {
-          setMediaPlaylist(files);
-          setMediaPlaylistPosition(files.indexOf(file));
-        }}
-        onClickPhotoFile={(f) => setPhoto(f)}
-        onClickSearchFolder={changePath}
-        path={path}
-        reserveRightSpace={!playlistClosed && !playlistMaximised}
-      />
-      {isPlayingMedia && (
-        <Media
-          file={media}
-          isPlaylistOpen={!playlistClosed}
-          mediaRef={mediaRef}
-          next={mediaPlaylist[mediaPlaylistPosition + 1]}
-          onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
-          onNetworkStateChange={setMediaNetworkState}
-          onPlaybackChange={(playing) => setPlaying(playing)}
-          onPlaybackRateChange={(rate) => setPlaybackRate(rate)}
-          onReadyStateChange={setMediaReadyState}
-          onRequestCloseMontageFrames={() => setShowMontageFrames(false)}
-          onRequestNext={() => setMediaPlaylistPosition((p) => p + 1)}
-          onRequestPrev={() => setMediaPlaylistPosition((p) => p - 1)}
-          onTimeUpdate={(currentTime) =>
-            setCurrentPlaybackTime(Duration.fromMillis(currentTime * 1000))
-          }
-          showMontageFrames={showMontageFrames}
+      <div
+        className={classNames(
+          "app-content",
+          !playlistClosed && "app-content-playlist-open"
+        )}
+      >
+        <Explorer
+          filter={searchValue}
+          onClickFolder={(f) => changePath(path.concat(f))}
+          onClickMediaFile={(files, file) => {
+            setMediaPlaylist(files);
+            setMediaPlaylistPosition(files.indexOf(file));
+          }}
+          onClickPhotoFile={(f) => setPhoto(f)}
+          onClickSearchFolder={changePath}
+          path={path}
         />
-      )}
-      {photo && <Image file={photo} />}
-      <Path
-        components={path}
-        onChangeSearchValue={setSearchValue}
-        onNavigate={changePath}
-        onRequestClose={() => {
-          if (photo) {
-            setPhoto(undefined);
-          } else {
-            setMediaPlaylistPosition(-1);
-          }
-        }}
-        searchValue={searchValue}
-        showCloseButtonInsteadOfUp={isViewing}
-        showComponents={!isViewing}
-        showSearch={!isViewing}
-        useMenu={pathUseMenu}
-      />
+        {isPlayingMedia && (
+          <Media
+            file={media}
+            isPlaylistOpen={!playlistClosed}
+            mediaRef={mediaRef}
+            next={mediaPlaylist[mediaPlaylistPosition + 1]}
+            onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
+            onNetworkStateChange={setMediaNetworkState}
+            onPlaybackChange={(playing) => setPlaying(playing)}
+            onPlaybackRateChange={(rate) => setPlaybackRate(rate)}
+            onReadyStateChange={setMediaReadyState}
+            onRequestCloseMontageFrames={() => setShowMontageFrames(false)}
+            onRequestNext={() => setMediaPlaylistPosition((p) => p + 1)}
+            onRequestPrev={() => setMediaPlaylistPosition((p) => p - 1)}
+            onTimeUpdate={(currentTime) =>
+              setCurrentPlaybackTime(Duration.fromMillis(currentTime * 1000))
+            }
+            showMontageFrames={showMontageFrames}
+          />
+        )}
+        {photo && <Image file={photo} />}
+        <Path
+          components={path}
+          onChangeSearchValue={setSearchValue}
+          onNavigate={changePath}
+          onRequestClose={() => {
+            if (photo) {
+              setPhoto(undefined);
+            } else {
+              setMediaPlaylistPosition(-1);
+            }
+          }}
+          searchValue={searchValue}
+          showCloseButtonInsteadOfUp={isViewing}
+          showComponents={!isViewing}
+          showSearch={!isViewing}
+          useMenu={pathUseMenu}
+        />
+        {(isViewing || isPlayingMedia) && (
+          <Playback
+            canShowCard={!isCurrentlyImmersed}
+            currentTime={currentTime}
+            file={media ?? photo}
+            loading={mediaLoading}
+            mediaRef={mediaRef}
+            onRequestPlaybackRateChange={(rate) => {
+              const elem = mediaRef.current;
+              if (elem) {
+                elem.playbackRate = rate;
+              }
+            }}
+            onRequestToggleMontage={() => setShowMontageFrames((x) => !x)}
+            onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
+            playbackRate={playbackRate}
+            playing={playing}
+            ready={mediaReadyState >= HTMLMediaElement.HAVE_METADATA}
+            showMontageToggle={isPlayingVideo}
+            totalTime={totalTime}
+          />
+        )}
+      </div>
       <Playlist
         closed={playlistClosed}
+        dark={isViewing || isPlayingMedia}
         files={mediaPlaylist}
         maximised={playlistMaximised}
         onChangePosition={setMediaPlaylistPosition}
         position={mediaPlaylistPosition}
       />
-      {(isViewing || isPlayingMedia) && (
-        <Playback
-          canShowCard={!isCurrentlyImmersed}
-          currentTime={currentTime}
-          file={media ?? photo}
-          loading={mediaLoading}
-          mediaRef={mediaRef}
-          onRequestPlaybackRateChange={(rate) => {
-            const elem = mediaRef.current;
-            if (elem) {
-              elem.playbackRate = rate;
-            }
-          }}
-          onRequestToggleMontage={() => setShowMontageFrames((x) => !x)}
-          onTogglePlaylistPanel={() => setPlaylistClosed((s) => !s)}
-          playbackRate={playbackRate}
-          playing={playing}
-          ready={mediaReadyState >= HTMLMediaElement.HAVE_METADATA}
-          showMontageToggle={isPlayingVideo}
-          totalTime={totalTime}
-        />
-      )}
     </div>
   );
 };

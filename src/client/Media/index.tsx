@@ -51,7 +51,6 @@ const MontageFrame = ({
 
 export default ({
   file,
-  isPlaylistOpen,
   mediaRef,
   next,
   onEnded,
@@ -66,7 +65,6 @@ export default ({
   showMontageFrames,
 }: {
   file: ListedMedia;
-  isPlaylistOpen: boolean;
   mediaRef: MutableRefObject<HTMLVideoElement | null>;
   next?: ListedMedia;
   onEnded: () => void;
@@ -418,13 +416,7 @@ export default ({
         src={videoSrc}
       />
       {showMontageFrames && (
-        <div
-          className={classNames(
-            "acrylic",
-            "media-montage",
-            isPlaylistOpen && "media-montage-playlist-open"
-          )}
-        >
+        <div className={classNames("acrylic", "media-montage")}>
           {montageFrames.map((time) => (
             <MontageFrame
               key={[file.path, time].join("\0")}

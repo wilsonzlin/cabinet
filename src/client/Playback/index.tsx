@@ -278,12 +278,12 @@ export default ({
 
         {!isPhoto && loading && <RippleLoader size={40} />}
         {/* TODO HACK This is not a button as overflow with button doesn't cause ellipsis. */}
-        <div
+        <button
           className="playback-title"
           onClick={() => file.type != "photo" && onTogglePlaylistPanel()}
         >
           {(file as any).title || file.name}
-        </div>
+        </button>
         <button onClick={() => setShowCard((s) => !s)}>ⓘ</button>
 
         <div className="playback-spacer" />

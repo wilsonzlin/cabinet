@@ -5,12 +5,14 @@ import "./index.css";
 
 export default ({
   closed,
+  dark,
   files,
   maximised,
   onChangePosition,
   position,
 }: {
   closed: boolean;
+  dark: boolean;
   files: ListedMedia[];
   maximised: boolean;
   onChangePosition: (pos: number) => void;
@@ -24,9 +26,8 @@ export default ({
   return (
     <div
       className={classNames(
-        "acrylic",
-        "floating",
         "playlist",
+        dark && "playlist-dark",
         closed && "playlist-closed",
         maximised && "playlist-maximised"
       )}

@@ -5,20 +5,28 @@
   */
   z-index: 2;
 
-  border-radius: 10px;
   position: absolute;
-  top: 30px;
-  right: 35px;
-  bottom: 115px;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: 300px;
 
   transition: 0.4s;
+
+  background: #fff;
+  border-left: 1px solid #eaeaea;
 }
 
 .playlist-closed {
   box-shadow: none;
   right: -300px;
   pointer-events: none;
+}
+
+.playlist-dark {
+  background: #111;
+  border-left: 1px solid #222;
+  color: #eee;
 }
 
 .playlist-maximised {

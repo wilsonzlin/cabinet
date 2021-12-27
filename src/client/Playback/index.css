@@ -21,8 +21,6 @@
 }
 
 .playback-card {
-  /* .playback-card takes up invisible space. */
-  pointer-events: none;
   word-wrap: break-word;
 
   width: 300px;
@@ -38,7 +36,6 @@
 .playback-card-open {
   margin-bottom: 5px;
   opacity: 1;
-  pointer-events: auto;
 }
 
 .playback-card-details {
@@ -136,12 +133,9 @@
 }
 
 .playback-title {
-  /* TODO HACK This element is not a button (see index.tsx). */
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  flex-shrink: 1;
+  font-size: 16px !important;
   font-weight: bold;
-  justify-content: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

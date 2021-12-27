@@ -171,7 +171,6 @@ export default ({
   onClickPhotoFile,
   onClickSearchFolder,
   path,
-  reserveRightSpace,
 }: {
   filter: string;
   onClickFolder: (name: string) => void;
@@ -179,7 +178,6 @@ export default ({
   onClickPhotoFile: (file: ListedPhoto) => void;
   onClickSearchFolder: (path: string[]) => void;
   path: string[];
-  reserveRightSpace: boolean;
 }) => {
   const [mode, setMode] = useState<"list" | "tile">("tile");
   // TODO Allow adjusting column widths.
@@ -265,12 +263,7 @@ export default ({
   });
 
   return (
-    <div
-      className={classNames(
-        "explorer",
-        reserveRightSpace && "explorer-reserve-right-space"
-      )}
-    >
+    <div className={"explorer"}>
       {!entries ? (
         <Loading />
       ) : (
