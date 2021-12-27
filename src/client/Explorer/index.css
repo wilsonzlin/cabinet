@@ -69,8 +69,15 @@
 }
 
 .explorer-entries-dir {
-  display: block;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
   padding: 20px 0 12px 0;
+}
+
+.explorer-entries-dir > span {
+  margin-right: 8px;
+  font-size: 20px;
 }
 
 .explorer-entries:first-child .explorer-entries-dir {

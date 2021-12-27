@@ -125,6 +125,7 @@ export default ({}: {}) => {
           setMediaPlaylistPosition(files.indexOf(file));
         }}
         onClickPhotoFile={(f) => setPhoto(f)}
+        onClickSearchFolder={changePath}
         path={path}
         reserveRightSpace={!playlistClosed && !playlistMaximised}
       />

@@ -51,11 +51,13 @@ const Folder = ({
   name,
   itemCount,
   onClick,
+  types,
 }: {
   path: string[];
   name: string;
   itemCount: number;
   onClick: () => void;
+  types: string[];
 }) => {
   const [firstEntries, setFirstEntries] = useState<
     JsonApiOutput<typeof listFilesApi> | undefined
@@ -69,7 +71,7 @@ const Folder = ({
           path,
           limit: 12,
           subdirectories: false,
-          types: ["audio", "photo", "video"],
+          types,
         }),
       });
       setFirstEntries(yield res.json());
@@ -84,7 +86,7 @@ const Folder = ({
 
   const ents = firstEntries?.results[0]?.entries ?? [];
 
-  return (
+  return !ents.length ? null : (
     <DirEnt
       corner={`${itemCount} item${itemCount == 1 ? "" : "s"}`}
       name={name}
@@ -167,6 +169,7 @@ export default ({
   onClickFolder,
   onClickMediaFile,
   onClickPhotoFile,
+  onClickSearchFolder,
   path,
   reserveRightSpace,
 }: {
@@ -174,6 +177,7 @@ export default ({
   onClickFolder: (name: string) => void;
   onClickMediaFile: (relatedFiles: ListedMedia[], file: ListedMedia) => void;
   onClickPhotoFile: (file: ListedPhoto) => void;
+  onClickSearchFolder: (path: string[]) => void;
   path: string[];
   reserveRightSpace: boolean;
 }) => {
@@ -335,9 +339,16 @@ export default ({
               return (
                 <div className="explorer-entries" key={dir.join("\0")}>
                   {subdirectories && (
-                    <strong className="explorer-entries-dir">
-                      {dir.join("/")}
-                    </strong>
+                    <a
+                      className="explorer-entries-dir"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onClickSearchFolder(dir);
+                      }}
+                    >
+                      <span>📁</span>
+                      <strong>{dir.join("/")}</strong>
+                    </a>
                   )}
                   {mode == "list" ? (
                     <div className="explorer-entries-list-container">
@@ -405,6 +416,7 @@ export default ({
                             name={f.name}
                             itemCount={f.itemCount}
                             onClick={() => onClickFolder(f.name)}
+                            types={types}
                           />
                         ))}
                       </div>
