@@ -137,7 +137,6 @@ export default ({}: {}) => {
         {isPlayingMedia && (
           <Media
             file={media}
-            isPlaylistOpen={!playlistClosed}
             mediaRef={mediaRef}
             next={mediaPlaylist[mediaPlaylistPosition + 1]}
             onEnded={() => setMediaPlaylistPosition((i) => i + 1)}
