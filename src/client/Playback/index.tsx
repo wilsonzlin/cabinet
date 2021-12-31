@@ -3,7 +3,7 @@ import classNames from "@xtjs/lib/js/classNames";
 import nativeOrdering from "@xtjs/lib/js/nativeOrdering";
 import mapDefined from "@xtjs/lib/js/mapDefined";
 import { DateTime, Duration } from "luxon";
-import React, { MutableRefObject, useEffect, useState } from "react";
+import React, { Fragment, MutableRefObject, useEffect, useState } from "react";
 import { ListedAudio, ListedPhoto, ListedVideo } from "../../api/listFiles";
 import { formatDur, formatSize } from "../_common/ui";
 import "./index.css";
@@ -12,112 +12,57 @@ import { RippleLoader } from "../_common/Loader";
 const getRatio = (pageX: number, rect: DOMRect) =>
   (pageX - rect.left) / rect.width;
 
-const MetadataCard = ({
+const InfoDialog = ({
   file,
 }: {
   file: ListedAudio | ListedPhoto | ListedVideo;
 }) => {
+  const fields = {
+    Size: formatSize(file.size),
+    Modified: DateTime.fromMillis(file.modifiedMs).toLocaleString(
+      DateTime.DATETIME_MED_WITH_WEEKDAY
+    ),
+    ...(file.type != "photo"
+      ? {
+          Author: file.author,
+          Album: file.album,
+          Genre: file.genre,
+        }
+      : {
+          Alpha: file.hasAlphaChannel?.toString(),
+          Channels: file.channels,
+          "Chroma subsampling": file.chromaSubsampling,
+          "Colour space": file.colourSpace,
+          DPI: file.dpi,
+          Format: file.format,
+          Height: file.height,
+          "ICC profile": file.hasIccProfile?.toString(),
+          Orientation: file.orientation,
+          Progressive: file.isProgressive?.toString(),
+          Width: file.width,
+        }),
+  };
   return (
-    <div className="playback-card-details">
-      <div className="playback-card-path">{file.path}</div>
-      <div className="playback-card-size">{formatSize(file.size)}</div>
-      <div className="playback-card-modified">
-        Modified{" "}
-        {DateTime.fromMillis(file.modifiedMs).toLocaleString(
-          DateTime.DATETIME_MED_WITH_WEEKDAY
-        )}
+    <div className="playback-info-dialog">
+      <div className="playback-info-header">
+        <div className="playback-info-icon">ⓘ</div>
+        <div className="playback-info-path">{file.path}</div>
       </div>
-      {file.type != "photo" && (
-        <>
-          <div className="playback-card-title">{file.title}</div>
-          {mapDefined(file.author, (author) => (
-            <div className="playback-card-iconed">
-              <span>👤</span>
-              <span>{author}</span>
-            </div>
-          ))}
-          {mapDefined(file.album, (album) => (
-            <div className="playback-card-iconed">
-              <span>💿</span>
-              <span>{album}</span>
-            </div>
-          ))}
-          {mapDefined(file.genre, (genre) => (
-            <div className="playback-card-iconed">
-              <span>𝄞</span>
-              <span>{genre}</span>
-            </div>
-          ))}
-        </>
-      )}
-      {file.type == "photo" && (
-        <dl className="playback-photo-metadata">
-          {mapDefined(file.hasAlphaChannel, (h) => (
-            <div>
-              <dt>Alpha</dt>
-              <dd>{h.toString()}</dd>
-            </div>
-          ))}
-          {mapDefined(file.channels, (channels) => (
-            <div>
-              <dt>Channels</dt>
-              <dd>{channels}</dd>
-            </div>
-          ))}
-          <div>
-            <dt>Chroma subsampling</dt>
-            <dd>{file.chromaSubsampling}</dd>
-          </div>
-          {mapDefined(file.colourSpace, (cs) => (
-            <div>
-              <dt>Colour space</dt>
-              <dd>{cs}</dd>
-            </div>
-          ))}
-          {mapDefined(file.dpi, (dpi) => (
-            <div>
-              <dt>DPI</dt>
-              <dd>{dpi}</dd>
-            </div>
-          ))}
-          <div>
-            <dt>Format</dt>
-            <dd>{file.format}</dd>
-          </div>
-          <div>
-            <dt>Height</dt>
-            <dd>{file.height}</dd>
-          </div>
-          {mapDefined(file.hasIccProfile, (h) => (
-            <div>
-              <dt>ICC profile</dt>
-              <dd>{h.toString()}</dd>
-            </div>
-          ))}
-          {mapDefined(file.orientation, (o) => (
-            <div>
-              <dt>Orientation</dt>
-              <dd>{o}</dd>
-            </div>
-          ))}
-          {mapDefined(file.isProgressive, (h) => (
-            <div>
-              <dt>Progressive</dt>
-              <dd>{h.toString()}</dd>
-            </div>
-          ))}
-          <div>
-            <dt>Width</dt>
-            <dd>{file.width}</dd>
-          </div>
-        </dl>
-      )}
+      <dl className="playback-info-defs">
+        {Object.entries(fields).map(([n, v]) =>
+          mapDefined(v, (v) => (
+            <Fragment key={n}>
+              <dt>{n}</dt>
+              <dd>{v}</dd>
+            </Fragment>
+          ))
+        )}
+      </dl>
     </div>
   );
 };
 
 export default ({
-  canShowCard,
   currentTime,
   file,
   loading,
@@ -131,7 +76,6 @@ export default ({
   showMontageToggle,
   totalTime,
 }: {
-  canShowCard: boolean;
   currentTime: Duration;
   file: ListedAudio | ListedPhoto | ListedVideo;
   loading: boolean;
@@ -147,10 +91,7 @@ export default ({
 }) => {
   const isPhoto = file.type == "photo";
 
-  const [showCard, setShowCard] = useState(false);
-  useEffect(() => {
-    setShowCard(false);
-  }, [canShowCard]);
+  const [showInfoDlg, setShowInfoDlg] = useState(false);
 
   // We don't use a simple input[type=range] for several reasons:
   // - Difficulty in cross-browser/-platform styling.
@@ -202,16 +143,7 @@ export default ({
 
   return (
     <div className={"playback"}>
-      <div
-        className={classNames(
-          "acrylic",
-          "floating",
-          "playback-card",
-          showCard && "playback-card-open"
-        )}
-      >
-        <MetadataCard file={file} />
-      </div>
+      {showInfoDlg && <InfoDialog file={file} />}
       <div
         className={classNames(
           "playback-slider",
@@ -239,6 +171,7 @@ export default ({
           />
         </div>
       </div>
+
       <div className="playback-main">
         {!isPhoto && ready && !playing && (
           <button onClick={() => mediaElem?.play()}>▶</button>
@@ -281,10 +214,13 @@ export default ({
         <button
           className="playback-title"
           onClick={() => file.type != "photo" && onTogglePlaylistPanel()}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setShowInfoDlg(true);
+          }}
         >
           {(file as any).title || file.name}
         </button>
-        <button onClick={() => setShowCard((s) => !s)}>ⓘ</button>
 
         <div className="playback-spacer" />
 

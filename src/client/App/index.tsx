@@ -173,7 +173,6 @@ export default ({}: {}) => {
         />
         {(isViewing || isPlayingMedia) && (
           <Playback
-            canShowCard={!isCurrentlyImmersed}
             currentTime={currentTime}
             file={media ?? photo}
             loading={mediaLoading}
