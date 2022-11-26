@@ -63,7 +63,7 @@ export class FsSearch {
       const where = [];
       const params = [];
       where.push(`name match ?`);
-      params.push(query);
+      params.push(`"${query.replaceAll('"', '""')}"`);
       if (subdirs) {
         if (dir.length) {
           where.push(`dir LIKE ? ESCAPE '*'`);

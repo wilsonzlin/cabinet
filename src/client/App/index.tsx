@@ -1,7 +1,7 @@
 import classNames from "@xtjs/lib/js/classNames";
 import mapDefined from "@xtjs/lib/js/mapDefined";
 import { Duration } from "luxon";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ListedMedia, ListedPhoto } from "../../api/listFiles";
 import { isIos, useElemDimensions } from "../_common/ui";
 import Explorer from "../Explorer";
@@ -17,10 +17,28 @@ const ZERO_DURATION = Duration.fromMillis(0);
 export default ({}: {}) => {
   const [searchValue, setSearchValue] = useState("");
   const [path, setPath_callChangePathInstead] = useState<Array<string>>([]);
-  const changePath = (newPath: string[]) => {
+  const urlHandler = useCallback((pathname: string) => {
     setSearchValue("");
-    setPath_callChangePathInstead(newPath);
-  };
+    setPath_callChangePathInstead(
+      pathname
+        .split("/")
+        .map((p) => decodeURIComponent(p))
+        .filter((p) => p)
+    );
+  }, []);
+  useEffect(() => {
+    const listener = () => urlHandler(location.pathname);
+    window.addEventListener("popstate", listener);
+    listener();
+    return () => window.removeEventListener("popstate", listener);
+  }, []);
+  const changePath = useCallback((newPath: string[]) => {
+    const newPathname = `/${newPath
+      .map((p) => encodeURIComponent(p))
+      .join("/")}`;
+    history.pushState(undefined, "", newPathname);
+    urlHandler(newPathname);
+  }, []);
 
   const [photo, setPhoto] = useState<ListedPhoto | undefined>(undefined);
 

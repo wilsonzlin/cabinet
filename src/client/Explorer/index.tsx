@@ -1,5 +1,4 @@
 import mapDefined from "@xtjs/lib/js/mapDefined";
-import { cancellable, CancelledError } from "@xtjs/lang/js/cancellable";
 import classNames from "@xtjs/lib/js/classNames";
 import React, { ReactNode, useEffect, useState } from "react";
 import { JsonApiOutput } from "../../api/_common";
@@ -64,24 +63,20 @@ const Folder = ({
   >();
   useEffect(() => {
     setFirstEntries(undefined);
-    const req = cancellable(function* () {
-      const res = yield fetch("/listFiles", {
-        method: "POST",
-        body: JSON.stringify({
-          path,
-          limit: 12,
-          subdirectories: false,
-          types,
-        }),
-      });
-      setFirstEntries(yield res.json());
-    });
-    req.catch((e) => {
-      if (!(e instanceof CancelledError)) {
-        throw e;
-      }
-    });
-    return () => req.cancel();
+    const abortController = new AbortController();
+    fetch("/listFiles", {
+      method: "POST",
+      body: JSON.stringify({
+        path,
+        limit: 12,
+        subdirectories: false,
+        types,
+      }),
+      signal: abortController.signal,
+    })
+      .then((res) => res.json())
+      .then(setFirstEntries);
+    return () => abortController.abort();
   }, [path.join("\0")]);
 
   const ents = firstEntries?.results[0]?.entries ?? [];
@@ -196,24 +191,20 @@ export default ({
   >();
   useEffect(() => {
     setEntries(undefined);
-    const req = cancellable(function* () {
-      const res = yield fetch("/listFiles", {
-        method: "POST",
-        body: JSON.stringify({
-          filter,
-          path,
-          subdirectories,
-          types,
-        }),
-      });
-      setEntries(yield res.json());
-    });
-    req.catch((e) => {
-      if (!(e instanceof CancelledError)) {
-        throw e;
-      }
-    });
-    return () => req.cancel();
+    const abortController = new AbortController();
+    fetch("/listFiles", {
+      method: "POST",
+      body: JSON.stringify({
+        filter,
+        path,
+        subdirectories,
+        types,
+      }),
+      signal: abortController.signal,
+    })
+      .then((res) => res.json())
+      .then(setEntries);
+    return () => abortController.abort();
   }, [filter, path, subdirectories, types]);
 
   const [stats, setStats] = useState<
@@ -262,8 +253,41 @@ export default ({
     width: `${listColumnWidths[i] * 100}%`,
   });
 
+  const scrollLocalStorageKey = `cabinet-explorer-${path.join("/")}-scroll`;
+  const [rootElem, setRootElem] = useState<HTMLDivElement | null>(null);
+  const [canScroll, setCanScroll] = useState(false);
+  useEffect(() => {
+    // Only set scroll once entries have loaded, as otherwise we'll scroll an empty body, and then overwrite the stored scroll. Check against and toggle `canScroll` to run this only once (and not after changing filters, switching view mode, etc.).
+    if (rootElem && entries && !canScroll) {
+      const scrollTop = +sessionStorage[scrollLocalStorageKey];
+      console.log("Restoring previous scroll position:", scrollTop);
+      console.log(
+        "Current scroll position and height:",
+        rootElem.scrollTop,
+        rootElem.scrollHeight
+      );
+      // Don't set scroll immediately, as React hasn't updated the DOM yet.
+      setTimeout(() => (rootElem.scrollTop = scrollTop), 500);
+      setCanScroll(true);
+    }
+  }, [canScroll, entries, rootElem, scrollLocalStorageKey]);
+  useEffect(() => {
+    setCanScroll(false);
+  }, [scrollLocalStorageKey]);
+
   return (
-    <div className={"explorer"}>
+    <div
+      className={"explorer"}
+      onScroll={(e) => {
+        if (canScroll) {
+          sessionStorage.setItem(
+            scrollLocalStorageKey,
+            e.currentTarget.scrollTop.toString()
+          );
+        }
+      }}
+      ref={setRootElem}
+    >
       {!entries ? (
         <Loading />
       ) : (
